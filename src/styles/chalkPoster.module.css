@@ -280,6 +280,46 @@
 }
 
 /* ── Asset-Grid & Controls ───────────────────────────── */
+.layoutGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.layoutThumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 5px;
+  padding: 6px 4px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.layoutThumb:hover {
+  background: #303030;
+  border-color: #5a7fb5;
+}
+
+.layoutThumbSvg {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 60 / 80;
+  background: #1a1a1a;
+  border-radius: 3px;
+}
+
+.layoutThumbLabel {
+  font-size: 10px;
+  color: #bbb;
+  text-align: center;
+  line-height: 1.1;
+}
+
 .assetGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

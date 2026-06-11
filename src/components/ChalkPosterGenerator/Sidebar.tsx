@@ -49,6 +49,8 @@ interface SidebarProps {
   dividerStyle: DividerStyle["style"];
   setDividerStyle: (v: DividerStyle["style"]) => void;
 
+  layoutSection: React.ReactNode;
+
   header: TextFieldState;
   sub: TextFieldState;
   body: TextFieldState;
@@ -226,7 +228,7 @@ const DIVIDER_OPTIONS = [
 ];
 
 export function Sidebar(props: SidebarProps) {
-  const [open, setOpen] = useState<string>("pattern");
+  const [open, setOpen] = useState<string>("layout");
   const toggle = (key: string) => setOpen((o) => (o === key ? "" : key));
 
   return (
@@ -251,6 +253,14 @@ export function Sidebar(props: SidebarProps) {
             }))}
             onChange={(v) => props.setPosterSizeIndex(Number(v))}
           />
+        </Section>
+
+        <Section
+          title="Layout"
+          isOpen={open === "layout"}
+          onToggle={() => toggle("layout")}
+        >
+          {props.layoutSection}
         </Section>
 
         <Section

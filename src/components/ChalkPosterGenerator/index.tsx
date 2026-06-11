@@ -17,7 +17,15 @@ import { PosterCanvas } from "./PosterCanvas";
 import { TextOverlay } from "./TextOverlay";
 import { DividerOverlay } from "./DividerOverlay";
 import { AssetPanel } from "./AssetPanel";
+import { LayoutPanel } from "./LayoutPanel";
+import { LAYOUTS, type PosterLayout } from "./layouts";
 import styles from "../../styles/chalkPoster.module.css";
+
+function makeId() {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `placed-${Date.now()}-${Math.random()}`;
+}
 
 const POS_KEYS = ["header", "sub", "body", "detail", "divider"] as const;
 
@@ -214,10 +222,7 @@ export function ChalkPosterGenerator() {
       ];
       const pos = smartPlace(asset, existing, size.w / size.h);
       const maxZ = placedAssets.reduce((m, p) => Math.max(m, p.zIndex), 0);
-      const id =
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `placed-${Date.now()}-${Math.random()}`;
+      const id = makeId();
       setPlacedAssets((prev) => [
         ...prev,
         {
@@ -236,6 +241,32 @@ export function ChalkPosterGenerator() {
     },
     [placedAssets, positions, size.w, size.h]
   );
+
+  // Wendet ein Layout an: ordnet Texte an und platziert die vorhandenen
+  // Logos der Reihe nach in die Logo-Plätze des Layouts.
+  const applyLayout = useCallback((layout: PosterLayout) => {
+    setPositions(layout.positions);
+    const logos = ASSET_REGISTRY.filter((a) => a.category === "logos");
+    if (logos.length === 0) {
+      setPlacedAssets([]);
+      setSelectedAssetId(null);
+      return;
+    }
+    setPlacedAssets(
+      layout.logoSlots.map((slot, i) => ({
+        id: makeId(),
+        assetId: logos[i % logos.length].id,
+        x: slot.x,
+        y: slot.y,
+        scale: slot.scale,
+        rotation: 0,
+        opacity: 1,
+        flipX: false,
+        zIndex: i + 1,
+      }))
+    );
+    setSelectedAssetId(null);
+  }, []);
 
   const updateSelected = useCallback(
     (patch: Partial<PlacedAsset>) => {
@@ -493,6 +524,13 @@ export function ChalkPosterGenerator() {
         setBorderWeight={setBorderWeight}
         dividerStyle={dividerStyle}
         setDividerStyle={setDividerStyle}
+        layoutSection={
+          <LayoutPanel
+            layouts={LAYOUTS}
+            onApply={applyLayout}
+            hasLogos={ASSET_REGISTRY.some((a) => a.category === "logos")}
+          />
+        }
         header={headerField}
         sub={subField}
         body={bodyField}
