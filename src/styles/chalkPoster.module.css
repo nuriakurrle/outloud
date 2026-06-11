@@ -1,0 +1,352 @@
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: #111;
+  color: #ddd;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* ── Sidebar ─────────────────────────────────────────── */
+.sidebar {
+  width: 290px;
+  min-width: 290px;
+  height: 100%;
+  background: #1a1a1a;
+  border-right: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarHeader {
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.sidebarTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #f0f0f0;
+}
+
+.sidebarSubtitle {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #777;
+}
+
+.sidebarScroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sidebarFooter {
+  padding: 14px 16px;
+  border-top: 1px solid #2a2a2a;
+}
+
+/* ── Accordion sections ──────────────────────────────── */
+.section {
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.sectionButton {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #ddd;
+  padding: 13px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-family: inherit;
+}
+
+.sectionButton:hover {
+  background: #202020;
+}
+
+.arrow {
+  font-size: 9px;
+  color: #888;
+  transition: transform 0.18s ease;
+}
+
+.arrowOpen {
+  transform: rotate(90deg);
+}
+
+.sectionBody {
+  padding: 4px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Form controls ───────────────────────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #888;
+}
+
+.input,
+.select,
+.textarea {
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  color: #ddd;
+  border-radius: 5px;
+  padding: 8px 9px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: #5a5a5a;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 56px;
+  line-height: 1.4;
+}
+
+.select {
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #888 50%),
+    linear-gradient(135deg, #888 50%, transparent 50%);
+  background-position: calc(100% - 15px) calc(50% + 1px),
+    calc(100% - 10px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+.slider {
+  width: 100%;
+  accent-color: #e0e0e0;
+  cursor: pointer;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sliderValue {
+  font-size: 11px;
+  color: #aaa;
+  font-variant-numeric: tabular-nums;
+}
+
+.regenButton {
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  color: #ddd;
+  border-radius: 5px;
+  padding: 9px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.regenButton:hover {
+  background: #303030;
+  border-color: #4a4a4a;
+}
+
+.hint {
+  font-size: 11px;
+  color: #777;
+  line-height: 1.4;
+}
+
+.exportButton {
+  width: 100%;
+  background: #e0e0e0;
+  color: #111;
+  border: none;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.exportButton:hover {
+  background: #fff;
+}
+
+/* ── Preview ─────────────────────────────────────────── */
+.preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  overflow: hidden;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.posterWrap {
+  position: relative;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  background: #1e1e1e;
+}
+
+.canvas {
+  display: block;
+}
+
+.overlayLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.previewHint {
+  font-size: 12px;
+  color: #666;
+  letter-spacing: 0.5px;
+}
+
+/* ── Draggable overlays ──────────────────────────────── */
+.textEl {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  user-select: none;
+  text-align: center;
+  white-space: pre-wrap;
+  max-width: 90%;
+  line-height: 1.15;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+  border: 1px solid transparent;
+  padding: 2px 4px;
+  touch-action: none;
+}
+
+.textEl:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.dragging {
+  cursor: grabbing;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  border-style: dashed;
+}
+
+.dividerEl {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  transform: translateY(-50%);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  border: 1px solid transparent;
+}
+
+.dividerEl:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ── Asset-Grid & Controls ───────────────────────────── */
+.assetGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.assetThumb {
+  aspect-ratio: 1;
+  width: 100%;
+  background: #252525;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assetThumb:hover {
+  background: #333;
+  border-color: #555;
+}
+
+.assetThumbImg {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  pointer-events: none;
+}
+
+.assetControls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid #333;
+  padding-top: 12px;
+}
+
+.assetButtonRow {
+  display: flex;
+  gap: 6px;
+}
+
+.smallButton {
+  flex: 1;
+  background: #252525;
+  border: 1px solid #3a3a3a;
+  color: #ddd;
+  border-radius: 5px;
+  padding: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.smallButton:hover {
+  background: #303030;
+  border-color: #4a4a4a;
+}
+
+.danger {
+  color: #f0a0a0;
+}
+
+.danger:hover {
+  background: #3a2424;
+  border-color: #6a3a3a;
+}
