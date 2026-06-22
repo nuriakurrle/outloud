@@ -14,6 +14,7 @@ interface TextOverlayProps {
   scale: number;
   dragging: boolean;
   selected?: boolean;
+  outline?: boolean;
   onPointerDown: (id: string, e: React.PointerEvent) => void;
 }
 
@@ -37,8 +38,20 @@ export function TextOverlay({
   scale,
   dragging,
   selected = false,
+  outline = false,
   onPointerDown,
 }: TextOverlayProps) {
+  // Umriss-Stil: hohle Buchstaben mit Kontur in der Schriftfarbe.
+  const strokeW = Math.max(0.8, size * scale * 0.045);
+  const outlineStyle = outline
+    ? {
+        color: "transparent",
+        WebkitTextFillColor: "transparent",
+        WebkitTextStrokeWidth: `${strokeW}px`,
+        WebkitTextStrokeColor: color,
+        textShadow: "none",
+      }
+    : {};
   return (
     <div
       className={`${styles.textEl} ${dragging ? styles.dragging : ""}`}
@@ -55,6 +68,7 @@ export function TextOverlay({
         cursor: dragging ? "grabbing" : "grab",
         outline: selected ? "1.5px dashed rgba(255,255,255,0.7)" : "none",
         outlineOffset: 4,
+        ...outlineStyle,
       }}
       onPointerDown={(e) => onPointerDown(id, e)}
     >

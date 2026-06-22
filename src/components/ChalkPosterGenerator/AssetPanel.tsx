@@ -22,6 +22,16 @@ interface AssetPanelProps {
   onUpdateSelected: (patch: Partial<PlacedAsset>) => void;
   onDeleteSelected: () => void;
   onLayer: (dir: 1 | -1) => void;
+  // Kreide-Filter eines hochgeladenen Fotos ändern (an/aus + Parameter)
+  onChalkChange: (
+    assetId: string,
+    patch: Partial<{
+      enabled: boolean;
+      contrast: number;
+      brightness: number;
+      threshold: number;
+    }>
+  ) => void;
 }
 
 const CATEGORY_LABELS: Record<AssetCategory | "all", string> = {
@@ -84,10 +94,15 @@ export function AssetPanel({
   onUpdateSelected,
   onDeleteSelected,
   onLayer,
+  onChalkChange,
 }: AssetPanelProps) {
   const selectedAsset = selected
     ? assets.find((a) => a.id === selected.assetId)
     : undefined;
+
+  // Hochgeladenes Foto (kein SVG) → Kreide-Filter anbietbar.
+  const isPhoto = !!selectedAsset?.originalSrc;
+  const chalk = selectedAsset?.chalk;
 
   // Striche & Formen teilen sich den Masken-/Tint-Pfad, brauchen aber leicht
   // andere Beschriftungen und Farb-Paletten.
@@ -168,6 +183,82 @@ export function AssetPanel({
           <span className={styles.label}>
             Ausgewählt: {selectedAsset?.name ?? "Element"}
           </span>
+          {isPhoto && (
+            <>
+              <div className={styles.field}>
+                <span className={styles.label}>Kreide-Filter</span>
+                <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                  {[
+                    { label: "Kreide", on: true },
+                    { label: "Original", on: false },
+                  ].map((o) => {
+                    const active = (chalk?.enabled ?? false) === o.on;
+                    return (
+                      <button
+                        key={o.label}
+                        onClick={() =>
+                          onChalkChange(selected.assetId, { enabled: o.on })
+                        }
+                        style={{
+                          flex: 1,
+                          padding: "5px 8px",
+                          borderRadius: 6,
+                          background: active
+                            ? "rgba(255,255,255,0.16)"
+                            : "rgba(255,255,255,0.04)",
+                          border: active
+                            ? "1px solid rgba(255,255,255,0.5)"
+                            : "1px solid rgba(255,255,255,0.15)",
+                          color: "#f5f2ed",
+                          fontSize: 12,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {chalk?.enabled && (
+                <>
+                  <AssetSlider
+                    label="Kontrast"
+                    value={chalk.contrast}
+                    min={0.5}
+                    max={2.5}
+                    step={0.05}
+                    format={(v) => v.toFixed(2)}
+                    onChange={(v) =>
+                      onChalkChange(selected.assetId, { contrast: v })
+                    }
+                  />
+                  <AssetSlider
+                    label="Helligkeit"
+                    value={chalk.brightness}
+                    min={-0.3}
+                    max={0.3}
+                    step={0.02}
+                    format={(v) => v.toFixed(2)}
+                    onChange={(v) =>
+                      onChalkChange(selected.assetId, { brightness: v })
+                    }
+                  />
+                  <AssetSlider
+                    label="Schwelle"
+                    value={chalk.threshold}
+                    min={0}
+                    max={0.9}
+                    step={0.02}
+                    format={(v) => (v < 0.02 ? "weich" : v.toFixed(2))}
+                    onChange={(v) =>
+                      onChalkChange(selected.assetId, { threshold: v })
+                    }
+                  />
+                </>
+              )}
+            </>
+          )}
           <AssetSlider
             label={isStroke ? "Länge" : "Größe"}
             value={selected.scale}

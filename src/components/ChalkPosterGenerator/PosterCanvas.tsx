@@ -11,7 +11,11 @@ import type {
   PatternStroke,
   PosterSize,
 } from "../../types/poster";
-import { drawChalkBackground } from "../../lib/chalkBackground";
+import {
+  drawChalkBackground,
+  chalkRgbFor,
+  renderPatternStrokeCanvas,
+} from "../../lib/chalkBackground";
 import {
   renderStroke,
   compositeStroke,
@@ -60,6 +64,12 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
   const strokeCache = useRef<
     Map<string, { sig: string; canvas: HTMLCanvasElement }>
   >(new Map());
+  // Cache der Hintergrund-Linien (Pattern): id → { sig, canvas }. Der Offset
+  // (Drag) fließt NICHT in die Signatur ein → Verschieben ist nur ein
+  // drawImage und bleibt flüssig.
+  const patternCache = useRef<
+    Map<string, { sig: string; canvas: HTMLCanvasElement }>
+  >(new Map());
 
   // `progress` < 1 = Pattern-Selbstzeichen-Animation; die fetten Striche und
   // alles andere bleiben dabei voll sichtbar.
@@ -77,8 +87,47 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, size.w, size.h);
 
-      // Tafel + Grain + Hintergrund-Muster (gecachte Tafel, animierbar)
-      drawChalkBackground(ctx, size.w, size.h, patternStrokes, pattern.seed, progress, bg);
+      // Hintergrund + Pattern-Linien.
+      if (progress < 1) {
+        // Selbstzeichen-Animation: voller Re-Render (Offsets werden in
+        // renderPatternStrokes berücksichtigt).
+        drawChalkBackground(
+          ctx,
+          size.w,
+          size.h,
+          patternStrokes,
+          pattern.seed,
+          progress,
+          bg
+        );
+      } else {
+        // Statische Vorschau: jede Linie aus dem Cache compositen + Offset.
+        // → Verschieben ist flüssig (kein Grain-Re-Render pro Frame).
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, size.w, size.h);
+        const chalkRgb = chalkRgbFor(bg);
+        const pcache = patternCache.current;
+        const liveP = new Set(patternStrokes.map((s) => s.id));
+        for (const id of [...pcache.keys()]) {
+          if (!liveP.has(id)) pcache.delete(id);
+        }
+        for (const ps of patternStrokes) {
+          const sig = `${ps.seed}|${Math.round(ps.weight)}|${ps.opacity.toFixed(
+            2
+          )}|${size.w}x${size.h}|${chalkRgb}`;
+          let entry = pcache.get(ps.id);
+          if (!entry || entry.sig !== sig) {
+            entry = {
+              sig,
+              canvas: renderPatternStrokeCanvas(ps, size.w, size.h, dpr, chalkRgb),
+            };
+            pcache.set(ps.id, entry);
+          }
+          const ox = ((ps.offsetX ?? 0) / 100) * size.w;
+          const oy = ((ps.offsetY ?? 0) / 100) * size.h;
+          ctx.drawImage(entry.canvas, ox, oy, size.w, size.h);
+        }
+      }
 
       // Fette Kreide-Striche (generiert + freihand) in zIndex-Reihenfolge
       const cache = strokeCache.current;

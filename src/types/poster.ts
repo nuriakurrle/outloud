@@ -26,10 +26,13 @@ export interface PatternConfig {
  * Kreide-Textur gezeichnet (siehe `lib/chalkBackground`).
  */
 export interface PatternStroke {
+  id: string; // stabile ID (für Auswahl/Drag); pro Regenerierung neu vergeben
   points: Array<{ x: number; y: number }>; // Pfad in % (0–100)
   weight: number; // tatsächliche Stärke (mit Variation)
   opacity: number; // tatsächliche Deckkraft 0–1 (mit Variation)
   seed: number; // Textur-Seed
+  offsetX: number; // Verschiebung in % (Drag), Default 0
+  offsetY: number;
 }
 
 /** Werkzeug-Modus: Elemente verschieben vs. Freihand zeichnen. */
@@ -107,6 +110,19 @@ export interface AssetItem {
   anchor: "center" | "top" | "bottom" | "corner"; // Für Smart Placement
   naturalWidth?: number; // Nur Stroke-Stamps: Originalmaße fürs Seitenverhältnis
   naturalHeight?: number;
+  // Nur hochgeladene Fotos: Original-URL (für erneutes Kreide-Verarbeiten) und
+  // die aktuell angewandten Kreide-Filter-Parameter. `src` zeigt dann auf die
+  // verarbeitete Data-URL (bzw. = originalSrc, wenn der Filter aus ist).
+  originalSrc?: string;
+  chalk?: ChalkAssetSettings;
+}
+
+/** Kreide-Filter-Einstellungen eines hochgeladenen Fotos. */
+export interface ChalkAssetSettings {
+  enabled: boolean; // Filter an/aus (aus = Originalfoto)
+  contrast: number; // 0.5–2.5
+  brightness: number; // -0.3–0.3
+  threshold: number; // 0 = weiche Schattierung, >0 = harter Cutout
 }
 
 export interface PlacedAsset {

@@ -28,6 +28,7 @@ export interface SceneText {
   weight: string;
   color: string;
   align?: "center" | "left" | "right";
+  outline?: boolean; // hohle Buchstaben mit Kontur (Umriss-Stil)
   x: number;
   y: number;
 }
@@ -123,14 +124,22 @@ export function renderPosterScene(
     const text = item.text;
     const align = item.align ?? "center";
     ctx.textAlign = align;
-    ctx.fillStyle = item.color;
     ctx.font = `${item.weight} ${item.size}px "${item.font}", sans-serif`;
     const cx = (item.x / 100) * w;
     const cy = (item.y / 100) * h;
     const lines = text.split("\n");
     const lh = item.size * 1.15;
     const startY = cy - (lh * (lines.length - 1)) / 2;
-    lines.forEach((line, i) => ctx.fillText(line, cx, startY + i * lh));
+    if (item.outline) {
+      // Umriss-Stil: hohle Buchstaben, nur Kontur in der Schriftfarbe.
+      ctx.strokeStyle = item.color;
+      ctx.lineWidth = Math.max(1, item.size * 0.045);
+      ctx.lineJoin = "round";
+      lines.forEach((line, i) => ctx.strokeText(line, cx, startY + i * lh));
+    } else {
+      ctx.fillStyle = item.color;
+      lines.forEach((line, i) => ctx.fillText(line, cx, startY + i * lh));
+    }
   }
   ctx.globalAlpha = 1;
 

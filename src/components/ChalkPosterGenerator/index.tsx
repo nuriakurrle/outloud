@@ -19,6 +19,11 @@ import { smartPlace } from "../../lib/smartPlace";
 import { ASSET_REGISTRY } from "../../assetRegistry";
 import { isDefaultWhite, isMaskAsset } from "../../lib/strokeStamps";
 import { SHAPE_ASSETS } from "../../lib/shapeAssets";
+import {
+  chalkifyImage,
+  DEFAULT_CHALKIFY,
+  type ChalkifyOptions,
+} from "../../lib/chalkifyImage";
 import { Sidebar, type TextFieldState } from "./Sidebar";
 import { PosterCanvas, type PosterCanvasHandle } from "./PosterCanvas";
 import { TextOverlay } from "./TextOverlay";
@@ -57,6 +62,20 @@ const POSTER_SIZES: PosterSize[] = [
   { label: "Instagram", w: 400, h: 400 },
 ];
 
+// Schrift-Pools für „Alles neu generieren" — pro Textrolle passend gewählt,
+// damit der gewürfelte Look im Brand-Rahmen bleibt.
+const DISPLAY_FONTS = [
+  "Playfair Display",
+  "Abril Fatface",
+  "Permanent Marker",
+  "Pacifico",
+  "Rock Salt",
+];
+const SCRIPT_FONTS = ["Caveat", "Pacifico", "Permanent Marker"];
+const BODY_FONTS = ["Oswald", "Special Elite", "Caveat"];
+const DETAIL_FONTS = ["Special Elite", "Oswald", "Caveat"];
+const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
 const CHALK = "#e0e0e0";
 const CHALK_DIM = "#c0c0c0";
 const POSTER_BG = "#000000";
@@ -83,6 +102,10 @@ export function ChalkPosterGenerator() {
     seed: Math.floor(Math.random() * 999999),
   });
   const [patternStrokes, setPatternStrokes] = useState<PatternStroke[]>([]);
+  // Ausgewählte Hintergrund-Linie (für Auswahl-Rahmen & Löschen)
+  const [selectedPatternId, setSelectedPatternId] = useState<string | null>(
+    null
+  );
   const updatePattern = useCallback(
     (patch: Partial<PatternConfig>) =>
       setPatternConfig((c) => ({ ...c, ...patch })),
@@ -149,6 +172,12 @@ export function ChalkPosterGenerator() {
   const [bodyColor, setBodyColor] = useState(CHALK);
   const [detailColor, setDetailColor] = useState(CHALK_DIM);
 
+  // Umriss-Stil je Textfeld (hohle Buchstaben mit Kontur, wie der Referenz-Titel)
+  const [headerOutline, setHeaderOutline] = useState(false);
+  const [subOutline, setSubOutline] = useState(false);
+  const [bodyOutline, setBodyOutline] = useState(false);
+  const [detailOutline, setDetailOutline] = useState(false);
+
   // Positionen (%) für Drag & Drop
   const [positions, setPositions] = useState<Record<PosKey, Position>>({
     header: { x: 50, y: 22 },
@@ -181,16 +210,67 @@ export function ChalkPosterGenerator() {
 
   const handleUpload = useCallback((file: File) => {
     const url = URL.createObjectURL(file);
+    const id = `custom/${makeId()}`;
+    const isSvg = /svg/i.test(file.type) || /\.svg$/i.test(file.name);
     const asset: AssetItem = {
-      id: `custom/${makeId()}`,
+      id,
       name: file.name.replace(/\.(svg|png|jpe?g)$/i, ""),
       category: "logos",
       src: url,
       defaultScale: 0.25,
       anchor: "center",
     };
+    // SVGs sind bereits Strichgrafik → unverändert übernehmen.
+    if (isSvg) {
+      setCustomAssets((prev) => [...prev, asset]);
+      return;
+    }
+    // Fotos sofort einblenden, dann im Hintergrund in Kreide umwandeln.
+    asset.originalSrc = url;
+    asset.chalk = { ...DEFAULT_CHALKIFY, enabled: true };
     setCustomAssets((prev) => [...prev, asset]);
+    chalkifyImage(url, DEFAULT_CHALKIFY)
+      .then((dataUrl) => {
+        setCustomAssets((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, src: dataUrl } : a))
+        );
+      })
+      .catch(() => {
+        /* bei Fehler bleibt das Originalfoto sichtbar */
+      });
   }, []);
+
+  // Kreide-Filter eines hochgeladenen Fotos anpassen (oder aus-/einschalten):
+  // mit den neuen Parametern neu verarbeiten und `src` aktualisieren.
+  const updateAssetChalk = useCallback(
+    (assetId: string, patch: Partial<ChalkifyOptions & { enabled: boolean }>) => {
+      setCustomAssets((prev) => {
+        const target = prev.find((a) => a.id === assetId);
+        if (!target || !target.originalSrc) return prev;
+        const next = {
+          ...DEFAULT_CHALKIFY,
+          enabled: true,
+          ...target.chalk,
+          ...patch,
+        };
+        // Filter aus → zurück zum Originalfoto, kein Re-Processing nötig.
+        if (!next.enabled) {
+          return prev.map((a) =>
+            a.id === assetId ? { ...a, chalk: next, src: a.originalSrc! } : a
+          );
+        }
+        const orig = target.originalSrc;
+        chalkifyImage(orig, next).then((dataUrl) => {
+          setCustomAssets((cur) =>
+            cur.map((a) => (a.id === assetId ? { ...a, src: dataUrl } : a))
+          );
+        });
+        // Parameter sofort speichern; src folgt asynchron.
+        return prev.map((a) => (a.id === assetId ? { ...a, chalk: next } : a));
+      });
+    },
+    []
+  );
 
   // ── Undo/Redo ────────────────────────────────────────
   // Snapshot der editierbaren Sammlungen (Striche, Logos, Positionen).
@@ -198,6 +278,7 @@ export function ChalkPosterGenerator() {
     strokes: ChalkStroke[];
     placedAssets: PlacedAsset[];
     positions: Record<PosKey, Position>;
+    patternStrokes: PatternStroke[];
   };
   const [past, setPast] = useState<Snapshot[]>([]);
   const [future, setFuture] = useState<Snapshot[]>([]);
@@ -206,6 +287,7 @@ export function ChalkPosterGenerator() {
     strokes: [],
     placedAssets: [],
     positions: {} as Record<PosKey, Position>,
+    patternStrokes: [],
   });
 
   const getAssetSrc = useCallback(
@@ -215,7 +297,7 @@ export function ChalkPosterGenerator() {
 
   // liveRef immer mit aktuellen Werten füllen (für Snapshots)
   useEffect(() => {
-    liveRef.current = { strokes, placedAssets, positions };
+    liveRef.current = { strokes, placedAssets, positions, patternStrokes };
   });
 
   const commit = useCallback(() => {
@@ -226,6 +308,7 @@ export function ChalkPosterGenerator() {
         strokes: snap.strokes,
         placedAssets: snap.placedAssets,
         positions: snap.positions,
+        patternStrokes: snap.patternStrokes,
       },
     ].slice(-50));
     setFuture([]);
@@ -235,6 +318,7 @@ export function ChalkPosterGenerator() {
     setStrokes(s.strokes);
     setPlacedAssets(s.placedAssets);
     setPositions(s.positions);
+    setPatternStrokes(s.patternStrokes);
   }, []);
 
   const undo = useCallback(() => {
@@ -262,6 +346,14 @@ export function ChalkPosterGenerator() {
   const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   // Bei Strich-Drag: Start-Pointer + Start-Offset (Delta-basiert)
   const strokeDrag = useRef<{
+    id: string;
+    cx: number;
+    cy: number;
+    offX: number;
+    offY: number;
+  } | null>(null);
+  // Bei Pattern-Linien-Drag: Start-Pointer + Start-Offset (Delta-basiert)
+  const patternDrag = useRef<{
     id: string;
     cx: number;
     cy: number;
@@ -354,6 +446,31 @@ export function ChalkPosterGenerator() {
     [mode, strokes, commit]
   );
 
+  // Hintergrund-Linien: Delta-basiertes Verschieben (wie die fetten Striche)
+  const handlePatternPointerDown = useCallback(
+    (id: string, e: React.PointerEvent) => {
+      if (mode !== "move") return;
+      e.preventDefault();
+      e.stopPropagation();
+      const ps = patternStrokes.find((p) => p.id === id);
+      if (!ps) return;
+      commit();
+      setSelectedPatternId(id);
+      setSelectedStrokeId(null);
+      setSelectedTextKey(null);
+      setSelectedAssetId(null);
+      setDragging(id);
+      patternDrag.current = {
+        id,
+        cx: e.clientX,
+        cy: e.clientY,
+        offX: ps.offsetX ?? 0,
+        offY: ps.offsetY ?? 0,
+      };
+    },
+    [mode, patternStrokes, commit]
+  );
+
   useEffect(() => {
     if (!dragging) return;
     const onMove = (e: PointerEvent) => {
@@ -369,6 +486,20 @@ export function ChalkPosterGenerator() {
         setStrokes((prev) =>
           prev.map((st) =>
             st.id === dragging ? { ...st, offsetX: offX, offsetY: offY } : st
+          )
+        );
+        return;
+      }
+      // Pattern-Linien-Drag: relativ über Pointer-Delta
+      if (patternDrag.current && patternDrag.current.id === dragging) {
+        const pd = patternDrag.current;
+        const dxPct = ((e.clientX - pd.cx) / rect.width) * 100;
+        const dyPct = ((e.clientY - pd.cy) / rect.height) * 100;
+        const offX = Math.max(-80, Math.min(80, pd.offX + dxPct));
+        const offY = Math.max(-80, Math.min(80, pd.offY + dyPct));
+        setPatternStrokes((prev) =>
+          prev.map((ps) =>
+            ps.id === dragging ? { ...ps, offsetX: offX, offsetY: offY } : ps
           )
         );
         return;
@@ -395,6 +526,7 @@ export function ChalkPosterGenerator() {
     const onUp = () => {
       setDragging(null);
       strokeDrag.current = null;
+      patternDrag.current = null;
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -509,11 +641,52 @@ export function ChalkPosterGenerator() {
     [selectedAssetId]
   );
 
-  // 🎲 Alles neu generieren — ein neues Hintergrund-Muster innerhalb der
-  // Brand-Parameter. Texte/Positionen/Logos/Freihand-Striche bleiben erhalten.
+  // 🎲 Alles neu generieren — komplett neue Komposition im Brand-Rahmen:
+  // zufälliges Layout (Positionen + Ausrichtung + Logo-Plätze), neue Schriften
+  // je Textfeld und ein neues Hintergrund-Muster. Erhalten bleiben: die
+  // Text-Inhalte, vom Nutzer platzierte Illustrationen (Porträts, Icons …)
+  // sowie Freihand-Striche.
   const generateAll = useCallback(() => {
     commit();
-    // Hintergrund-Muster komplett neu würfeln
+    // 1) Zufälliges Layout: Positionen + Ausrichtung
+    const layout = LAYOUTS[Math.floor(Math.random() * LAYOUTS.length)];
+    setPositions(layout.positions);
+    setTextAligns({
+      header: layout.aligns?.header ?? "center",
+      sub: layout.aligns?.sub ?? "center",
+      body: layout.aligns?.body ?? "center",
+      detail: layout.aligns?.detail ?? "center",
+    });
+    // 2) Logos neu in die Layout-Plätze setzen; andere platzierte
+    //    Illustrationen (Porträts, Icons …) bleiben erhalten.
+    const logos = ASSET_REGISTRY.filter((a) => a.category === "logos");
+    setPlacedAssets((prev) => {
+      const others = prev.filter((p) => {
+        const item = allAssets.find((a) => a.id === p.assetId);
+        return item?.category !== "logos";
+      });
+      if (logos.length === 0) return others;
+      const baseZ = others.reduce((m, p) => Math.max(m, p.zIndex), 0);
+      const newLogos = layout.logoSlots.map((slot, i) => ({
+        id: makeId(),
+        assetId: logos[i % logos.length].id,
+        x: slot.x,
+        y: slot.y,
+        scale: slot.scale,
+        rotation: 0,
+        opacity: 1,
+        flipX: false,
+        zIndex: baseZ + i + 1,
+      }));
+      return [...others, ...newLogos];
+    });
+    setSelectedAssetId(null);
+    // 3) Schriften je Textrolle neu würfeln (passende Pools)
+    setHeaderFont(pick(DISPLAY_FONTS));
+    setSubFont(pick(SCRIPT_FONTS));
+    setBodyFont(pick(BODY_FONTS));
+    setDetailFont(pick(DETAIL_FONTS));
+    // 4) Hintergrund-Muster komplett neu würfeln
     setPatternConfig({
       count: Math.round(3 + Math.random() * 8),
       noise: Math.round((0.15 + Math.random() * 0.5) * 100) / 100,
@@ -523,7 +696,7 @@ export function ChalkPosterGenerator() {
       spread: Math.round((0.2 + Math.random() * 0.5) * 100) / 100,
       seed: Math.floor(Math.random() * 999999),
     });
-  }, [commit]);
+  }, [commit, allAssets]);
 
   const deleteSelectedStroke = useCallback(() => {
     if (!selectedStrokeId) return;
@@ -531,6 +704,13 @@ export function ChalkPosterGenerator() {
     setStrokes((prev) => prev.filter((s) => s.id !== selectedStrokeId));
     setSelectedStrokeId(null);
   }, [selectedStrokeId, commit]);
+
+  const deleteSelectedPattern = useCallback(() => {
+    if (!selectedPatternId) return;
+    commit();
+    setPatternStrokes((prev) => prev.filter((p) => p.id !== selectedPatternId));
+    setSelectedPatternId(null);
+  }, [selectedPatternId, commit]);
 
   // ── Freihand-Zeichnen ────────────────────────────────
   const getPointerPercent = useCallback((e: React.PointerEvent) => {
@@ -653,6 +833,7 @@ export function ChalkPosterGenerator() {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedStrokeId) deleteSelectedStroke();
         else if (selectedAssetId) deleteSelected();
+        else if (selectedPatternId) deleteSelectedPattern();
         return;
       }
       // Modus + Pinselgröße
@@ -669,6 +850,8 @@ export function ChalkPosterGenerator() {
     deleteSelected,
     selectedStrokeId,
     deleteSelectedStroke,
+    selectedPatternId,
+    deleteSelectedPattern,
     undo,
     redo,
   ]);
@@ -686,6 +869,7 @@ export function ChalkPosterGenerator() {
       weight: headerWeight,
       color: headerColor,
       align: textAligns.header,
+      outline: headerOutline,
     },
     {
       key: "sub" as PosKey,
@@ -695,6 +879,7 @@ export function ChalkPosterGenerator() {
       weight: "600",
       color: subColor,
       align: textAligns.sub,
+      outline: subOutline,
     },
     {
       key: "body" as PosKey,
@@ -704,6 +889,7 @@ export function ChalkPosterGenerator() {
       weight: "400",
       color: bodyColor,
       align: textAligns.body,
+      outline: bodyOutline,
     },
     {
       key: "detail" as PosKey,
@@ -713,6 +899,7 @@ export function ChalkPosterGenerator() {
       weight: "400",
       color: detailColor,
       align: textAligns.detail,
+      outline: detailOutline,
     },
   ];
 
@@ -733,6 +920,7 @@ export function ChalkPosterGenerator() {
         weight: t.weight,
         color: t.color,
         align: t.align,
+        outline: t.outline,
         x: positions[t.key].x,
         y: positions[t.key].y,
       })),
@@ -838,6 +1026,8 @@ export function ChalkPosterGenerator() {
     setWeight: setHeaderWeight,
     color: headerColor,
     setColor: setHeaderColor,
+    outline: headerOutline,
+    setOutline: setHeaderOutline,
   };
   const subField: TextFieldState = {
     text: subText,
@@ -850,6 +1040,8 @@ export function ChalkPosterGenerator() {
     sizeMax: 60,
     color: subColor,
     setColor: setSubColor,
+    outline: subOutline,
+    setOutline: setSubOutline,
   };
   const bodyField: TextFieldState = {
     text: bodyText,
@@ -863,6 +1055,8 @@ export function ChalkPosterGenerator() {
     multiline: true,
     color: bodyColor,
     setColor: setBodyColor,
+    outline: bodyOutline,
+    setOutline: setBodyOutline,
   };
   const detailField: TextFieldState = {
     text: detailText,
@@ -920,6 +1114,7 @@ export function ChalkPosterGenerator() {
             onUpdateSelected={updateSelected}
             onDeleteSelected={deleteSelected}
             onLayer={handleLayer}
+            onChalkChange={updateAssetChalk}
           />
         }
         onRandomize={generateAll}
@@ -943,8 +1138,53 @@ export function ChalkPosterGenerator() {
             setSelectedAssetId(null);
             setSelectedStrokeId(null);
             setSelectedTextKey(null);
+            setSelectedPatternId(null);
           }}
         >
+          {/* Hintergrund-Linien: Hit-/Drag-Flächen (unterste interaktive Ebene).
+              Liegt als erstes Kind mit zIndex 0 unter Assets/Text/fetten Strichen. */}
+          <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              zIndex: 0,
+              pointerEvents: "none",
+              overflow: "visible",
+            }}
+          >
+            {patternStrokes.map((ps) => {
+              const ox = ps.offsetX ?? 0;
+              const oy = ps.offsetY ?? 0;
+              const d = ps.points
+                .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x + ox} ${p.y + oy}`)
+                .join(" ");
+              const sw = Math.max((ps.weight / size.w) * 100, 2.5);
+              const isSel = selectedPatternId === ps.id;
+              return (
+                <path
+                  key={ps.id}
+                  d={d}
+                  fill="none"
+                  stroke={isSel ? "rgba(255,255,255,0.5)" : "transparent"}
+                  strokeWidth={sw}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={isSel ? "1.5 1.5" : undefined}
+                  style={{
+                    pointerEvents: mode === "move" ? "stroke" : "none",
+                    cursor: dragging === ps.id ? "grabbing" : "grab",
+                  }}
+                  onPointerDown={(e) => handlePatternPointerDown(ps.id, e)}
+                  onClick={() => setSelectedPatternId(ps.id)}
+                />
+              );
+            })}
+          </svg>
+
           {/* Fette Striche: präzise Klick-/Drag-Flächen entlang des Pfades */}
           <svg
             viewBox="0 0 100 100"
@@ -1110,6 +1350,7 @@ export function ChalkPosterGenerator() {
               weight={item.weight}
               color={item.color}
               align={item.align}
+              outline={item.outline}
               position={positions[item.key]}
               scale={scale}
               dragging={dragging === item.key}

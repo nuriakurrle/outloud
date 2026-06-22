@@ -21,6 +21,9 @@ export interface TextFieldState {
   setWeight?: (v: string) => void;
   color?: string;
   setColor?: (v: string) => void;
+  // Umriss-Stil: hohle Buchstaben mit Kontur (wie der Referenz-Titel)
+  outline?: boolean;
+  setOutline?: (v: boolean) => void;
 }
 
 // Schriftfarbe: nur Weiß (Kreide) oder Schwarz.
@@ -247,6 +250,41 @@ function TextSection({ fonts, field }: { fonts: FontOption[]; field: TextFieldSt
           onChange={field.setWeight}
         />
       )}
+      {field.setOutline && (
+        <div className={styles.field}>
+          <span className={styles.label}>Stil</span>
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            {[
+              { label: "Gefüllt", val: false },
+              { label: "Umriss", val: true },
+            ].map((o) => {
+              const active = (field.outline ?? false) === o.val;
+              return (
+                <button
+                  key={o.label}
+                  onClick={() => field.setOutline?.(o.val)}
+                  style={{
+                    flex: 1,
+                    padding: "5px 8px",
+                    borderRadius: 6,
+                    background: active
+                      ? "rgba(255,255,255,0.16)"
+                      : "rgba(255,255,255,0.04)",
+                    border: active
+                      ? "1px solid rgba(255,255,255,0.5)"
+                      : "1px solid rgba(255,255,255,0.15)",
+                    color: "#f5f2ed",
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -265,7 +303,7 @@ export function Sidebar(props: SidebarProps) {
       {/* 🎲 Alles neu generieren — generative Vielfalt im Brand-Rahmen */}
       <button
         onClick={props.onRandomize}
-        title="Komplett neues Design generieren (Muster, Rahmen, Striche, Akzent)"
+        title="Komplett neues Design: Layout, Schriften & Hintergrund-Muster (Text-Inhalte & platzierte Illustrationen bleiben erhalten)"
         style={{
           margin: "0 12px 8px",
           padding: "10px 12px",
@@ -342,8 +380,12 @@ export function Sidebar(props: SidebarProps) {
           isOpen={open === "pattern"}
           onToggle={() => toggle("pattern")}
         >
-          <button className={styles.regenButton} onClick={props.onRegenerate}>
-            🎲 Neues Muster
+          <button
+            className={styles.regenButton}
+            onClick={props.onRegenerate}
+            title="Nur die Hintergrund-Linien neu würfeln (gleiche Einstellungen, neue Anordnung)"
+          >
+            🎲 Neue Linien
           </button>
           <Slider
             label="Striche"

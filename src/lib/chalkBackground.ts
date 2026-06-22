@@ -26,7 +26,7 @@ function luminance(hex: string): number {
 }
 
 /** Kreide-Farbe (RGB-Tripel) passend zum Hintergrund: hell auf dunkel, dunkel auf hell. */
-function chalkRgbFor(bg: string): string {
+export function chalkRgbFor(bg: string): string {
   return luminance(bg) > 140 ? CHALK_RGB_DARK : CHALK_RGB;
 }
 
@@ -80,10 +80,13 @@ export function generateChalkStrokes(
     }
 
     strokes.push({
+      id: `p${i}`,
       points,
       weight: config.weight * (0.7 + rng() * 0.6),
       opacity: (config.opacity / 100) * (0.7 + rng() * 0.3),
       seed: Math.floor(rng() * 99999),
+      offsetX: 0,
+      offsetY: 0,
     });
   }
 
@@ -131,9 +134,11 @@ export function renderPatternStrokes(
     const sp = Math.max(0, Math.min(1, (drawProgress - sStart) / (sEnd - sStart)));
     if (sp <= 0) continue;
 
+    const ox = stroke.offsetX ?? 0;
+    const oy = stroke.offsetY ?? 0;
     const pts = stroke.points.map((p) => ({
-      x: (p.x / 100) * w,
-      y: (p.y / 100) * h,
+      x: ((p.x + ox) / 100) * w,
+      y: ((p.y + oy) / 100) * h,
     }));
 
     renderSingleChalkStroke(
@@ -146,6 +151,42 @@ export function renderPatternStrokes(
       chalkRgb
     );
   }
+}
+
+/**
+ * Rendert einen einzelnen Pattern-Strich (an seiner Basis-Position, ohne
+ * Offset) in einen eigenen Canvas. Dient als Cache für die statische Vorschau:
+ * Verschieben wird dann per `drawImage`-Offset gezeichnet → flüssiges Draggen,
+ * ohne den teuren Grain-Render pro Frame zu wiederholen.
+ */
+export function renderPatternStrokeCanvas(
+  stroke: PatternStroke,
+  w: number,
+  h: number,
+  dpr: number,
+  chalkRgb: string
+): HTMLCanvasElement {
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(w * dpr));
+  c.height = Math.max(1, Math.round(h * dpr));
+  const ctx = c.getContext("2d");
+  if (ctx) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const pts = stroke.points.map((p) => ({
+      x: (p.x / 100) * w,
+      y: (p.y / 100) * h,
+    }));
+    renderSingleChalkStroke(
+      ctx,
+      pts,
+      stroke.weight,
+      stroke.opacity,
+      stroke.seed,
+      1,
+      chalkRgb
+    );
+  }
+  return c;
 }
 
 function pathLength(pts: Array<{ x: number; y: number }>): number {
