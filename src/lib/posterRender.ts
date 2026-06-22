@@ -106,7 +106,8 @@ export function renderPosterScene(
     h,
     scene.patternStrokes,
     scene.pattern.seed,
-    patternProgress
+    patternProgress,
+    scene.bg
   );
 
   // 4. Fette Kreide-Striche (zIndex-Reihenfolge, statisch)

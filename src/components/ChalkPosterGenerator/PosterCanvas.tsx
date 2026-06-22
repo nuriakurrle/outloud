@@ -24,6 +24,7 @@ interface PosterCanvasProps {
   pattern: PatternConfig;
   patternStrokes: PatternStroke[];
   strokes: ChalkStroke[];
+  bg: string;
   scale: number;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onBackgroundClick?: () => void;
@@ -45,6 +46,7 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
       pattern,
       patternStrokes,
       strokes,
+      bg,
       scale,
       containerRef,
       onBackgroundClick,
@@ -76,7 +78,7 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
       ctx.clearRect(0, 0, size.w, size.h);
 
       // Tafel + Grain + Hintergrund-Muster (gecachte Tafel, animierbar)
-      drawChalkBackground(ctx, size.w, size.h, patternStrokes, pattern.seed, progress);
+      drawChalkBackground(ctx, size.w, size.h, patternStrokes, pattern.seed, progress, bg);
 
       // Fette Kreide-Striche (generiert + freihand) in zIndex-Reihenfolge
       const cache = strokeCache.current;
@@ -95,7 +97,7 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
         compositeStroke(ctx, entry.canvas, stroke, size.w, size.h);
       }
     },
-    [size, pattern.seed, patternStrokes, strokes]
+    [size, pattern.seed, patternStrokes, strokes, bg]
   );
 
   useEffect(() => {

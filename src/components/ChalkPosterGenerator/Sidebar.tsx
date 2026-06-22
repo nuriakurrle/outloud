@@ -29,11 +29,21 @@ const TEXT_COLORS = [
   { label: "Schwarz", hex: "#1e1e1e" },
 ];
 
+// Hintergrund: dunkle Tafel oder helles Papier.
+const BG_COLORS = [
+  { label: "Schwarz", hex: "#1e1e1e" },
+  { label: "Weiß", hex: "#efeae0" },
+];
+
 interface SidebarProps {
   fonts: FontOption[];
   sizes: PosterSize[];
   posterSizeIndex: number;
   setPosterSizeIndex: (v: number) => void;
+
+  // Hintergrundfarbe (Tafel/Papier)
+  bg: string;
+  setBg: (hex: string) => void;
 
   // Kreide-Muster (Hintergrund)
   pattern: PatternConfig;
@@ -291,6 +301,32 @@ export function Sidebar(props: SidebarProps) {
             }))}
             onChange={(v) => props.setPosterSizeIndex(Number(v))}
           />
+          <div className={styles.field}>
+            <span className={styles.label}>Hintergrund</span>
+            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+              {BG_COLORS.map((c) => {
+                const active = props.bg.toLowerCase() === c.hex.toLowerCase();
+                return (
+                  <button
+                    key={c.hex}
+                    title={c.label}
+                    onClick={() => props.setBg(c.hex)}
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: "50%",
+                      background: c.hex,
+                      border: active
+                        ? "2px solid #fff"
+                        : "2px solid rgba(255,255,255,0.25)",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
         </Section>
 
         <Section

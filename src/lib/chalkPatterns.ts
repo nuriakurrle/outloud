@@ -141,7 +141,8 @@ export function drawBoardTexture(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  seed: number
+  seed: number,
+  base = 30 // Grundhelligkeit R/G/B (30 = #1e1e1e Tafel, ~232 = helles Papier)
 ): void {
   const noise = new SimpleNoise(seed + 999);
   const gw = Math.max(1, Math.floor(w));
@@ -155,7 +156,6 @@ export function drawBoardTexture(
 
   const imageData = octx.createImageData(gw, gh);
   const data = imageData.data;
-  const base = 30; // R/G/B von #1e1e1e
 
   for (let y = 0; y < gh; y++) {
     for (let x = 0; x < gw; x++) {

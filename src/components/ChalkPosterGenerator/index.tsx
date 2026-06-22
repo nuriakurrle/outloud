@@ -68,6 +68,9 @@ export function ChalkPosterGenerator() {
   const [posterSizeIndex, setPosterSizeIndex] = useState(0);
   const size = POSTER_SIZES[posterSizeIndex];
 
+  // Hintergrundfarbe: dunkle Tafel oder helles Papier (wählbar)
+  const [bgColor, setBgColor] = useState(POSTER_BG);
+
   // Kreide-Muster (Hintergrund) — generative Striche, die sich animiert
   // selbst zeichnen können.
   const [patternConfig, setPatternConfig] = useState<PatternConfig>({
@@ -568,11 +571,11 @@ export function ChalkPosterGenerator() {
       pts,
       STRETCH_BRUSHES[drawBrush],
       brushSize,
-      isErasing ? POSTER_BG : chalkColor,
+      isErasing ? bgColor : chalkColor,
       isErasing ? 1 : brushOpacity,
       liveSeedRef.current
     );
-  }, [drawBrush, brushSize, chalkColor, brushOpacity, isErasing, size.w, size.h]);
+  }, [drawBrush, brushSize, chalkColor, brushOpacity, isErasing, bgColor, size.w, size.h]);
 
   const handleDrawStart = useCallback(
     (e: React.PointerEvent) => {
@@ -619,13 +622,13 @@ export function ChalkPosterGenerator() {
         smoothed,
         brushSize,
         isErasing ? 1 : brushOpacity,
-        isErasing ? POSTER_BG : chalkColor,
+        isErasing ? bgColor : chalkColor,
         drawBrush,
         prev.length,
         liveSeedRef.current
       ),
     ]);
-  }, [isDrawing, commit, brushSize, brushOpacity, chalkColor, drawBrush, isErasing, clearLiveCanvas]);
+  }, [isDrawing, commit, brushSize, brushOpacity, chalkColor, drawBrush, isErasing, bgColor, clearLiveCanvas]);
 
   // Delete-Taste, Undo/Redo
   useEffect(() => {
@@ -718,7 +721,7 @@ export function ChalkPosterGenerator() {
     return {
       w: size.w,
       h: size.h,
-      bg: POSTER_BG,
+      bg: bgColor,
       pattern: patternConfig,
       patternStrokes,
       strokes,
@@ -746,6 +749,7 @@ export function ChalkPosterGenerator() {
     };
   }, [
     size,
+    bgColor,
     patternConfig,
     patternStrokes,
     positions,
@@ -881,6 +885,8 @@ export function ChalkPosterGenerator() {
         sizes={POSTER_SIZES}
         posterSizeIndex={posterSizeIndex}
         setPosterSizeIndex={setPosterSizeIndex}
+        bg={bgColor}
+        setBg={setBgColor}
         pattern={patternConfig}
         setPattern={updatePattern}
         onRegenerate={() =>
@@ -930,6 +936,7 @@ export function ChalkPosterGenerator() {
           pattern={patternConfig}
           patternStrokes={patternStrokes}
           strokes={strokes}
+          bg={bgColor}
           scale={scale}
           containerRef={containerRef}
           onBackgroundClick={() => {

@@ -13,7 +13,23 @@ import { seededRandom } from "./seededRandom";
 import { drawBoardTexture } from "./chalkPatterns";
 
 const BOARD_BG = "#1e1e1e";
-const CHALK_RGB = "224,221,216"; // #e0ddd8
+const CHALK_RGB = "224,221,216"; // helle Kreide auf dunkler Tafel
+const CHALK_RGB_DARK = "38,38,38"; // dunkle Kreide auf hellem Hintergrund
+
+/** Relative Helligkeit eines Hex-Farbwerts (0–255). */
+function luminance(hex: string): number {
+  const c = hex.replace("#", "");
+  if (c.length < 6) return 30;
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+/** Kreide-Farbe (RGB-Tripel) passend zum Hintergrund: hell auf dunkel, dunkel auf hell. */
+function chalkRgbFor(bg: string): string {
+  return luminance(bg) > 140 ? CHALK_RGB_DARK : CHALK_RGB;
+}
 
 // ── Striche generieren ──────────────────────────────────────────────────
 
@@ -79,9 +95,14 @@ export function generateChalkStrokes(
 
 const boardCache = new Map<string, HTMLCanvasElement>();
 
-/** Tafel (Hintergrund + Grain) — pro Seed/Größe einmal gebaut und gecacht. */
-function getBoard(w: number, h: number, seed: number): HTMLCanvasElement {
-  const key = `${seed}|${Math.round(w)}x${Math.round(h)}`;
+/** Tafel (Hintergrund + Grain) — pro Seed/Größe/Farbe einmal gebaut und gecacht. */
+function getBoard(
+  w: number,
+  h: number,
+  seed: number,
+  bg: string
+): HTMLCanvasElement {
+  const key = `${seed}|${Math.round(w)}x${Math.round(h)}|${bg}`;
   const cached = boardCache.get(key);
   if (cached) return cached;
 
@@ -89,9 +110,9 @@ function getBoard(w: number, h: number, seed: number): HTMLCanvasElement {
   board.width = Math.max(1, Math.round(w));
   board.height = Math.max(1, Math.round(h));
   const bctx = board.getContext("2d")!;
-  bctx.fillStyle = BOARD_BG;
+  bctx.fillStyle = bg;
   bctx.fillRect(0, 0, board.width, board.height);
-  drawBoardTexture(bctx, board.width, board.height, seed);
+  drawBoardTexture(bctx, board.width, board.height, seed, Math.round(luminance(bg)));
 
   // Cache klein halten (verschiedene Seeds/Größen während des Editierens)
   if (boardCache.size > 6) {
@@ -114,10 +135,11 @@ export function drawChalkBackground(
   h: number,
   strokes: PatternStroke[],
   seed: number,
-  progress = 1
+  progress = 1,
+  bg = BOARD_BG
 ): void {
-  ctx.drawImage(getBoard(w, h, seed), 0, 0, w, h);
-  renderPatternStrokes(ctx, strokes, w, h, progress);
+  ctx.drawImage(getBoard(w, h, seed, bg), 0, 0, w, h);
+  renderPatternStrokes(ctx, strokes, w, h, progress, chalkRgbFor(bg));
 }
 
 // ── Striche rendern ─────────────────────────────────────────────────────
@@ -127,7 +149,8 @@ export function renderPatternStrokes(
   strokes: PatternStroke[],
   w: number,
   h: number,
-  drawProgress = 1
+  drawProgress = 1,
+  chalkRgb: string = CHALK_RGB
 ): void {
   for (let i = 0; i < strokes.length; i++) {
     const stroke = strokes[i];
@@ -143,7 +166,15 @@ export function renderPatternStrokes(
       y: (p.y / 100) * h,
     }));
 
-    renderSingleChalkStroke(ctx, pts, stroke.weight, stroke.opacity, stroke.seed, sp);
+    renderSingleChalkStroke(
+      ctx,
+      pts,
+      stroke.weight,
+      stroke.opacity,
+      stroke.seed,
+      sp,
+      chalkRgb
+    );
   }
 }
 
@@ -161,7 +192,8 @@ export function renderSingleChalkStroke(
   weight: number,
   opacity: number,
   seed: number,
-  drawProgress = 1
+  drawProgress = 1,
+  chalkRgb: string = CHALK_RGB
 ): void {
   if (points.length < 2) return;
   const rng = seededRandom(seed);
@@ -215,7 +247,7 @@ export function renderSingleChalkStroke(
         const a =
           opacity * (0.05 + rng() * 0.45) * (0.5 + gv * 0.5) * (1 - edge * 0.3);
 
-        ctx.fillStyle = `rgba(${CHALK_RGB},${Math.min(1, a)})`;
+        ctx.fillStyle = `rgba(${chalkRgb},${Math.min(1, a)})`;
         ctx.beginPath();
 
         if (rng() > 0.3) {
