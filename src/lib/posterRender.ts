@@ -147,7 +147,7 @@ export function renderPosterScene(
       renderPlacedStroke(ctx, drawImg, {
         px,
         py,
-        scaleX: sc,
+        scaleX: sc * (asset.scaleX ?? 1),
         scaleY: sc * (asset.scaleY ?? 1),
         rotation: asset.rotation,
         flipX: asset.flipX,
@@ -157,8 +157,9 @@ export function renderPosterScene(
       continue;
     }
 
-    const targetW = asset.scale * w;
-    const targetH = targetW * (ih / iw);
+    const baseW = asset.scale * w;
+    const targetW = baseW * (asset.scaleX ?? 1);
+    const targetH = baseW * (ih / iw) * (asset.scaleY ?? 1);
     ctx.save();
     ctx.translate(px, py);
     ctx.rotate((asset.rotation * Math.PI) / 180);

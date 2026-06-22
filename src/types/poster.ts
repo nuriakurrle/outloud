@@ -119,8 +119,10 @@ export interface PlacedAsset {
   opacity: number; // 0–1
   flipX: boolean; // Horizontal spiegeln
   zIndex: number; // Ebene
-  // Nur für Stroke-Stamps:
-  scaleY?: number; // Strichstärke (vertikal), unabhängig von der Länge (Default 1)
+  // Freies Stretchen (per Maus-Griffe): horizontaler/vertikaler Streckfaktor
+  // zusätzlich zur Basis-Größe `scale` (Default je 1).
+  scaleX?: number; // Horizontaler Streckfaktor (Default 1)
+  scaleY?: number; // Vertikaler Streckfaktor / Strichstärke (Default 1)
   flipY?: boolean; // Vertikal spiegeln
   tint?: string; // Kreide-Farbe (Hex); leer = weiß
 }

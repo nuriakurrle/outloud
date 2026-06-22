@@ -17,11 +17,7 @@ import { STRETCH_BRUSHES } from "../../lib/stretchBrush";
 import { DrawingToolbar } from "./DrawingToolbar";
 import { smartPlace } from "../../lib/smartPlace";
 import { ASSET_REGISTRY } from "../../assetRegistry";
-import {
-  STROKE_ASSETS,
-  isDefaultWhite,
-  isMaskAsset,
-} from "../../lib/strokeStamps";
+import { isDefaultWhite, isMaskAsset } from "../../lib/strokeStamps";
 import { SHAPE_ASSETS } from "../../lib/shapeAssets";
 import { Sidebar, type TextFieldState } from "./Sidebar";
 import { PosterCanvas, type PosterCanvasHandle } from "./PosterCanvas";
@@ -143,6 +139,12 @@ export function ChalkPosterGenerator() {
   const [detailFont, setDetailFont] = useState("Special Elite");
   const [detailSize, setDetailSize] = useState(14);
 
+  // Schriftfarbe je Textfeld: Weiß (Kreide) oder Schwarz.
+  const [headerColor, setHeaderColor] = useState(CHALK);
+  const [subColor, setSubColor] = useState(CHALK);
+  const [bodyColor, setBodyColor] = useState(CHALK);
+  const [detailColor, setDetailColor] = useState(CHALK_DIM);
+
   // Positionen (%) für Drag & Drop
   const [positions, setPositions] = useState<Record<PosKey, Position>>({
     header: { x: 50, y: 22 },
@@ -162,7 +164,7 @@ export function ChalkPosterGenerator() {
   // Vom Nutzer hochgeladene Illustrationen (zusätzlich zum Registry)
   const [customAssets, setCustomAssets] = useState<AssetItem[]>([]);
   const allAssets = useMemo(
-    () => [...ASSET_REGISTRY, ...SHAPE_ASSETS, ...STROKE_ASSETS, ...customAssets],
+    () => [...ASSET_REGISTRY, ...SHAPE_ASSETS, ...customAssets],
     [customAssets]
   );
 
@@ -665,7 +667,7 @@ export function ChalkPosterGenerator() {
       font: headerFont,
       size: headerSize,
       weight: headerWeight,
-      color: CHALK,
+      color: headerColor,
     },
     {
       key: "sub" as PosKey,
@@ -673,7 +675,7 @@ export function ChalkPosterGenerator() {
       font: subFont,
       size: subSize,
       weight: "600",
-      color: CHALK,
+      color: subColor,
     },
     {
       key: "body" as PosKey,
@@ -681,7 +683,7 @@ export function ChalkPosterGenerator() {
       font: bodyFont,
       size: bodySize,
       weight: "400",
-      color: CHALK,
+      color: bodyColor,
     },
     {
       key: "detail" as PosKey,
@@ -689,7 +691,7 @@ export function ChalkPosterGenerator() {
       font: detailFont,
       size: detailSize,
       weight: "400",
-      color: CHALK_DIM,
+      color: detailColor,
     },
   ];
 
@@ -811,6 +813,8 @@ export function ChalkPosterGenerator() {
     sizeMax: 100,
     weight: headerWeight,
     setWeight: setHeaderWeight,
+    color: headerColor,
+    setColor: setHeaderColor,
   };
   const subField: TextFieldState = {
     text: subText,
@@ -821,6 +825,8 @@ export function ChalkPosterGenerator() {
     setSize: setSubSize,
     sizeMin: 14,
     sizeMax: 60,
+    color: subColor,
+    setColor: setSubColor,
   };
   const bodyField: TextFieldState = {
     text: bodyText,
@@ -832,6 +838,8 @@ export function ChalkPosterGenerator() {
     sizeMin: 10,
     sizeMax: 40,
     multiline: true,
+    color: bodyColor,
+    setColor: setBodyColor,
   };
   const detailField: TextFieldState = {
     text: detailText,
@@ -843,6 +851,8 @@ export function ChalkPosterGenerator() {
     sizeMin: 8,
     sizeMax: 30,
     multiline: true,
+    color: detailColor,
+    setColor: setDetailColor,
   };
 
   return (
@@ -967,7 +977,8 @@ export function ChalkPosterGenerator() {
               const nh = item.naturalHeight ?? 1;
               const widthPx = asset.scale * displayW;
               const heightPx = widthPx * (nh / nw);
-              const thickness = asset.scaleY ?? 1;
+              const stretchX = asset.scaleX ?? 1;
+              const stretchY = asset.scaleY ?? 1;
               const mask = `url("${item.src}")`;
               return (
                 <div
@@ -979,7 +990,7 @@ export function ChalkPosterGenerator() {
                     top: `${asset.y}%`,
                     width: `${widthPx}px`,
                     height: `${heightPx}px`,
-                    transform: `translate(-50%, -50%) rotate(${asset.rotation}deg) scale(${asset.flipX ? -1 : 1}, ${(asset.flipY ? -1 : 1) * thickness})`,
+                    transform: `translate(-50%, -50%) rotate(${asset.rotation}deg) scale(${(asset.flipX ? -1 : 1) * stretchX}, ${(asset.flipY ? -1 : 1) * stretchY})`,
                     transformOrigin: "center",
                     opacity: asset.opacity,
                     zIndex: asset.zIndex,
@@ -1023,9 +1034,7 @@ export function ChalkPosterGenerator() {
                   // Breite = Anteil der Posterbreite (in Anzeige-Pixeln)
                   width: `${asset.scale * displayW}px`,
                   height: "auto",
-                  transform: `translate(-50%, -50%) ${
-                    asset.flipX ? "scaleX(-1)" : ""
-                  } rotate(${asset.rotation}deg)`,
+                  transform: `translate(-50%, -50%) rotate(${asset.rotation}deg) scale(${(asset.flipX ? -1 : 1) * (asset.scaleX ?? 1)}, ${asset.scaleY ?? 1})`,
                   transformOrigin: "center",
                   opacity: asset.opacity,
                   zIndex: asset.zIndex,
@@ -1042,25 +1051,23 @@ export function ChalkPosterGenerator() {
           {selectedAsset &&
             (() => {
               const it = allAssets.find((x) => x.id === selectedAsset.assetId);
-              let ratio = 1;
-              if (it && isMaskAsset(it.category) && it.naturalWidth) {
-                ratio =
-                  (it.naturalHeight! / it.naturalWidth) *
-                  (selectedAsset.scaleY ?? 1);
-              } else {
-                ratio =
-                  imgRatios.current.get(selectedAsset.assetId) ??
-                  (it?.naturalWidth && it?.naturalHeight
-                    ? it.naturalHeight / it.naturalWidth
-                    : 1);
-              }
+              // Natürliches Höhen-/Breitenverhältnis (ohne Stretch)
+              const baseRatio =
+                it && isMaskAsset(it.category) && it.naturalWidth
+                  ? it.naturalHeight! / it.naturalWidth
+                  : imgRatios.current.get(selectedAsset.assetId) ??
+                    (it?.naturalWidth && it?.naturalHeight
+                      ? it.naturalHeight / it.naturalWidth
+                      : 1);
+              const baseW = selectedAsset.scale * displayW;
+              const widthPx = baseW * (selectedAsset.scaleX ?? 1);
+              const heightPx = baseW * baseRatio * (selectedAsset.scaleY ?? 1);
               return (
                 <SelectionHandles
                   asset={selectedAsset}
                   containerRef={containerRef}
-                  displayW={displayW}
-                  displayH={displayH}
-                  heightRatio={ratio}
+                  widthPx={widthPx}
+                  heightPx={heightPx}
                   onStart={commit}
                   onChange={updateSelected}
                 />

@@ -19,7 +19,15 @@ export interface TextFieldState {
   multiline?: boolean;
   weight?: string;
   setWeight?: (v: string) => void;
+  color?: string;
+  setColor?: (v: string) => void;
 }
+
+// Schriftfarbe: nur Weiß (Kreide) oder Schwarz.
+const TEXT_COLORS = [
+  { label: "Weiß", hex: "#e0e0e0" },
+  { label: "Schwarz", hex: "#1e1e1e" },
+];
 
 interface SidebarProps {
   fonts: FontOption[];
@@ -187,6 +195,36 @@ function TextSection({ fonts, field }: { fonts: FontOption[]; field: TextFieldSt
         max={field.sizeMax}
         onChange={field.setSize}
       />
+      {field.setColor && (
+        <div className={styles.field}>
+          <span className={styles.label}>Farbe</span>
+          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+            {TEXT_COLORS.map((c) => {
+              const isBlack = c.hex === "#1e1e1e";
+              const curBlack = (field.color ?? "#e0e0e0") === "#1e1e1e";
+              const active = isBlack ? curBlack : !curBlack;
+              return (
+                <button
+                  key={c.hex}
+                  title={c.label}
+                  onClick={() => field.setColor?.(c.hex)}
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    background: c.hex,
+                    border: active
+                      ? "2px solid #fff"
+                      : "2px solid rgba(255,255,255,0.25)",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
       {field.setWeight && (
         <Select
           label="Gewicht"
