@@ -26,6 +26,7 @@ import { SelectionHandles } from "./SelectionHandles";
 import { AssetPanel } from "./AssetPanel";
 import { LayoutPanel } from "./LayoutPanel";
 import { LAYOUTS, type PosterLayout } from "./layouts";
+import type { Align } from "../../lib/layouts";
 import { type PosterScene, type SceneAsset } from "../../lib/posterRender";
 import { exportPNG, exportGIF, exportVideo, downloadBlob } from "../../lib/exporter";
 import styles from "../../styles/chalkPoster.module.css";
@@ -151,6 +152,13 @@ export function ChalkPosterGenerator() {
     sub: { x: 50, y: 35 },
     body: { x: 50, y: 52 },
     detail: { x: 50, y: 82 },
+  });
+  // Ausrichtung je Textfeld (vom Layout gesetzt, Default zentriert)
+  const [textAligns, setTextAligns] = useState<Record<PosKey, Align>>({
+    header: "center",
+    sub: "center",
+    body: "center",
+    detail: "center",
   });
 
   // Platzierte Logos/Illustrationen
@@ -440,6 +448,12 @@ export function ChalkPosterGenerator() {
   // Logos der Reihe nach in die Logo-Plätze des Layouts.
   const applyLayout = useCallback((layout: PosterLayout) => {
     setPositions(layout.positions);
+    setTextAligns({
+      header: layout.aligns?.header ?? "center",
+      sub: layout.aligns?.sub ?? "center",
+      body: layout.aligns?.body ?? "center",
+      detail: layout.aligns?.detail ?? "center",
+    });
     const logos = ASSET_REGISTRY.filter((a) => a.category === "logos");
     if (logos.length === 0) {
       setPlacedAssets([]);
@@ -668,6 +682,7 @@ export function ChalkPosterGenerator() {
       size: headerSize,
       weight: headerWeight,
       color: headerColor,
+      align: textAligns.header,
     },
     {
       key: "sub" as PosKey,
@@ -676,6 +691,7 @@ export function ChalkPosterGenerator() {
       size: subSize,
       weight: "600",
       color: subColor,
+      align: textAligns.sub,
     },
     {
       key: "body" as PosKey,
@@ -684,6 +700,7 @@ export function ChalkPosterGenerator() {
       size: bodySize,
       weight: "400",
       color: bodyColor,
+      align: textAligns.body,
     },
     {
       key: "detail" as PosKey,
@@ -692,6 +709,7 @@ export function ChalkPosterGenerator() {
       size: detailSize,
       weight: "400",
       color: detailColor,
+      align: textAligns.detail,
     },
   ];
 
@@ -711,6 +729,7 @@ export function ChalkPosterGenerator() {
         size: t.size,
         weight: t.weight,
         color: t.color,
+        align: t.align,
         x: positions[t.key].x,
         y: positions[t.key].y,
       })),
@@ -1083,6 +1102,7 @@ export function ChalkPosterGenerator() {
               size={item.size}
               weight={item.weight}
               color={item.color}
+              align={item.align}
               position={positions[item.key]}
               scale={scale}
               dragging={dragging === item.key}

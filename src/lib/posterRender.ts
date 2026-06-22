@@ -27,6 +27,7 @@ export interface SceneText {
   size: number;
   weight: string;
   color: string;
+  align?: "center" | "left" | "right";
   x: number;
   y: number;
 }
@@ -116,10 +117,11 @@ export function renderPosterScene(
   });
 
   // 5. Text
-  ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   for (const item of scene.texts) {
     const text = item.text;
+    const align = item.align ?? "center";
+    ctx.textAlign = align;
     ctx.fillStyle = item.color;
     ctx.font = `${item.weight} ${item.size}px "${item.font}", sans-serif`;
     const cx = (item.x / 100) * w;

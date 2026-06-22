@@ -1,6 +1,8 @@
 import type { Position } from "../../types/poster";
+import type { Align } from "../../lib/layouts";
 
 type PosKey = "header" | "sub" | "body" | "detail" | "divider";
+type TextKey = "header" | "sub" | "body" | "detail";
 
 export interface LogoSlot {
   x: number; // Position in % (0–100)
@@ -14,6 +16,8 @@ export interface PosterLayout {
   /** Kurze Beschreibung für das Mini-Vorschau-Layout */
   hint: string;
   positions: Record<PosKey, Position>;
+  /** Ausrichtung je Textfeld (Default: zentriert). */
+  aligns?: Partial<Record<TextKey, Align>>;
   /** Logo-Plätze – werden der Reihe nach mit den vorhandenen Logos gefüllt */
   logoSlots: LogoSlot[];
 }
@@ -108,5 +112,51 @@ export const LAYOUTS: PosterLayout[] = [
       detail: { x: 50, y: 88 },
     },
     logoSlots: [{ x: 50, y: 17, scale: 0.26 }],
+  },
+
+  // ── Referenz-Layouts (OUTLOUD / Голос!-Stil) ──────────────────────────
+  // Linksbündig: Logo oben links, Titel/Text linksbündig, Hero-Illustration
+  // füllt die Mitte (frei platzierbar), Event-Details unten links.
+  {
+    id: "event_links",
+    name: "Event (Links)",
+    hint: "Logo oben links · Titel & Text links · Details unten",
+    positions: {
+      header: { x: 8, y: 26 },
+      sub: { x: 8, y: 35 },
+      divider: { x: 50, y: 44 },
+      body: { x: 8, y: 42 },
+      detail: { x: 8, y: 88 },
+    },
+    aligns: { header: "left", sub: "left", body: "left", detail: "left" },
+    logoSlots: [{ x: 20, y: 12, scale: 0.3 }],
+  },
+  {
+    id: "aufruf",
+    name: "Aufruf",
+    hint: "Logo oben links · großer Betrag · Aufruf-Text",
+    positions: {
+      header: { x: 50, y: 40 },
+      sub: { x: 8, y: 22 },
+      divider: { x: 50, y: 52 },
+      body: { x: 8, y: 30 },
+      detail: { x: 8, y: 90 },
+    },
+    aligns: { sub: "left", body: "left", detail: "left" },
+    logoSlots: [{ x: 22, y: 12, scale: 0.34 }],
+  },
+  {
+    id: "vs_diskussion",
+    name: "VS-Diskussion",
+    hint: "Großer Titel links · Logo oben rechts · Details rechts",
+    positions: {
+      header: { x: 8, y: 18 },
+      sub: { x: 8, y: 32 },
+      divider: { x: 50, y: 40 },
+      body: { x: 8, y: 42 },
+      detail: { x: 92, y: 86 },
+    },
+    aligns: { header: "left", sub: "left", body: "left", detail: "right" },
+    logoSlots: [{ x: 82, y: 14, scale: 0.3 }],
   },
 ];
