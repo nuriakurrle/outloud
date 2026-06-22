@@ -1,10 +1,5 @@
 import { useState } from "react";
-import type {
-  BorderConfig,
-  DividerStyle,
-  PatternConfig,
-  PosterSize,
-} from "../../types/poster";
+import type { PatternConfig, PosterSize } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 
 interface FontOption {
@@ -32,22 +27,21 @@ interface SidebarProps {
   posterSizeIndex: number;
   setPosterSizeIndex: (v: number) => void;
 
-  patternStyle: PatternConfig["style"];
-  setPatternStyle: (v: PatternConfig["style"]) => void;
-  patternDensity: number;
-  setPatternDensity: (v: number) => void;
-  patternStroke: number;
-  setPatternStroke: (v: number) => void;
-  patternOpacity: number;
-  setPatternOpacity: (v: number) => void;
-  onRegenerate: () => void;
+  // Kreide-Muster (Hintergrund)
+  pattern: PatternConfig;
+  setPattern: (patch: Partial<PatternConfig>) => void;
+  onRegenerate: () => void; // neuer Seed → neues Muster
+  // Pattern-Selbstzeichen-Animation
+  isPlaying: boolean;
+  onTogglePlay: () => void;
+  animDuration: number;
+  setAnimDuration: (v: number) => void;
 
-  borderStyle: BorderConfig["style"];
-  setBorderStyle: (v: BorderConfig["style"]) => void;
-  borderWeight: number;
-  setBorderWeight: (v: number) => void;
-  dividerStyle: DividerStyle["style"];
-  setDividerStyle: (v: DividerStyle["style"]) => void;
+  // Undo/Redo
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 
   layoutSection: React.ReactNode;
 
@@ -58,7 +52,13 @@ interface SidebarProps {
 
   assetSection: React.ReactNode;
 
+  onRandomize: () => void;
   onExport: () => void;
+
+  // Export der Pattern-Animation
+  onExportGif: () => void;
+  onExportVideo: () => void;
+  isExporting: null | "gif" | "video";
 }
 
 // ── kleine Hilfs-Komponenten ─────────────────────────────
@@ -203,30 +203,6 @@ function TextSection({ fonts, field }: { fonts: FontOption[]; field: TextFieldSt
   );
 }
 
-const PATTERN_OPTIONS = [
-  { label: "Fließend", value: "flowing" },
-  { label: "Wirbel", value: "swirls" },
-  { label: "Topografie", value: "topo" },
-  { label: "Gestreut", value: "scattered" },
-  { label: "Keins", value: "none" },
-];
-
-const BORDER_OPTIONS = [
-  { label: "Gestrichelt", value: "dashed" },
-  { label: "Doppelt", value: "double" },
-  { label: "Ornament", value: "ornament" },
-  { label: "Kreide", value: "chalk" },
-  { label: "Keiner", value: "none" },
-];
-
-const DIVIDER_OPTIONS = [
-  { label: "Linie", value: "line" },
-  { label: "Doppellinie", value: "doubleline" },
-  { label: "Punkte", value: "dots" },
-  { label: "Ornament", value: "ornament" },
-  { label: "Keiner", value: "none" },
-];
-
 export function Sidebar(props: SidebarProps) {
   const [open, setOpen] = useState<string>("layout");
   const toggle = (key: string) => setOpen((o) => (o === key ? "" : key));
@@ -234,9 +210,33 @@ export function Sidebar(props: SidebarProps) {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.sidebarHeader}>
-        <h1 className={styles.sidebarTitle}>Kreide-Poster</h1>
-        <p className={styles.sidebarSubtitle}>Generator · weiß auf Tafel</p>
+        <h1 className={styles.sidebarTitle}>Голос!</h1>
+        <p className={styles.sidebarSubtitle}>Generative Identity · Kreide</p>
       </div>
+
+      {/* 🎲 Alles neu generieren — generative Vielfalt im Brand-Rahmen */}
+      <button
+        onClick={props.onRandomize}
+        title="Komplett neues Design generieren (Muster, Rahmen, Striche, Akzent)"
+        style={{
+          margin: "0 12px 8px",
+          padding: "10px 12px",
+          background:
+            "linear-gradient(135deg, rgba(245,230,163,0.18), rgba(140,184,212,0.18))",
+          border: "1px solid rgba(255,255,255,0.18)",
+          borderRadius: 8,
+          color: "#f5f2ed",
+          fontSize: 13,
+          fontWeight: 600,
+          cursor: "pointer",
+          letterSpacing: "0.02em",
+        }}
+      >
+        🎲 Alles neu generieren
+      </button>
+
+      {/* Werkzeug-Umschalter & Freihand-Regler leben jetzt komplett in der
+          schwebenden Bar über dem Poster (siehe DrawingToolbar). */}
 
       <div className={styles.sidebarScroll}>
         <Section
@@ -264,75 +264,86 @@ export function Sidebar(props: SidebarProps) {
         </Section>
 
         <Section
-          title="Kreide-Muster"
+          title="Kreide-Muster (Hintergrund)"
           isOpen={open === "pattern"}
           onToggle={() => toggle("pattern")}
         >
-          <Select
-            label="Stil"
-            value={props.patternStyle}
-            options={PATTERN_OPTIONS}
-            onChange={(v) =>
-              props.setPatternStyle(v as PatternConfig["style"])
-            }
-          />
+          <button className={styles.regenButton} onClick={props.onRegenerate}>
+            🎲 Neues Muster
+          </button>
           <Slider
-            label="Dichte"
-            value={props.patternDensity}
-            min={0}
-            max={100}
-            onChange={props.setPatternDensity}
-          />
-          <Slider
-            label="Strichstärke"
-            value={props.patternStroke}
+            label="Striche"
+            value={props.pattern.count}
             min={1}
-            max={8}
-            step={0.5}
-            onChange={props.setPatternStroke}
+            max={15}
+            onChange={(v) => props.setPattern({ count: v })}
+          />
+          <Slider
+            label="Noise"
+            value={props.pattern.noise}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(v) => props.setPattern({ noise: v })}
+          />
+          <Slider
+            label="Stärke"
+            value={props.pattern.weight}
+            min={5}
+            max={120}
+            onChange={(v) => props.setPattern({ weight: v })}
           />
           <Slider
             label="Deckkraft"
-            value={props.patternOpacity}
-            min={5}
+            value={props.pattern.opacity}
+            min={10}
             max={100}
             suffix="%"
-            onChange={props.setPatternOpacity}
-          />
-          <button className={styles.regenButton} onClick={props.onRegenerate}>
-            ↻ Neues Muster erzeugen
-          </button>
-        </Section>
-
-        <Section
-          title="Rahmen & Trenner"
-          isOpen={open === "border"}
-          onToggle={() => toggle("border")}
-        >
-          <Select
-            label="Rahmenstil"
-            value={props.borderStyle}
-            options={BORDER_OPTIONS}
-            onChange={(v) => props.setBorderStyle(v as BorderConfig["style"])}
+            onChange={(v) => props.setPattern({ opacity: v })}
           />
           <Slider
-            label="Rahmenstärke"
-            value={props.borderWeight}
-            min={1}
-            max={5}
-            onChange={props.setBorderWeight}
+            label="Richtung"
+            value={props.pattern.direction}
+            min={0}
+            max={360}
+            suffix="°"
+            onChange={(v) => props.setPattern({ direction: v })}
           />
-          <Select
-            label="Trennerstil"
-            value={props.dividerStyle}
-            options={DIVIDER_OPTIONS}
-            onChange={(v) => props.setDividerStyle(v as DividerStyle["style"])}
+          <Slider
+            label="Spread"
+            value={props.pattern.spread}
+            min={0}
+            max={1}
+            step={0.05}
+            onChange={(v) => props.setPattern({ spread: v })}
           />
-          <p className={styles.hint}>Trenner ist auf dem Poster verschiebbar ↕</p>
+
+          <div className={styles.label} style={{ marginTop: 14 }}>
+            Animation
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              className={styles.regenButton}
+              style={{ flex: "0 0 auto", margin: 0 }}
+              onClick={props.onTogglePlay}
+            >
+              {props.isPlaying ? "⏹ Stopp" : "▶ Play"}
+            </button>
+            <div style={{ flex: 1 }}>
+              <Slider
+                label="Dauer"
+                value={props.animDuration}
+                min={1}
+                max={15}
+                suffix="s"
+                onChange={props.setAnimDuration}
+              />
+            </div>
+          </div>
         </Section>
 
         <Section
-          title="Logos"
+          title="Illustrationen & Logos"
           isOpen={open === "assets"}
           onToggle={() => toggle("assets")}
         >
@@ -373,9 +384,41 @@ export function Sidebar(props: SidebarProps) {
       </div>
 
       <div className={styles.sidebarFooter}>
+        <div className={styles.assetButtonRow}>
+          <button
+            className={styles.smallButton}
+            onClick={props.onUndo}
+            disabled={!props.canUndo}
+          >
+            ↶ Rückgängig
+          </button>
+          <button
+            className={styles.smallButton}
+            onClick={props.onRedo}
+            disabled={!props.canRedo}
+          >
+            ↷ Wiederholen
+          </button>
+        </div>
         <button className={styles.exportButton} onClick={props.onExport}>
           Export PNG
         </button>
+        <div className={styles.assetButtonRow} style={{ marginTop: 8 }}>
+          <button
+            className={styles.smallButton}
+            onClick={props.onExportGif}
+            disabled={props.isExporting !== null}
+          >
+            {props.isExporting === "gif" ? "GIF …" : "Export GIF"}
+          </button>
+          <button
+            className={styles.smallButton}
+            onClick={props.onExportVideo}
+            disabled={props.isExporting !== null}
+          >
+            {props.isExporting === "video" ? "Video …" : "Export Video"}
+          </button>
+        </div>
       </div>
     </aside>
   );

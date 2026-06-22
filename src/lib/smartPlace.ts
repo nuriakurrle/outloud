@@ -2,7 +2,15 @@ import type { AssetItem } from "../types/poster";
 
 type Zone = { x: number; y: number };
 
-const ZONES: Record<AssetItem["category"], Zone[]> = {
+const DEFAULT_ZONES: Zone[] = [
+  { x: 50, y: 50 },
+  { x: 30, y: 40 },
+  { x: 70, y: 60 },
+  { x: 50, y: 25 },
+  { x: 50, y: 75 },
+];
+
+const ZONES: Partial<Record<AssetItem["category"], Zone[]>> = {
   portraits: [
     { x: 50, y: 40 },
     { x: 25, y: 45 },
@@ -44,7 +52,7 @@ export function smartPlace(
   existingElements: { x: number; y: number }[],
   _posterAspect: number
 ): { x: number; y: number } {
-  const candidates = ZONES[asset.category];
+  const candidates = ZONES[asset.category] ?? DEFAULT_ZONES;
 
   let bestZone = candidates[0];
   let bestMinDist = -Infinity;

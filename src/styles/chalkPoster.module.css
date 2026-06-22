@@ -183,6 +183,105 @@
   line-height: 1.4;
 }
 
+/* ── Brush-Auswahl ───────────────────────────────────── */
+.brushGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.brushCard {
+  cursor: pointer;
+  text-align: center;
+}
+
+.brushCard canvas {
+  width: 100%;
+  height: 36px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  display: block;
+  margin: 0 auto 4px;
+  box-sizing: border-box;
+}
+
+.brushCard:hover canvas {
+  border-color: #4a4a4a;
+}
+
+.brushCardSelected canvas {
+  border-color: #e0e0e0;
+}
+
+.brushCard span {
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.brushCardSelected span {
+  color: #e0e0e0;
+}
+
+/* ── Werkzeug-Toolbar ────────────────────────────────── */
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #2a2a2a;
+  background: #1c1c1c;
+}
+
+.toolToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.toolButton {
+  background: #333;
+  border: 1px solid #3a3a3a;
+  color: #ccc;
+  border-radius: 5px;
+  padding: 9px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.toolButton:hover {
+  background: #3a3a3a;
+}
+
+.toolButtonActive {
+  background: #e0e0e0;
+  color: #111;
+  border-color: #e0e0e0;
+  font-weight: 600;
+}
+
+.toolButtonActive:hover {
+  background: #fff;
+}
+
+/* ── Kreide-Cursor im Zeichen-Modus ──────────────────── */
+.drawCursor {
+  position: fixed;
+  border: 1.5px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+}
+
+.smallButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .exportButton {
   width: 100%;
   background: #e0e0e0;
@@ -204,6 +303,7 @@
 
 /* ── Preview ─────────────────────────────────────────── */
 .preview {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;

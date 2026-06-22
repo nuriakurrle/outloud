@@ -1,4 +1,5 @@
 import type { Position } from "../../types/poster";
+import type { Align } from "../../lib/layouts";
 import styles from "../../styles/chalkPoster.module.css";
 
 interface TextOverlayProps {
@@ -9,10 +10,19 @@ interface TextOverlayProps {
   weight?: string;
   color: string;
   position: Position; // Prozent
+  align?: Align;
   scale: number;
   dragging: boolean;
   onPointerDown: (id: string, e: React.PointerEvent) => void;
 }
+
+// Verankerung: bei left/right ist position.x die linke/rechte Kante,
+// bei center die Mitte — passend zum Canvas-Export (ctx.textAlign).
+const TRANSFORM: Record<Align, string> = {
+  center: "translate(-50%, -50%)",
+  left: "translate(0, -50%)",
+  right: "translate(-100%, -50%)",
+};
 
 export function TextOverlay({
   id,
@@ -22,6 +32,7 @@ export function TextOverlay({
   weight,
   color,
   position,
+  align = "center",
   scale,
   dragging,
   onPointerDown,
@@ -32,6 +43,8 @@ export function TextOverlay({
       style={{
         left: `${position.x}%`,
         top: `${position.y}%`,
+        transform: TRANSFORM[align],
+        textAlign: align,
         fontFamily: `"${font}", sans-serif`,
         fontSize: `${size * scale}px`,
         fontWeight: weight ?? "400",
