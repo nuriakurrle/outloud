@@ -26,12 +26,12 @@ export interface TextFieldState {
 // Schriftfarbe: nur Weiß (Kreide) oder Schwarz.
 const TEXT_COLORS = [
   { label: "Weiß", hex: "#e0e0e0" },
-  { label: "Schwarz", hex: "#1e1e1e" },
+  { label: "Schwarz", hex: "#000000" },
 ];
 
-// Hintergrund: dunkle Tafel oder helles Papier.
+// Hintergrund: echtes Schwarz oder helles Papier.
 const BG_COLORS = [
-  { label: "Schwarz", hex: "#1e1e1e" },
+  { label: "Schwarz", hex: "#000000" },
   { label: "Weiß", hex: "#efeae0" },
 ];
 
@@ -210,8 +210,8 @@ function TextSection({ fonts, field }: { fonts: FontOption[]; field: TextFieldSt
           <span className={styles.label}>Farbe</span>
           <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
             {TEXT_COLORS.map((c) => {
-              const isBlack = c.hex === "#1e1e1e";
-              const curBlack = (field.color ?? "#e0e0e0") === "#1e1e1e";
+              const isBlack = c.hex === "#000000";
+              const curBlack = (field.color ?? "#e0e0e0") === "#000000";
               const active = isBlack ? curBlack : !curBlack;
               return (
                 <button

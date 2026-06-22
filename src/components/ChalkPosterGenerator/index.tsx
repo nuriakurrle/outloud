@@ -59,7 +59,7 @@ const POSTER_SIZES: PosterSize[] = [
 
 const CHALK = "#e0e0e0";
 const CHALK_DIM = "#c0c0c0";
-const POSTER_BG = "#1e1e1e";
+const POSTER_BG = "#000000";
 
 type PosKey = "header" | "sub" | "body" | "detail";
 

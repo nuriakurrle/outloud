@@ -11,7 +11,7 @@ import type { PatternConfig, PatternStroke } from "../types/poster";
 import { SimpleNoise } from "./noise";
 import { seededRandom } from "./seededRandom";
 
-const BOARD_BG = "#1e1e1e";
+const BOARD_BG = "#000000";
 const CHALK_RGB = "224,221,216"; // helle Kreide auf dunkler Tafel
 const CHALK_RGB_DARK = "38,38,38"; // dunkle Kreide auf hellem Hintergrund
 
