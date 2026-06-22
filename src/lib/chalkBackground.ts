@@ -10,7 +10,6 @@
 import type { PatternConfig, PatternStroke } from "../types/poster";
 import { SimpleNoise } from "./noise";
 import { seededRandom } from "./seededRandom";
-import { drawBoardTexture } from "./chalkPatterns";
 
 const BOARD_BG = "#1e1e1e";
 const CHALK_RGB = "224,221,216"; // helle Kreide auf dunkler Tafel
@@ -91,54 +90,25 @@ export function generateChalkStrokes(
   return strokes;
 }
 
-// ── Tafel-Hintergrund (gecacht) ─────────────────────────────────────────
-
-const boardCache = new Map<string, HTMLCanvasElement>();
-
-/** Tafel (Hintergrund + Grain) — pro Seed/Größe/Farbe einmal gebaut und gecacht. */
-function getBoard(
-  w: number,
-  h: number,
-  seed: number,
-  bg: string
-): HTMLCanvasElement {
-  const key = `${seed}|${Math.round(w)}x${Math.round(h)}|${bg}`;
-  const cached = boardCache.get(key);
-  if (cached) return cached;
-
-  const board = document.createElement("canvas");
-  board.width = Math.max(1, Math.round(w));
-  board.height = Math.max(1, Math.round(h));
-  const bctx = board.getContext("2d")!;
-  bctx.fillStyle = bg;
-  bctx.fillRect(0, 0, board.width, board.height);
-  drawBoardTexture(bctx, board.width, board.height, seed, Math.round(luminance(bg)));
-
-  // Cache klein halten (verschiedene Seeds/Größen während des Editierens)
-  if (boardCache.size > 6) {
-    boardCache.delete(boardCache.keys().next().value as string);
-  }
-  boardCache.set(key, board);
-  return board;
-}
-
 // ── Komplett-Hintergrund zeichnen ───────────────────────────────────────
 
 /**
- * Zeichnet Tafel + Grain + alle Pattern-Striche. `progress` (0–1) steuert die
- * Selbstzeichen-Animation; 1 = voll. Der Aufrufer zeichnet ggf. fette Striche,
- * Text und Assets darüber.
+ * Zeichnet die flache Hintergrundfarbe + alle Pattern-Striche. `progress`
+ * (0–1) steuert die Selbstzeichen-Animation; 1 = voll. Nur die Kreide-Striche
+ * werden generiert — der Hintergrund ist eine reine Füllfarbe (kein Grain).
+ * `seed` bleibt für die API-Kompatibilität erhalten (Striche tragen eigene Seeds).
  */
 export function drawChalkBackground(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   strokes: PatternStroke[],
-  seed: number,
+  _seed: number,
   progress = 1,
   bg = BOARD_BG
 ): void {
-  ctx.drawImage(getBoard(w, h, seed, bg), 0, 0, w, h);
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
   renderPatternStrokes(ctx, strokes, w, h, progress, chalkRgbFor(bg));
 }
 
