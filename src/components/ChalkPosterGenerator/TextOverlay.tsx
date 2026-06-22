@@ -13,6 +13,7 @@ interface TextOverlayProps {
   align?: Align;
   scale: number;
   dragging: boolean;
+  selected?: boolean;
   onPointerDown: (id: string, e: React.PointerEvent) => void;
 }
 
@@ -35,6 +36,7 @@ export function TextOverlay({
   align = "center",
   scale,
   dragging,
+  selected = false,
   onPointerDown,
 }: TextOverlayProps) {
   return (
@@ -49,6 +51,10 @@ export function TextOverlay({
         fontSize: `${size * scale}px`,
         fontWeight: weight ?? "400",
         color,
+        // Hover-Affordance: signalisiert, dass Text direkt verschiebbar ist
+        cursor: dragging ? "grabbing" : "grab",
+        outline: selected ? "1.5px dashed rgba(255,255,255,0.7)" : "none",
+        outlineOffset: 4,
       }}
       onPointerDown={(e) => onPointerDown(id, e)}
     >

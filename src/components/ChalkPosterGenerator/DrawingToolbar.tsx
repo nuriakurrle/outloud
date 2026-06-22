@@ -130,45 +130,31 @@ export function DrawingToolbar({
         maxWidth: "calc(100vw - 32px)",
       }}
     >
-      {/* Werkzeug-Umschalter (immer sichtbar) */}
-      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-        {([
-          { m: "move" as ToolMode, icon: "✋", label: "Bewegen" },
-          { m: "draw" as ToolMode, icon: "✏️", label: "Zeichnen" },
-        ]).map(({ m, icon, label }) => {
-          const active = mode === m;
-          return (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              title={label}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                height: 28,
-                padding: "0 10px",
-                borderRadius: 6,
-                background: active
-                  ? "rgba(255,255,255,0.9)"
-                  : "rgba(255,255,255,0.06)",
-                border: active
-                  ? "2px solid #fff"
-                  : "2px solid rgba(255,255,255,0.12)",
-                color: active ? "#1e1e1e" : "#ddd",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              <span style={{ fontSize: 13 }}>{icon}</span>
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Zeichnen-Umschalter: aus = alles direkt mit der Maus beweglich,
+          ein = Freihand-Zeichnen. Kein separater „Bewegen"-Knopf nötig. */}
+      <button
+        onClick={() => setMode(isDraw ? "move" : "draw")}
+        title={isDraw ? "Zeichnen aus (zum Bewegen)" : "Zeichnen einschalten"}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+          height: 28,
+          padding: "0 12px",
+          borderRadius: 6,
+          background: isDraw ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.06)",
+          border: isDraw ? "2px solid #fff" : "2px solid rgba(255,255,255,0.12)",
+          color: isDraw ? "#1e1e1e" : "#ddd",
+          fontSize: 12,
+          fontWeight: 600,
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ fontSize: 13 }}>✏️</span>
+        {isDraw ? "Zeichnen an" : "Zeichnen"}
+      </button>
 
       {isDraw && <div style={DIVIDER} />}
 

@@ -26,6 +26,7 @@ import { SHAPE_ASSETS } from "../../lib/shapeAssets";
 import { Sidebar, type TextFieldState } from "./Sidebar";
 import { PosterCanvas, type PosterCanvasHandle } from "./PosterCanvas";
 import { TextOverlay } from "./TextOverlay";
+import { SelectionHandles } from "./SelectionHandles";
 import { AssetPanel } from "./AssetPanel";
 import { LayoutPanel } from "./LayoutPanel";
 import { LAYOUTS, type PosterLayout } from "./layouts";
@@ -153,6 +154,11 @@ export function ChalkPosterGenerator() {
   // Platzierte Logos/Illustrationen
   const [placedAssets, setPlacedAssets] = useState<PlacedAsset[]>([]);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  // Ausgewähltes Textfeld (für Auswahl-Rahmen)
+  const [selectedTextKey, setSelectedTextKey] = useState<PosKey | null>(null);
+  // Natürliches Höhen-/Breitenverhältnis je Asset (für die Skalier-Griffe),
+  // beim Laden des Bildes erfasst.
+  const imgRatios = useRef<Map<string, number>>(new Map());
   // Vom Nutzer hochgeladene Illustrationen (zusätzlich zum Registry)
   const [customAssets, setCustomAssets] = useState<AssetItem[]>([]);
   const allAssets = useMemo(
@@ -291,6 +297,9 @@ export function ChalkPosterGenerator() {
   const handlePointerDown = useCallback(
     (key: string, e: React.PointerEvent) => {
       const k = key as PosKey;
+      setSelectedTextKey(k);
+      setSelectedAssetId(null);
+      setSelectedStrokeId(null);
       beginDrag(k, positions[k].x, positions[k].y, e);
     },
     [beginDrag, positions]
@@ -302,6 +311,7 @@ export function ChalkPosterGenerator() {
       const a = placedAssets.find((p) => p.id === id);
       if (!a) return;
       setSelectedAssetId(id);
+      setSelectedTextKey(null);
       beginDrag(id, a.x, a.y, e);
     },
     [beginDrag, placedAssets]
@@ -317,6 +327,8 @@ export function ChalkPosterGenerator() {
       if (!s) return;
       commit();
       setSelectedStrokeId(id);
+      setSelectedTextKey(null);
+      setSelectedAssetId(null);
       setDragging(id);
       strokeDrag.current = {
         id,
@@ -894,6 +906,7 @@ export function ChalkPosterGenerator() {
           onBackgroundClick={() => {
             setSelectedAssetId(null);
             setSelectedStrokeId(null);
+            setSelectedTextKey(null);
           }}
         >
           {/* Fette Striche: präzise Klick-/Drag-Flächen entlang des Pfades */}
@@ -943,10 +956,9 @@ export function ChalkPosterGenerator() {
 
           {placedAssets.map((asset) => {
             const item = allAssets.find((a) => a.id === asset.assetId);
-            const isSelected = selectedAssetId === asset.id;
-            const commonOutline = isSelected
-              ? "2px dashed rgba(255,255,255,0.5)"
-              : "none";
+            // Auswahl wird jetzt über die On-Canvas-Griffe angezeigt
+            // (SelectionHandles), daher kein doppelter Outline am Element.
+            const commonOutline = "none";
 
             // Striche & Formen: weiß-auf-transparent als Maske → in
             // Kreide-Farbe getönt, mit getrennter Stärke/Höhe (scaleY) & V-Flip.
@@ -994,6 +1006,15 @@ export function ChalkPosterGenerator() {
                 src={getAssetSrc(asset.assetId)}
                 alt=""
                 draggable={false}
+                onLoad={(e) => {
+                  const im = e.currentTarget;
+                  if (im.naturalWidth > 0) {
+                    imgRatios.current.set(
+                      asset.assetId,
+                      im.naturalHeight / im.naturalWidth
+                    );
+                  }
+                }}
                 onPointerDown={(e) => handleAssetPointerDown(asset.id, e)}
                 style={{
                   position: "absolute",
@@ -1017,6 +1038,35 @@ export function ChalkPosterGenerator() {
               />
             );
           })}
+          {/* On-Canvas-Griffe (Drehen/Skalieren) für das ausgewählte Asset */}
+          {selectedAsset &&
+            (() => {
+              const it = allAssets.find((x) => x.id === selectedAsset.assetId);
+              let ratio = 1;
+              if (it && isMaskAsset(it.category) && it.naturalWidth) {
+                ratio =
+                  (it.naturalHeight! / it.naturalWidth) *
+                  (selectedAsset.scaleY ?? 1);
+              } else {
+                ratio =
+                  imgRatios.current.get(selectedAsset.assetId) ??
+                  (it?.naturalWidth && it?.naturalHeight
+                    ? it.naturalHeight / it.naturalWidth
+                    : 1);
+              }
+              return (
+                <SelectionHandles
+                  asset={selectedAsset}
+                  containerRef={containerRef}
+                  displayW={displayW}
+                  displayH={displayH}
+                  heightRatio={ratio}
+                  onStart={commit}
+                  onChange={updateSelected}
+                />
+              );
+            })()}
+
           {textItems.map((item) => (
             <TextOverlay
               key={item.key}
@@ -1029,6 +1079,7 @@ export function ChalkPosterGenerator() {
               position={positions[item.key]}
               scale={scale}
               dragging={dragging === item.key}
+              selected={selectedTextKey === item.key}
               onPointerDown={handlePointerDown}
             />
           ))}
@@ -1105,8 +1156,8 @@ export function ChalkPosterGenerator() {
 
         <p className={styles.previewHint}>
           {mode === "draw"
-            ? "Zeichnen-Modus · ziehen zum Malen · oben zu „Bewegen“ wechseln"
-            : "Striche, Texte, Trenner & Logos verschieben · anklicken zum Bearbeiten · Entf zum Löschen · Strg+Z für Rückgängig"}
+            ? "Zeichnen aktiv · ziehen zum Malen · „Zeichnen“ ausschalten zum Bewegen"
+            : "Alles direkt verschieben: Striche, Texte, Linien & Logos anklicken & ziehen · Entf zum Löschen · Strg+Z für Rückgängig"}
         </p>
       </div>
     </div>
