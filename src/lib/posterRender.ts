@@ -7,7 +7,7 @@
 // Bilder werden vorab über `loadSceneImages` geladen, damit das Rendering
 // selbst synchron (pro Frame) laufen kann.
 
-import { drawChalkBackground } from "./chalkBackground";
+import { drawChalkBackground, patternChalkRgb } from "./chalkBackground";
 import { renderStroke, compositeStroke } from "./chalkStrokes";
 import { tintStrokeImage, isMaskAsset } from "./strokeStamps";
 import { renderPlacedStroke } from "./warpRenderer";
@@ -108,7 +108,8 @@ export function renderPosterScene(
     scene.patternStrokes,
     scene.pattern.seed,
     patternProgress,
-    scene.bg
+    scene.bg,
+    patternChalkRgb(scene.pattern.color)
   );
 
   // 4. Fette Kreide-Striche (zIndex-Reihenfolge, statisch)

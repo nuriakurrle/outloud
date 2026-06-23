@@ -11,11 +11,12 @@ export interface PosterSize {
 
 export interface PatternConfig {
   count: number; // 1–15, Anzahl Hintergrund-Striche
-  noise: number; // 0–1, Pfad-Wackeln
+  straightness: number; // 0–1, wie gerade die Linien sind (1 = schnurgerade, 0 = wackelig)
   weight: number; // 5–120, Strichstärke (Basis)
   opacity: number; // 10–100 (%)
   direction: number; // 0–360 (°), Hauptrichtung
   spread: number; // 0–1, Streuung um die Hauptrichtung
+  color: "white" | "black"; // Farbe der Strichlinien (unabhängig vom Hintergrund)
   seed: number;
 }
 

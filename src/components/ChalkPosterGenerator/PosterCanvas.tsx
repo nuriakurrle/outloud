@@ -13,7 +13,7 @@ import type {
 } from "../../types/poster";
 import {
   drawChalkBackground,
-  chalkRgbFor,
+  patternChalkRgb,
   renderPatternStrokeCanvas,
 } from "../../lib/chalkBackground";
 import {
@@ -98,14 +98,15 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
           patternStrokes,
           pattern.seed,
           progress,
-          bg
+          bg,
+          patternChalkRgb(pattern.color)
         );
       } else {
         // Statische Vorschau: jede Linie aus dem Cache compositen + Offset.
         // → Verschieben ist flüssig (kein Grain-Re-Render pro Frame).
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, size.w, size.h);
-        const chalkRgb = chalkRgbFor(bg);
+        const chalkRgb = patternChalkRgb(pattern.color);
         const pcache = patternCache.current;
         const liveP = new Set(patternStrokes.map((s) => s.id));
         for (const id of [...pcache.keys()]) {
@@ -146,7 +147,7 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
         compositeStroke(ctx, entry.canvas, stroke, size.w, size.h);
       }
     },
-    [size, pattern.seed, patternStrokes, strokes, bg]
+    [size, pattern.seed, pattern.color, patternStrokes, strokes, bg]
   );
 
   useEffect(() => {

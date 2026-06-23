@@ -1,0 +1,26 @@
+/* Globaler „Kreide"-Look für alle Buttons (und button-artige Labels) innerhalb
+   der App-Container. Hand-Schrift (Caveat) + verwackelte Kanten via SVG-Filter
+   #chalkRoughen (in App.tsx definiert). Portale (Radix-Dropdowns o. ä.) liegen
+   außerhalb von .chalk-ui und bleiben unberührt. */
+.chalk-ui button,
+.chalk-ui [data-chalk] {
+  font-family: "Caveat", "Permanent Marker", cursive;
+  filter: url(#chalkRoughen);
+  /* Caveat rendert optisch ~25 % kleiner als eine Sans — daher ein lesbarer
+     Größen-Boden. !important, weil viele Buttons ihre Größe inline setzen. */
+  font-size: 17px !important;
+  line-height: 1.15;
+}
+
+/* Primär-Buttons dürfen größer bleiben. */
+.chalk-ui .exportButton,
+.chalk-ui .regenButton {
+  font-size: 20px !important;
+}
+
+/* Range-Slider, Inputs & Selects bewusst NICHT verwackeln (Lesbarkeit). */
+.chalk-ui input,
+.chalk-ui select,
+.chalk-ui textarea {
+  filter: none;
+}

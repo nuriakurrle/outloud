@@ -163,18 +163,20 @@
 
 .regenButton {
   background: #252525;
-  border: 1px solid #3a3a3a;
-  color: #ddd;
-  border-radius: 5px;
-  padding: 9px;
-  font-size: 12px;
-  font-family: inherit;
+  border: 1.5px solid rgba(245, 242, 237, 0.45);
+  color: #f0ede6;
+  border-radius: 8px;
+  padding: 8px 9px;
+  font-size: 15px;
+  font-family: "Caveat", "Permanent Marker", cursive;
+  letter-spacing: 0.3px;
   cursor: pointer;
+  filter: url(#chalkRoughen);
 }
 
 .regenButton:hover {
   background: #303030;
-  border-color: #4a4a4a;
+  border-color: rgba(245, 242, 237, 0.75);
 }
 
 .hint {
@@ -286,15 +288,14 @@
   width: 100%;
   background: #e0e0e0;
   color: #111;
-  border: none;
-  border-radius: 6px;
-  padding: 12px;
-  font-size: 13px;
-  font-weight: 700;
+  border: 1.5px solid rgba(17, 17, 17, 0.35);
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 19px;
   letter-spacing: 0.5px;
-  text-transform: uppercase;
   cursor: pointer;
-  font-family: inherit;
+  font-family: "Caveat", "Permanent Marker", cursive;
+  filter: url(#chalkRoughen);
 }
 
 .exportButton:hover {
@@ -468,18 +469,20 @@
 .smallButton {
   flex: 1;
   background: #252525;
-  border: 1px solid #3a3a3a;
-  color: #ddd;
-  border-radius: 5px;
-  padding: 8px;
-  font-size: 12px;
-  font-family: inherit;
+  border: 1.5px solid rgba(245, 242, 237, 0.45);
+  color: #f0ede6;
+  border-radius: 8px;
+  padding: 7px 8px;
+  font-size: 15px;
+  font-family: "Caveat", "Permanent Marker", cursive;
+  letter-spacing: 0.3px;
   cursor: pointer;
+  filter: url(#chalkRoughen);
 }
 
 .smallButton:hover {
   background: #303030;
-  border-color: #4a4a4a;
+  border-color: rgba(245, 242, 237, 0.75);
 }
 
 .danger {

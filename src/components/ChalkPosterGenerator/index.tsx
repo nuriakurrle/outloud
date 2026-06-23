@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
 import type {
   AssetItem,
   ChalkStroke,
@@ -58,7 +59,7 @@ const FONTS = [
 const POSTER_SIZES: PosterSize[] = [
   { label: "A3 Hochformat", w: 420, h: 594 },
   { label: "A4 Hochformat", w: 297, h: 420 },
-  { label: "Quadrat", w: 420, h: 420 },
+  { label: "Flyer", w: 280, h: 594 }, // schmales Hochformat (DL-Proportion)
   { label: "Instagram", w: 400, h: 400 },
 ];
 
@@ -94,11 +95,12 @@ export function ChalkPosterGenerator() {
   // selbst zeichnen können.
   const [patternConfig, setPatternConfig] = useState<PatternConfig>({
     count: 5,
-    noise: 0.3,
+    straightness: 0.6,
     weight: 40,
     opacity: 65,
     direction: 135,
     spread: 0.4,
+    color: "white",
     seed: Math.floor(Math.random() * 999999),
   });
   const [patternStrokes, setPatternStrokes] = useState<PatternStroke[]>([]);
@@ -106,15 +108,27 @@ export function ChalkPosterGenerator() {
   const [selectedPatternId, setSelectedPatternId] = useState<string | null>(
     null
   );
+  // „Gespeichert": friert das aktuelle Muster ein → Slider/Seed überschreiben
+  // es nicht mehr, sodass man darauf weiter aufbauen kann.
+  const [patternLocked, setPatternLocked] = useState(false);
   const updatePattern = useCallback(
     (patch: Partial<PatternConfig>) =>
       setPatternConfig((c) => ({ ...c, ...patch })),
     []
   );
-  // Striche neu erzeugen, sobald sich Config oder Postergröße ändert.
+  // Beim Undo/Redo wird die Config UND die exakten Striche wiederhergestellt;
+  // dann darf der Generator-Effekt nicht erneut würfeln und sie überschreiben.
+  const skipRegenRef = useRef(false);
+  // Striche neu erzeugen, sobald sich Config oder Postergröße ändert —
+  // außer das Muster ist gespeichert (dann bleibt es unangetastet).
   useEffect(() => {
+    if (skipRegenRef.current) {
+      skipRegenRef.current = false;
+      return;
+    }
+    if (patternLocked) return;
     setPatternStrokes(generateChalkStrokes(patternConfig, size.w, size.h));
-  }, [patternConfig, size.w, size.h]);
+  }, [patternConfig, size.w, size.h, patternLocked]);
 
   // ── Freihand-Kreide-Striche ──────────────────────────
   const [strokes, setStrokes] = useState<ChalkStroke[]>([]);
@@ -279,6 +293,8 @@ export function ChalkPosterGenerator() {
     placedAssets: PlacedAsset[];
     positions: Record<PosKey, Position>;
     patternStrokes: PatternStroke[];
+    patternConfig: PatternConfig;
+    patternLocked: boolean;
   };
   const [past, setPast] = useState<Snapshot[]>([]);
   const [future, setFuture] = useState<Snapshot[]>([]);
@@ -288,6 +304,8 @@ export function ChalkPosterGenerator() {
     placedAssets: [],
     positions: {} as Record<PosKey, Position>,
     patternStrokes: [],
+    patternConfig,
+    patternLocked: false,
   });
 
   const getAssetSrc = useCallback(
@@ -297,7 +315,14 @@ export function ChalkPosterGenerator() {
 
   // liveRef immer mit aktuellen Werten füllen (für Snapshots)
   useEffect(() => {
-    liveRef.current = { strokes, placedAssets, positions, patternStrokes };
+    liveRef.current = {
+      strokes,
+      placedAssets,
+      positions,
+      patternStrokes,
+      patternConfig,
+      patternLocked,
+    };
   });
 
   const commit = useCallback(() => {
@@ -309,15 +334,24 @@ export function ChalkPosterGenerator() {
         placedAssets: snap.placedAssets,
         positions: snap.positions,
         patternStrokes: snap.patternStrokes,
+        patternConfig: snap.patternConfig,
+        patternLocked: snap.patternLocked,
       },
     ].slice(-50));
     setFuture([]);
   }, []);
 
   const applySnapshot = useCallback((s: Snapshot) => {
+    // Config + Striche zusammen wiederherstellen, ohne dass der Generator-Effekt
+    // (reagiert auf patternConfig-Änderung) die Striche neu würfelt.
+    skipRegenRef.current = true;
     setStrokes(s.strokes);
     setPlacedAssets(s.placedAssets);
     setPositions(s.positions);
+    // Klon → garantiert neue Referenz, damit der Generator-Effekt feuert und das
+    // Skip-Flag verlässlich konsumiert (sonst könnte es hängenbleiben).
+    setPatternConfig({ ...s.patternConfig });
+    setPatternLocked(s.patternLocked);
     setPatternStrokes(s.patternStrokes);
   }, []);
 
@@ -687,15 +721,16 @@ export function ChalkPosterGenerator() {
     setBodyFont(pick(BODY_FONTS));
     setDetailFont(pick(DETAIL_FONTS));
     // 4) Hintergrund-Muster komplett neu würfeln
-    setPatternConfig({
+    setPatternConfig((prev) => ({
+      ...prev, // Farbe (Weiß/Schwarz) bleibt beim Würfeln erhalten
       count: Math.round(3 + Math.random() * 8),
-      noise: Math.round((0.15 + Math.random() * 0.5) * 100) / 100,
+      straightness: Math.round((0.4 + Math.random() * 0.45) * 100) / 100,
       weight: Math.round(20 + Math.random() * 70),
       opacity: Math.round(45 + Math.random() * 45),
       direction: Math.round(Math.random() * 360),
       spread: Math.round((0.2 + Math.random() * 0.5) * 100) / 100,
       seed: Math.floor(Math.random() * 999999),
-    });
+    }));
   }, [commit, allAssets]);
 
   const deleteSelectedStroke = useCallback(() => {
@@ -711,6 +746,26 @@ export function ChalkPosterGenerator() {
     setPatternStrokes((prev) => prev.filter((p) => p.id !== selectedPatternId));
     setSelectedPatternId(null);
   }, [selectedPatternId, commit]);
+
+  // „Mehr Linien": zusätzliche Striche (neuer Seed) an das aktuelle Muster
+  // anhängen und es gleich speichern, damit nichts überschrieben wird.
+  const addPatternLines = useCallback(() => {
+    commit();
+    const extra = generateChalkStrokes(
+      { ...patternConfig, seed: Math.floor(Math.random() * 999999) },
+      size.w,
+      size.h
+    ).map((s) => ({ ...s, id: makeId() })); // eindeutige IDs (keine Kollision mit p0…pN)
+    setPatternStrokes((prev) => [...prev, ...extra]);
+    setPatternLocked(true);
+  }, [patternConfig, size.w, size.h, commit]);
+
+  // Speichern an/aus. Beim Würfeln neuer Linien wird automatisch entsperrt.
+  const togglePatternLock = useCallback(() => setPatternLocked((l) => !l), []);
+  const regeneratePattern = useCallback(() => {
+    setPatternLocked(false);
+    updatePattern({ seed: Math.floor(Math.random() * 999999) });
+  }, [updatePattern]);
 
   // ── Freihand-Zeichnen ────────────────────────────────
   const getPointerPercent = useCallback((e: React.PointerEvent) => {
@@ -1073,7 +1128,7 @@ export function ChalkPosterGenerator() {
   };
 
   return (
-    <div className={styles.app}>
+    <div className={`${styles.app} chalk-ui`}>
       <Sidebar
         fonts={FONTS}
         sizes={POSTER_SIZES}
@@ -1083,9 +1138,10 @@ export function ChalkPosterGenerator() {
         setBg={setBgColor}
         pattern={patternConfig}
         setPattern={updatePattern}
-        onRegenerate={() =>
-          updatePattern({ seed: Math.floor(Math.random() * 999999) })
-        }
+        onRegenerate={regeneratePattern}
+        onAddLines={addPatternLines}
+        patternLocked={patternLocked}
+        onToggleLock={togglePatternLock}
         isPlaying={isPlaying}
         onTogglePlay={() => (isPlaying ? handleStopPlay() : setIsPlaying(true))}
         animDuration={animDuration}
@@ -1435,6 +1491,44 @@ export function ChalkPosterGenerator() {
             : "Alles direkt verschieben: Striche, Texte, Linien & Logos anklicken & ziehen · Entf zum Löschen · Strg+Z für Rückgängig"}
         </p>
       </div>
+
+      {/* Schwebende „Live"-Bubble — Kreide-Look: dunkle Tafel, gekritzelter
+          Rand & Marker-Schrift, damit sie zur Gesamt-Ästhetik passt. */}
+      <style>{`
+        @keyframes outloudFabPulse {
+          0%,100% { box-shadow: 0 6px 22px rgba(0,0,0,0.5), 0 0 0 0 rgba(245,230,163,0.22); }
+          50%     { box-shadow: 0 6px 22px rgba(0,0,0,0.5), 0 0 0 11px rgba(245,230,163,0); }
+        }
+        .outloudFab { animation: outloudFabPulse 2.6s ease-in-out infinite; transition: transform 0.15s ease; }
+        .outloudFab:hover { transform: translateY(-2px) scale(1.04); }
+      `}</style>
+      <Link
+        to="/interactive"
+        className="outloudFab"
+        title="Interactive Mode: Live-Kreide mit der Webcam ✨"
+        style={{
+          position: "fixed",
+          right: 24,
+          bottom: 24,
+          zIndex: 1000,
+          display: "flex",
+          alignItems: "center",
+          gap: 9,
+          padding: "10px 20px 10px 15px",
+          borderRadius: 999,
+          background:
+            "linear-gradient(135deg, rgba(245,230,163,0.16), rgba(140,184,212,0.16)), #121212",
+          color: "#f5f2ed",
+          textDecoration: "none",
+          fontFamily: "'Permanent Marker', cursive",
+          fontSize: 16,
+          letterSpacing: "0.02em",
+          border: "1.5px dashed rgba(245,242,237,0.45)",
+        }}
+      >
+        <span style={{ fontSize: 18, lineHeight: 1 }}>✨</span>
+        <span>Live</span>
+      </Link>
     </div>
   );
 }

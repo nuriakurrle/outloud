@@ -30,6 +30,11 @@ export function chalkRgbFor(bg: string): string {
   return luminance(bg) > 140 ? CHALK_RGB_DARK : CHALK_RGB;
 }
 
+/** Explizite Strichlinien-Farbe (Weiß/Schwarz), unabhängig vom Hintergrund. */
+export function patternChalkRgb(color: "white" | "black"): string {
+  return color === "black" ? CHALK_RGB_DARK : CHALK_RGB;
+}
+
 // ── Striche generieren ──────────────────────────────────────────────────
 
 export function generateChalkStrokes(
@@ -66,16 +71,18 @@ export function generateChalkStrokes(
     const perpX = -Math.sin(angle);
     const perpY = Math.cos(angle);
 
+    // „Wackeligkeit" = Gegenteil der Geradheit. Quadratisch gewichtet, damit
+    // hohe Geradheit-Werte wirklich gerade Linien geben; kleine Amplitude +
+    // niedrige Frequenz → sanft geschwungen statt zittrig. wob=0 → exakt gerade.
+    const wob = (1 - config.straightness) * (1 - config.straightness);
+    const freq = 1 + wob * 2;
     for (let s = 0; s <= steps; s++) {
       const t = s / steps;
       const bx = startX + (endX - startX) * t;
       const by = startY + (endY - startY) * t;
-      const n1 = noise.noise2D(t * 3 * (0.5 + config.noise * 2) + nOff, i * 11);
-      const n2 = noise.noise2D(
-        t * 8 * (0.5 + config.noise * 2) + nOff,
-        i * 11 + 50
-      );
-      const dev = (n1 * 12 + n2 * 3) * config.noise;
+      const n1 = noise.noise2D(t * freq + nOff, i * 11);
+      const n2 = noise.noise2D(t * freq * 2 + nOff, i * 11 + 50);
+      const dev = (n1 * 9 + n2 * 2) * wob;
       points.push({ x: bx + perpX * dev, y: by + perpY * dev });
     }
 
@@ -108,11 +115,12 @@ export function drawChalkBackground(
   strokes: PatternStroke[],
   _seed: number,
   progress = 1,
-  bg = BOARD_BG
+  bg = BOARD_BG,
+  chalkRgb: string = chalkRgbFor(bg)
 ): void {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
-  renderPatternStrokes(ctx, strokes, w, h, progress, chalkRgbFor(bg));
+  renderPatternStrokes(ctx, strokes, w, h, progress, chalkRgb);
 }
 
 // ── Striche rendern ─────────────────────────────────────────────────────

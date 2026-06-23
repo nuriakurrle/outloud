@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import type { PatternConfig, PosterSize } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 
@@ -51,7 +52,10 @@ interface SidebarProps {
   // Kreide-Muster (Hintergrund)
   pattern: PatternConfig;
   setPattern: (patch: Partial<PatternConfig>) => void;
-  onRegenerate: () => void; // neuer Seed → neues Muster
+  onRegenerate: () => void; // neuer Seed → neues Muster (entsperrt)
+  onAddLines: () => void; // weitere Linien an aktuelles Muster anhängen
+  patternLocked: boolean; // Muster gespeichert/eingefroren?
+  onToggleLock: () => void;
   // Pattern-Selbstzeichen-Animation
   isPlaying: boolean;
   onTogglePlay: () => void;
@@ -124,12 +128,15 @@ function Slider({
   suffix?: string;
   onChange: (v: number) => void;
 }) {
+  // Einheitliche Anzeige: Nachkomma-Slider (step < 1) immer mit 2 Stellen,
+  // ganzzahlige gerundet — sonst zeigt z. B. Spread „0.6500000000001".
+  const display = step < 1 ? value.toFixed(2) : `${Math.round(value)}`;
   return (
     <div className={styles.field}>
       <div className={styles.sliderRow}>
         <span className={styles.label}>{label}</span>
         <span className={styles.sliderValue}>
-          {value}
+          {display}
           {suffix}
         </span>
       </div>
@@ -383,10 +390,35 @@ export function Sidebar(props: SidebarProps) {
           <button
             className={styles.regenButton}
             onClick={props.onRegenerate}
-            title="Nur die Hintergrund-Linien neu würfeln (gleiche Einstellungen, neue Anordnung)"
+            title="Alle Hintergrund-Linien neu würfeln (entsperrt das Muster)"
           >
             🎲 Neue Linien
           </button>
+          <div className={styles.assetButtonRow} style={{ marginTop: 8 }}>
+            <button
+              className={styles.smallButton}
+              onClick={props.onAddLines}
+              title="Weitere Linien zum aktuellen Muster hinzufügen (Muster bleibt erhalten)"
+            >
+              ➕ Mehr Linien
+            </button>
+            <button
+              className={styles.smallButton}
+              onClick={props.onToggleLock}
+              title={
+                props.patternLocked
+                  ? "Muster ist gespeichert – Regler/Würfeln verändern es nicht. Zum Entsperren klicken."
+                  : "Muster speichern/einfrieren, damit Regler es nicht überschreiben"
+              }
+              style={
+                props.patternLocked
+                  ? { borderColor: "rgba(245,230,163,0.8)", color: "#f5e6a3" }
+                  : undefined
+              }
+            >
+              {props.patternLocked ? "🔒 Gespeichert" : "💾 Speichern"}
+            </button>
+          </div>
           <Slider
             label="Striche"
             value={props.pattern.count}
@@ -395,13 +427,46 @@ export function Sidebar(props: SidebarProps) {
             onChange={(v) => props.setPattern({ count: v })}
           />
           <Slider
-            label="Noise"
-            value={props.pattern.noise}
+            label="Geradheit"
+            value={props.pattern.straightness}
             min={0}
             max={1}
             step={0.05}
-            onChange={(v) => props.setPattern({ noise: v })}
+            onChange={(v) => props.setPattern({ straightness: v })}
           />
+          <div className={styles.field}>
+            <span className={styles.label}>Linienfarbe</span>
+            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+              {([
+                { label: "Weiß", val: "white" as const },
+                { label: "Schwarz", val: "black" as const },
+              ]).map((o) => {
+                const active = props.pattern.color === o.val;
+                return (
+                  <button
+                    key={o.val}
+                    onClick={() => props.setPattern({ color: o.val })}
+                    style={{
+                      flex: 1,
+                      padding: "5px 8px",
+                      borderRadius: 6,
+                      background: active
+                        ? "rgba(255,255,255,0.16)"
+                        : "rgba(255,255,255,0.04)",
+                      border: active
+                        ? "1px solid rgba(255,255,255,0.5)"
+                        : "1px solid rgba(255,255,255,0.15)",
+                      color: "#f5f2ed",
+                      fontSize: 12,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <Slider
             label="Stärke"
             value={props.pattern.weight}
@@ -535,6 +600,21 @@ export function Sidebar(props: SidebarProps) {
             {props.isExporting === "video" ? "Video …" : "Export Video"}
           </button>
         </div>
+        {/* Live-Installation: Webcam → Kreide-Silhouette (eigene Vollbild-Seite) */}
+        <Link
+          to="/interactive"
+          style={{
+            display: "block",
+            marginTop: 10,
+            textAlign: "center",
+            color: "rgba(245,242,237,0.55)",
+            fontSize: 12,
+            textDecoration: "none",
+            letterSpacing: "0.03em",
+          }}
+        >
+          🎭 Interactive Mode
+        </Link>
       </div>
     </aside>
   );
