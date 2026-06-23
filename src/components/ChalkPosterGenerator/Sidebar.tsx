@@ -227,6 +227,7 @@ function TextSection({ fonts, field }: { fonts: FontOption[]; field: TextFieldSt
                 <button
                   key={c.hex}
                   title={c.label}
+                  data-no-chalk
                   onClick={() => field.setColor?.(c.hex)}
                   style={{
                     width: 22,
@@ -355,6 +356,7 @@ export function Sidebar(props: SidebarProps) {
                   <button
                     key={c.hex}
                     title={c.label}
+                    data-no-chalk
                     onClick={() => props.setBg(c.hex)}
                     style={{
                       width: 26,

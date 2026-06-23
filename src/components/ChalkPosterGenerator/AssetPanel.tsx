@@ -140,6 +140,7 @@ export function AssetPanel({
             key={a.id}
             className={styles.assetThumb}
             title={a.name}
+            data-no-chalk
             onClick={() => onPlace(a.id)}
             // Weiß-auf-transparent → dunkler Hintergrund nötig; Striche zudem
             // über die volle Breite (lange Stamps).
@@ -299,6 +300,7 @@ export function AssetPanel({
                       <button
                         key={c.hex}
                         title={c.label}
+                        data-no-chalk
                         onClick={() =>
                           onUpdateSelected({
                             tint: c.hex === "#e8e5e0" ? undefined : c.hex,

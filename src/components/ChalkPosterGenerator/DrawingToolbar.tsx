@@ -164,6 +164,7 @@ export function DrawingToolbar({
         {DRAW_COLORS.map((c) => (
           <button
             key={c.hex}
+            data-no-chalk
             onClick={() => {
               setIsErasing(false);
               setChalkColor(c.hex);
@@ -186,6 +187,7 @@ export function DrawingToolbar({
         ))}
         <button
           onClick={() => setIsErasing(!isErasing)}
+          data-no-chalk
           title="Radiergummi"
           style={{
             display: "flex",
