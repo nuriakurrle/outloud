@@ -8,7 +8,6 @@ import type {
   PatternStroke,
   PlacedAsset,
   Position,
-  PosterSize,
   ToolMode,
 } from "../../types/poster";
 import { makeFreehandStroke, smoothPoints } from "../../lib/chalkStrokes";
@@ -36,52 +35,22 @@ import type { Align } from "../../lib/layouts";
 import { type PosterScene, type SceneAsset } from "../../lib/posterRender";
 import { exportPNG, exportGIF, exportVideo, downloadBlob } from "../../lib/exporter";
 import styles from "../../styles/chalkPoster.module.css";
-
-function makeId() {
-  return typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `placed-${Date.now()}-${Math.random()}`;
-}
-
-const POS_KEYS = ["header", "sub", "body", "detail"] as const;
-
-const FONTS = [
-  { label: "Playfair Display", value: "Playfair Display" },
-  { label: "Oswald", value: "Oswald" },
-  { label: "Pacifico", value: "Pacifico" },
-  { label: "Permanent Marker", value: "Permanent Marker" },
-  { label: "Caveat", value: "Caveat" },
-  { label: "Special Elite", value: "Special Elite" },
-  { label: "Rock Salt", value: "Rock Salt" },
-  { label: "Abril Fatface", value: "Abril Fatface" },
-];
-
-const POSTER_SIZES: PosterSize[] = [
-  { label: "A3 Hochformat", w: 420, h: 594 },
-  { label: "A4 Hochformat", w: 297, h: 420 },
-  { label: "Flyer", w: 280, h: 594 }, // schmales Hochformat (DL-Proportion)
-  { label: "Instagram", w: 400, h: 400 },
-];
-
-// Schrift-Pools für „Alles neu generieren" — pro Textrolle passend gewählt,
-// damit der gewürfelte Look im Brand-Rahmen bleibt.
-const DISPLAY_FONTS = [
-  "Playfair Display",
-  "Abril Fatface",
-  "Permanent Marker",
-  "Pacifico",
-  "Rock Salt",
-];
-const SCRIPT_FONTS = ["Caveat", "Pacifico", "Permanent Marker"];
-const BODY_FONTS = ["Oswald", "Special Elite", "Caveat"];
-const DETAIL_FONTS = ["Special Elite", "Oswald", "Caveat"];
-const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-
-const CHALK = "#e0e0e0";
-const CHALK_DIM = "#c0c0c0";
-const POSTER_BG = "#000000";
-
-type PosKey = "header" | "sub" | "body" | "detail";
+import {
+  makeId,
+  POS_KEYS,
+  type PosKey,
+  FONTS,
+  POSTER_SIZES,
+  DISPLAY_FONTS,
+  SCRIPT_FONTS,
+  BODY_FONTS,
+  DETAIL_FONTS,
+  pick,
+  CHALK,
+  CHALK_DIM,
+  POSTER_BG,
+} from "./constants";
+import { useUndoRedo } from "./useUndoRedo";
 
 export function ChalkPosterGenerator() {
   // Poster-Größe
@@ -296,50 +265,20 @@ export function ChalkPosterGenerator() {
     patternConfig: PatternConfig;
     patternLocked: boolean;
   };
-  const [past, setPast] = useState<Snapshot[]>([]);
-  const [future, setFuture] = useState<Snapshot[]>([]);
-  // Aktuelle Werte über Ref, damit commit/undo nicht ständig neu gebunden werden.
-  const liveRef = useRef<Snapshot>({
-    strokes: [],
-    placedAssets: [],
-    positions: {} as Record<PosKey, Position>,
-    patternStrokes: [],
-    patternConfig,
-    patternLocked: false,
-  });
-
   const getAssetSrc = useCallback(
     (assetId: string) => allAssets.find((a) => a.id === assetId)?.src ?? "",
     [allAssets]
   );
 
-  // liveRef immer mit aktuellen Werten füllen (für Snapshots)
-  useEffect(() => {
-    liveRef.current = {
-      strokes,
-      placedAssets,
-      positions,
-      patternStrokes,
-      patternConfig,
-      patternLocked,
-    };
-  });
-
-  const commit = useCallback(() => {
-    const snap = liveRef.current;
-    setPast((p) => [
-      ...p,
-      {
-        strokes: snap.strokes,
-        placedAssets: snap.placedAssets,
-        positions: snap.positions,
-        patternStrokes: snap.patternStrokes,
-        patternConfig: snap.patternConfig,
-        patternLocked: snap.patternLocked,
-      },
-    ].slice(-50));
-    setFuture([]);
-  }, []);
+  // Aktueller, snapshot-fähiger Zustand für Undo/Redo.
+  const liveSnapshot: Snapshot = {
+    strokes,
+    placedAssets,
+    positions,
+    patternStrokes,
+    patternConfig,
+    patternLocked,
+  };
 
   const applySnapshot = useCallback((s: Snapshot) => {
     // Config + Striche zusammen wiederherstellen, ohne dass der Generator-Effekt
@@ -355,25 +294,10 @@ export function ChalkPosterGenerator() {
     setPatternStrokes(s.patternStrokes);
   }, []);
 
-  const undo = useCallback(() => {
-    setPast((p) => {
-      if (p.length === 0) return p;
-      const prev = p[p.length - 1];
-      setFuture((f) => [liveRef.current, ...f]);
-      applySnapshot(prev);
-      return p.slice(0, -1);
-    });
-  }, [applySnapshot]);
-
-  const redo = useCallback(() => {
-    setFuture((f) => {
-      if (f.length === 0) return f;
-      const next = f[0];
-      setPast((p) => [...p, liveRef.current]);
-      applySnapshot(next);
-      return f.slice(1);
-    });
-  }, [applySnapshot]);
+  const { commit, undo, redo, canUndo, canRedo } = useUndoRedo(
+    liveSnapshot,
+    applySnapshot
+  );
 
   // Drag-State (kann eine Text/Divider-Position ODER eine Asset-ID sein)
   const [dragging, setDragging] = useState<string | null>(null);
@@ -1148,8 +1072,8 @@ export function ChalkPosterGenerator() {
         setAnimDuration={setAnimDuration}
         onUndo={undo}
         onRedo={redo}
-        canUndo={past.length > 0}
-        canRedo={future.length > 0}
+        canUndo={canUndo}
+        canRedo={canRedo}
         layoutSection={
           <LayoutPanel
             layouts={LAYOUTS}
@@ -1482,7 +1406,7 @@ export function ChalkPosterGenerator() {
           isErasing={isErasing}
           setIsErasing={setIsErasing}
           onUndo={undo}
-          canUndo={past.length > 0}
+          canUndo={canUndo}
         />
 
         <p className={styles.previewHint}>
