@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router";
 import type { PatternConfig, PosterSize } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 
@@ -27,16 +26,14 @@ export interface TextFieldState {
   setOutline?: (v: boolean) => void;
 }
 
-// Schriftfarbe: nur Weiß (Kreide) oder Schwarz.
 const TEXT_COLORS = [
-  { label: "Weiß", hex: "#e0e0e0" },
+  { label: "Weiß", hex: "#ffffff" },
   { label: "Schwarz", hex: "#000000" },
 ];
 
-// Hintergrund: echtes Schwarz oder helles Papier.
 const BG_COLORS = [
   { label: "Schwarz", hex: "#000000" },
-  { label: "Weiß", hex: "#efeae0" },
+  { label: "Weiß", hex: "#ffffff" },
 ];
 
 interface SidebarProps {
@@ -80,10 +77,6 @@ interface SidebarProps {
   onRandomize: () => void;
   onExport: () => void;
 
-  // Export der Pattern-Animation
-  onExportGif: () => void;
-  onExportVideo: () => void;
-  isExporting: null | "gif" | "video";
 }
 
 // ── kleine Hilfs-Komponenten ─────────────────────────────
@@ -303,12 +296,6 @@ export function Sidebar(props: SidebarProps) {
 
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.sidebarHeader}>
-        <h1 className={styles.sidebarTitle}>Голос!</h1>
-        <p className={styles.sidebarSubtitle}>Generative Identity · Kreide</p>
-      </div>
-
-      {/* 🎲 Alles neu generieren — generative Vielfalt im Brand-Rahmen */}
       <button
         onClick={props.onRandomize}
         title="Komplett neues Design: Layout, Schriften & Hintergrund-Muster (Text-Inhalte & platzierte Illustrationen bleiben erhalten)"
@@ -326,7 +313,7 @@ export function Sidebar(props: SidebarProps) {
           letterSpacing: "0.02em",
         }}
       >
-        🎲 Alles neu generieren
+        Alles neu generieren
       </button>
 
       {/* Werkzeug-Umschalter & Freihand-Regler leben jetzt komplett in der
@@ -394,7 +381,7 @@ export function Sidebar(props: SidebarProps) {
             onClick={props.onRegenerate}
             title="Alle Hintergrund-Linien neu würfeln (entsperrt das Muster)"
           >
-            🎲 Neue Linien
+            Neue Linien
           </button>
           <div className={styles.assetButtonRow} style={{ marginTop: 8 }}>
             <button
@@ -402,7 +389,7 @@ export function Sidebar(props: SidebarProps) {
               onClick={props.onAddLines}
               title="Weitere Linien zum aktuellen Muster hinzufügen (Muster bleibt erhalten)"
             >
-              ➕ Mehr Linien
+              Mehr Linien
             </button>
             <button
               className={styles.smallButton}
@@ -418,7 +405,7 @@ export function Sidebar(props: SidebarProps) {
                   : undefined
               }
             >
-              {props.patternLocked ? "🔒 Gespeichert" : "💾 Speichern"}
+              {props.patternLocked ? "Gespeichert" : "Speichern"}
             </button>
           </div>
           <Slider
@@ -510,7 +497,7 @@ export function Sidebar(props: SidebarProps) {
               style={{ flex: "0 0 auto", margin: 0 }}
               onClick={props.onTogglePlay}
             >
-              {props.isPlaying ? "⏹ Stopp" : "▶ Play"}
+              {props.isPlaying ? "Stopp" : "Play"}
             </button>
             <div style={{ flex: 1 }}>
               <Slider
@@ -586,37 +573,6 @@ export function Sidebar(props: SidebarProps) {
         <button className={styles.exportButton} onClick={props.onExport}>
           Export PNG
         </button>
-        <div className={styles.assetButtonRow} style={{ marginTop: 8 }}>
-          <button
-            className={styles.smallButton}
-            onClick={props.onExportGif}
-            disabled={props.isExporting !== null}
-          >
-            {props.isExporting === "gif" ? "GIF …" : "Export GIF"}
-          </button>
-          <button
-            className={styles.smallButton}
-            onClick={props.onExportVideo}
-            disabled={props.isExporting !== null}
-          >
-            {props.isExporting === "video" ? "Video …" : "Export Video"}
-          </button>
-        </div>
-        {/* Live-Installation: Webcam → Kreide-Silhouette (eigene Vollbild-Seite) */}
-        <Link
-          to="/interactive"
-          style={{
-            display: "block",
-            marginTop: 10,
-            textAlign: "center",
-            color: "rgba(245,242,237,0.55)",
-            fontSize: 12,
-            textDecoration: "none",
-            letterSpacing: "0.03em",
-          }}
-        >
-          🎭 Interactive Mode
-        </Link>
       </div>
     </aside>
   );

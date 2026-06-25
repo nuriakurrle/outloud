@@ -6,18 +6,12 @@ import {
   useState,
 } from "react";
 import { Link } from "react-router";
-import { Camera, Image, Square, X } from "lucide-react";
-import {
-  startBodySegmentation,
-  type SegmentationHandle,
-} from "../lib/bodySegmentation";
+import { X } from "lucide-react";
 import {
   renderChalkFrame,
   DEFAULT_CHALK_ENGINE_CONFIG,
   type ChalkEngineConfig,
 } from "../lib/chalkEngine";
-
-type SourceMode = "upload" | "live";
 
 interface UploadedImage {
   url: string;
@@ -29,7 +23,6 @@ interface UploadedImage {
 const DPR = 2;
 const MAX_UPLOAD_DIM = 800;
 
-// Helligkeits-Map aus ImageData (Luma 0–1 pro Pixel).
 function brightnessFromImageData(data: Uint8ClampedArray, n: number): Float32Array {
   const out = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -43,34 +36,19 @@ function brightnessFromImageData(data: Uint8ClampedArray, n: number): Float32Arr
 export default function Interactive() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const segRef = useRef<SegmentationHandle | null>(null);
-  const frameCounter = useRef(0);
-  // Wiederverwendeter Helligkeits-Buffer (kein Neu-Allozieren pro Live-Frame).
-  const brightnessBuf = useRef<Float32Array | null>(null);
 
-  const [source, setSource] = useState<SourceMode>("upload");
   const [config, setConfig] = useState<ChalkEngineConfig>({
     ...DEFAULT_CHALK_ENGINE_CONFIG,
   });
   const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
-  const [isLiveRunning, setIsLiveRunning] = useState(false);
   const [showUI, setShowUI] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [size, setSize] = useState({ w: 640, h: 480 });
-
-  // Live-Render liest die Config über eine Ref → kein Neustart bei Slider-Änderung.
-  const configRef = useRef(config);
-  useEffect(() => {
-    configRef.current = config;
-  }, [config]);
 
   const setCfg = useCallback(
     (patch: Partial<ChalkEngineConfig>) => setConfig((c) => ({ ...c, ...patch })),
     []
   );
 
-  // ── Canvas-Größe an den verfügbaren Bereich anpassen (4:3, zentriert) ──
   useLayoutEffect(() => {
     const area = areaRef.current;
     if (!area) return;
@@ -94,7 +72,6 @@ export default function Interactive() {
     return () => ro.disconnect();
   }, []);
 
-  // Canvas-Pixelmaße setzen (löscht den Canvas → schwarz füllen).
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -110,9 +87,8 @@ export default function Interactive() {
     }
   }, [size]);
 
-  // ── Statisches Render (Upload) bei Slider-/Bild-/Größen-Änderung ──
   useEffect(() => {
-    if (source !== "upload" || !uploadedImage) return;
+    if (!uploadedImage) return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!ctx) return;
@@ -130,12 +106,8 @@ export default function Interactive() {
       false
     );
     ctx.restore();
-  }, [config, uploadedImage, source, size]);
+  }, [config, uploadedImage, size]);
 
-  // Kamera beim Verlassen stoppen.
-  useEffect(() => () => segRef.current?.stop(), []);
-
-  // ── Upload ──
   const handleImageUpload = useCallback(async (file: File) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -175,77 +147,6 @@ export default function Interactive() {
     }
   }, [size]);
 
-  // ── Live ──
-  const handleStopLive = useCallback(() => {
-    segRef.current?.stop();
-    segRef.current = null;
-    setIsLiveRunning(false);
-  }, []);
-
-  const startLive = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || segRef.current) return;
-    setError(null);
-    frameCounter.current = 0;
-    setIsLiveRunning(true);
-    segRef.current = startBodySegmentation(
-      video,
-      (result) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas?.getContext("2d");
-        if (!ctx || !canvas) return;
-        // Maße aus dem Canvas lesen (nicht aus dem Closure) → korrekt auch nach
-        // Fenster-/Format-Wechsel während Live läuft.
-        const cw = canvas.width / DPR;
-        const ch = canvas.height / DPR;
-        const n = result.width * result.height;
-        let brightness = brightnessBuf.current;
-        if (!brightness || brightness.length !== n) {
-          brightness = new Float32Array(n);
-          brightnessBuf.current = brightness;
-        }
-        const d = result.videoFrame.data;
-        const mask = result.mask.data;
-        for (let i = 0; i < n; i++) {
-          // jedes Element setzen (0 = Hintergrund) → kein Reset/Allozieren nötig
-          brightness[i] =
-            mask[i * 4] < 128
-              ? 0
-              : (0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]) /
-                255;
-        }
-        ctx.save();
-        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-        renderChalkFrame(
-          ctx,
-          brightness,
-          result.width,
-          result.height,
-          cw,
-          ch,
-          configRef.current,
-          frameCounter.current++,
-          true
-        );
-        ctx.restore();
-      },
-      (err) => {
-        console.error("Kamera-Fehler:", err);
-        setError("Kamera konnte nicht gestartet werden. Zugriff erlauben und neu laden.");
-        handleStopLive();
-      }
-    );
-  }, [handleStopLive]);
-
-  const switchSource = useCallback(
-    (next: SourceMode) => {
-      handleStopLive();
-      setSource(next);
-    },
-    [handleStopLive]
-  );
-
-  // ── Export ──
   const savePNG = useCallback(() => {
     canvasRef.current?.toBlob((blob) => {
       if (!blob) return;
@@ -257,7 +158,6 @@ export default function Interactive() {
     }, "image/png");
   }, []);
 
-  // ── Tastatur ──
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -269,92 +169,47 @@ export default function Interactive() {
         setShowUI((u) => !u);
       } else if (e.key === "s" || e.key === "S") {
         savePNG();
-      } else if (e.key === " " && source === "live") {
-        e.preventDefault();
-        if (isLiveRunning) handleStopLive();
-        else startLive();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [source, isLiveRunning, savePNG, startLive, handleStopLive]);
-
-  const liveDisabled = source !== "live";
+  }, [savePNG]);
 
   return (
     <div className="chalk-ui" style={S.root}>
       <div ref={areaRef} style={S.canvasArea}>
         <canvas ref={canvasRef} style={S.canvas} />
-        {source === "upload" && !uploadedImage && (
-          <div style={S.placeholder}>Bild wählen oder zu Live wechseln</div>
+        {!uploadedImage && (
+          <div style={S.placeholder}>Bild wählen</div>
         )}
       </div>
 
-      <video ref={videoRef} style={{ display: "none" }} playsInline muted />
-
       {showUI && (
         <aside style={S.sidebar}>
-          <div>
-            <div style={S.brand}>OUTLOUD</div>
-            <div style={S.brandSub}>Вголос!</div>
-          </div>
-
-          {/* Quelle */}
-          <div>
-            <div style={S.sectionLabel}>Quelle</div>
-            <div style={S.toggle}>
-              <button
-                onClick={() => switchSource("live")}
-                style={S.toggleBtn(source === "live")}
-              >
-                <Camera size={14} style={{ flexShrink: 0 }} /> Live
-              </button>
-              <button
-                onClick={() => switchSource("upload")}
-                style={S.toggleBtn(source === "upload")}
-              >
-                <Image size={14} style={{ flexShrink: 0 }} /> Upload
+          {uploadedImage ? (
+            <div style={S.thumbRow}>
+              <img src={uploadedImage.url} style={S.thumb} alt="" />
+              <button onClick={clearUpload} style={S.thumbX}>
+                <X size={14} />
               </button>
             </div>
-          </div>
-
-          {source === "upload" &&
-            (uploadedImage ? (
-              <div style={S.thumbRow}>
-                <img src={uploadedImage.url} style={S.thumb} alt="" />
-                <button onClick={clearUpload} style={S.thumbX}>
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <label style={S.fileLabel} data-chalk>
-                Bild wählen
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleImageUpload(f);
-                  }}
-                />
-              </label>
-            ))}
-
-          {source === "live" && (
-            <button
-              onClick={isLiveRunning ? handleStopLive : startLive}
-              style={S.liveBtn(isLiveRunning)}
-            >
-              {isLiveRunning ? <><Square size={14} /> Kamera stoppen</> : <><Camera size={14} /> Kamera starten</>}
-            </button>
+          ) : (
+            <label style={S.fileLabel} data-chalk>
+              Bild wählen
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleImageUpload(f);
+                }}
+              />
+            </label>
           )}
-
-          {error && <div style={S.error}>{error}</div>}
 
           <div style={S.divider} />
 
-          {/* Slider */}
           <Slider label="Scale" value={config.scale} min={0.1} max={1} step={0.05}
             onChange={(v) => setCfg({ scale: v })} fmt={(v) => v.toFixed(2)} />
           <Slider label="Resolution" value={config.resolution} min={2} max={20} step={1}
@@ -369,10 +224,6 @@ export default function Interactive() {
             onChange={(v) => setCfg({ direction: v })} fmt={(v) => `${v}°`} />
           <Slider label="Strichstärke" value={config.strokeWeight} min={1} max={8} step={0.5}
             onChange={(v) => setCfg({ strokeWeight: v })} fmt={(v) => v.toFixed(1)} />
-          <Slider label="Trail" value={config.trail} min={0} max={1} step={0.02}
-            onChange={(v) => setCfg({ trail: v })} fmt={(v) => v.toFixed(2)} disabled={liveDisabled} />
-          <Slider label="Lebendigkeit" value={config.shimmer} min={0} max={1} step={0.05}
-            onChange={(v) => setCfg({ shimmer: v })} fmt={(v) => v.toFixed(2)} disabled={liveDisabled} />
 
           <div style={S.divider} />
 
@@ -389,7 +240,6 @@ export default function Interactive() {
   );
 }
 
-// ── Slider-Unterkomponente ──
 function Slider({
   label,
   value,
@@ -398,7 +248,6 @@ function Slider({
   step,
   onChange,
   fmt,
-  disabled = false,
 }: {
   label: string;
   value: number;
@@ -407,10 +256,9 @@ function Slider({
   step: number;
   onChange: (v: number) => void;
   fmt: (v: number) => string;
-  disabled?: boolean;
 }) {
   return (
-    <div style={{ ...S.sliderRow, opacity: disabled ? 0.4 : 1 }}>
+    <div style={S.sliderRow}>
       <div style={S.sliderLabel}>
         <span>{label}</span>
         <span style={S.sliderValue}>{fmt(value)}</span>
@@ -421,7 +269,6 @@ function Slider({
         max={max}
         step={step}
         value={value}
-        disabled={disabled}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         style={S.range}
       />
@@ -429,7 +276,6 @@ function Slider({
   );
 }
 
-// ── Styles (NADO-Look: clean, dunkel, Sidebar rechts) ──
 const S = {
   root: {
     display: "flex",
@@ -467,44 +313,6 @@ const S = {
     gap: 16,
     overflowY: "auto",
   } as React.CSSProperties,
-  brand: {
-    color: "#f5f2ed",
-    fontWeight: 800,
-    fontSize: 16,
-    letterSpacing: "0.08em",
-  } as React.CSSProperties,
-  brandSub: {
-    color: "rgba(245,242,237,0.45)",
-    fontFamily: "'Playfair Display', serif",
-    fontSize: 18,
-  } as React.CSSProperties,
-  sectionLabel: {
-    fontSize: 11,
-    color: "#666",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    marginBottom: 6,
-  } as React.CSSProperties,
-  toggle: {
-    display: "flex",
-    borderRadius: 6,
-    overflow: "hidden",
-    border: "1px solid #2a2a2a",
-  } as React.CSSProperties,
-  toggleBtn: (active: boolean): React.CSSProperties => ({
-    flex: 1,
-    padding: "8px 0",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    background: active ? "#e0e0e0" : "#1a1a1a",
-    color: active ? "#111" : "#777",
-    border: "none",
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: "pointer",
-  }),
   fileLabel: {
     display: "block",
     padding: 14,
@@ -537,26 +345,6 @@ const S = {
     color: "#666",
     cursor: "pointer",
     fontSize: 14,
-  } as React.CSSProperties,
-  liveBtn: (running: boolean): React.CSSProperties => ({
-    width: "100%",
-    padding: 10,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    background: running ? "#333" : "#e0e0e0",
-    color: running ? "#aaa" : "#111",
-    border: "none",
-    borderRadius: 4,
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: "pointer",
-  }),
-  error: {
-    fontSize: 12,
-    color: "rgba(235,160,160,0.9)",
-    lineHeight: 1.4,
   } as React.CSSProperties,
   divider: { height: 1, background: "#1a1a1a" } as React.CSSProperties,
   sliderRow: {

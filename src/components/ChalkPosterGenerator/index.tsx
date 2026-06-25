@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router";
 import type {
   AssetItem,
   ChalkStroke,
@@ -33,7 +32,7 @@ import { LayoutPanel } from "./LayoutPanel";
 import { LAYOUTS, type PosterLayout } from "./layouts";
 import type { Align } from "../../lib/layouts";
 import { type PosterScene, type SceneAsset } from "../../lib/posterRender";
-import { exportPNG, exportGIF, exportVideo, downloadBlob } from "../../lib/exporter";
+import { exportPNG, downloadBlob } from "../../lib/exporter";
 import styles from "../../styles/chalkPoster.module.css";
 import {
   makeId,
@@ -123,7 +122,6 @@ export function ChalkPosterGenerator() {
   // ── Pattern-Selbstzeichen-Animation ──────────────────
   const [isPlaying, setIsPlaying] = useState(false);
   const [animDuration, setAnimDuration] = useState(5);
-  const [isExporting, setIsExporting] = useState<null | "gif" | "video">(null);
   const posterCanvasRef = useRef<PosterCanvasHandle>(null);
   const animFrameRef = useRef<number | null>(null);
 
@@ -599,7 +597,7 @@ export function ChalkPosterGenerator() {
     [selectedAssetId]
   );
 
-  // 🎲 Alles neu generieren — komplett neue Komposition im Brand-Rahmen:
+  // Alles neu generieren — komplett neue Komposition im Brand-Rahmen:
   // zufälliges Layout (Positionen + Ausrichtung + Logo-Plätze), neue Schriften
   // je Textfeld und ein neues Hintergrund-Muster. Erhalten bleiben: die
   // Text-Inhalte, vom Nutzer platzierte Illustrationen (Porträts, Icons …)
@@ -933,28 +931,6 @@ export function ChalkPosterGenerator() {
     downloadBlob(blob, "holos-poster.png");
   }, [buildScene]);
 
-  // ── Export GIF (Pattern-Selbstzeichen-Animation) ──
-  const handleExportGif = useCallback(async () => {
-    setIsExporting("gif");
-    try {
-      const blob = await exportGIF(buildScene(), animDuration, 12, 1);
-      downloadBlob(blob, `holos-${patternConfig.seed}.gif`);
-    } finally {
-      setIsExporting(null);
-    }
-  }, [buildScene, animDuration, patternConfig.seed]);
-
-  // ── Export Video (WebM, Pattern-Selbstzeichen-Animation) ──
-  const handleExportVideo = useCallback(async () => {
-    setIsExporting("video");
-    try {
-      const blob = await exportVideo(buildScene(), animDuration, 30, 2);
-      downloadBlob(blob, `holos-${patternConfig.seed}.webm`);
-    } finally {
-      setIsExporting(null);
-    }
-  }, [buildScene, animDuration, patternConfig.seed]);
-
   // ── Live-Pattern-Animation (rAF direkt auf der PosterCanvas) ──
   // Nur Tafel + Muster animieren sich; fette Striche, Text & Assets bleiben
   // statisch sichtbar (DOM-Overlays bzw. voll gezeichnet).
@@ -1099,9 +1075,6 @@ export function ChalkPosterGenerator() {
         }
         onRandomize={generateAll}
         onExport={handleExport}
-        onExportGif={handleExportGif}
-        onExportVideo={handleExportVideo}
-        isExporting={isExporting}
       />
 
       <div className={styles.preview}>
@@ -1416,43 +1389,6 @@ export function ChalkPosterGenerator() {
         </p>
       </div>
 
-      {/* Schwebende „Live"-Bubble — Kreide-Look: dunkle Tafel, gekritzelter
-          Rand & Marker-Schrift, damit sie zur Gesamt-Ästhetik passt. */}
-      <style>{`
-        @keyframes outloudFabPulse {
-          0%,100% { box-shadow: 0 6px 22px rgba(0,0,0,0.5), 0 0 0 0 rgba(245,230,163,0.22); }
-          50%     { box-shadow: 0 6px 22px rgba(0,0,0,0.5), 0 0 0 11px rgba(245,230,163,0); }
-        }
-        .outloudFab { animation: outloudFabPulse 2.6s ease-in-out infinite; transition: transform 0.15s ease; }
-        .outloudFab:hover { transform: translateY(-2px) scale(1.04); }
-      `}</style>
-      <Link
-        to="/interactive"
-        className="outloudFab"
-        title="Interactive Mode: Live-Kreide mit der Webcam ✨"
-        style={{
-          position: "fixed",
-          right: 24,
-          bottom: 24,
-          zIndex: 1000,
-          display: "flex",
-          alignItems: "center",
-          gap: 9,
-          padding: "10px 20px 10px 15px",
-          borderRadius: 999,
-          background:
-            "linear-gradient(135deg, rgba(245,230,163,0.16), rgba(140,184,212,0.16)), #121212",
-          color: "#f5f2ed",
-          textDecoration: "none",
-          fontFamily: "'Permanent Marker', cursive",
-          fontSize: 16,
-          letterSpacing: "0.02em",
-          border: "1.5px dashed rgba(245,242,237,0.45)",
-        }}
-      >
-        <span style={{ fontSize: 18, lineHeight: 1 }}>✨</span>
-        <span>Live</span>
-      </Link>
     </div>
   );
 }
