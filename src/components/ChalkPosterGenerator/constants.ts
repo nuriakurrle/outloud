@@ -1,11 +1,6 @@
 import type { PosterSize } from "../../types/poster";
 
-/** Eindeutige ID (crypto.randomUUID mit Fallback). */
-export function makeId() {
-  return typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `placed-${Date.now()}-${Math.random()}`;
-}
+export const makeId = () => crypto.randomUUID();
 
 export const POS_KEYS = ["header", "sub", "body", "detail"] as const;
 export type PosKey = (typeof POS_KEYS)[number];

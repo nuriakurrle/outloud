@@ -428,11 +428,3 @@ export const LAYOUTS: Record<string, LayoutPreset> = {
   },
 };
 
-/** Liefert die LayoutPresets, die für ein Format verfügbar sind. */
-export function getLayoutsForFormat(layoutIds: string[]): LayoutPreset[] {
-  return layoutIds.map((id) => LAYOUTS[id]).filter(Boolean);
-}
-
-export function getLayout(id: string): LayoutPreset | undefined {
-  return LAYOUTS[id];
-}

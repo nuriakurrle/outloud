@@ -1,29 +1,9 @@
 import { SimpleNoise } from "./noise";
 import { seededRandom } from "./seededRandom";
+import { computePathLength, smoothstep, hexToRgb } from "./mathUtils";
 import type { StretchBrush } from "./stretchBrush";
 
 type Pt = { x: number; y: number };
-
-export function computePathLength(points: Pt[]): number {
-  let len = 0;
-  for (let i = 1; i < points.length; i++) {
-    len += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
-  }
-  return len;
-}
-
-function smoothstep(edge0: number, edge1: number, x: number): number {
-  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0 || 1e-6)));
-  return t * t * (3 - 2 * t);
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  return [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
-  ];
-}
 
 /**
  * Zeichnet einen kompletten Strich mit einem Stretch Brush. Der Brush-Tip wird

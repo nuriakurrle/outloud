@@ -146,6 +146,3 @@ export const FORMAT_CATEGORIES: Array<{
   { id: "animation", label: "Animation", icon: "🎬" },
 ];
 
-export function getFormat(id: string): OutputFormat | undefined {
-  return FORMATS.find((f) => f.id === id);
-}

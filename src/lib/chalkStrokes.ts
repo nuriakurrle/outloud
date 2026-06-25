@@ -17,11 +17,7 @@ export const STROKE_SCHEMES: StrokeScheme[] = [
 const DEFAULT_STROKE_COLOR = "#e8e5e0";
 const DEFAULT_STROKE_BRUSH: DrawBrush = "verite";
 
-function uid(): string {
-  return typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `stroke-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
+const uid = () => crypto.randomUUID();
 
 type Pt = { x: number; y: number };
 

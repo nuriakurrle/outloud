@@ -7,6 +7,7 @@
 // (<img>) genauso wie im Canvas-Export (drawImage) — ohne Sonderpfade.
 
 import { loadImage } from "./posterRender";
+import { smoothstep, hexToRgb } from "./mathUtils";
 
 export interface ChalkifyOptions {
   contrast: number; // 0.5–2.5, Default ~1.35
@@ -24,27 +25,7 @@ export const DEFAULT_CHALKIFY: ChalkifyOptions = {
 
 const MAX_DIM = 1400; // Verarbeitungsgröße deckeln → flüssig, scharf genug
 
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace("#", "");
-  const n = parseInt(
-    h.length === 3
-      ? h
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : h,
-    16
-  );
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
-
-/** Weicher Stufenübergang (für Threshold-Kanten ohne Treppchen). */
-function smoothstep(edge0: number, edge1: number, x: number): number {
-  const t = clamp01((x - edge0) / (edge1 - edge0));
-  return t * t * (3 - 2 * t);
-}
 
 /**
  * Verarbeitet ein bereits geladenes Bild und liefert eine Kreide-Data-URL.

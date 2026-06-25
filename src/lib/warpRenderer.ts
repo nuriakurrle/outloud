@@ -1,7 +1,4 @@
-// ── Stroke-Stamp-Rendering (Canvas) ─────────────────────────────────────
-// Zwei Render-Wege für platzierte Stroke-Stamps:
-//   • renderPlacedStroke  — normales Transform (Position/Scale/Rotation/Flip)
-//   • renderWarpedStroke   — Stamp in 1px-Spalten entlang eines Pfads gewrappt
+import { computePathLength } from "./mathUtils";
 
 type Pt = { x: number; y: number };
 type Img = HTMLImageElement | HTMLCanvasElement;
@@ -11,14 +8,6 @@ function imgSize(img: Img): { w: number; h: number } {
     w: (img as HTMLImageElement).naturalWidth || img.width,
     h: (img as HTMLImageElement).naturalHeight || img.height,
   };
-}
-
-export function computePathLength(path: Pt[]): number {
-  let len = 0;
-  for (let i = 1; i < path.length; i++) {
-    len += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
-  }
-  return len;
 }
 
 /**

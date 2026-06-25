@@ -5,7 +5,7 @@ import { renderBrushPreview } from "../../lib/stretchBrushRenderer";
 
 /** Kreide-Farben, die auf schwarzer Tafel gut aussehen (für Asset-Tönung). */
 export const CHALK_COLORS = [
-  { label: "Weiß", hex: "#e8e5e0" },
+  { label: "Weiß", hex: "#FFFFFF" },
   { label: "Gelb", hex: "#f5e6a3" },
   { label: "Rosa", hex: "#e8a0b4" },
   { label: "Blau", hex: "#8cb8d4" },
@@ -17,7 +17,7 @@ export const CHALK_COLORS = [
 
 /** Zeichen-Farben in der Bar: nur Schwarz & Weiß. */
 const DRAW_COLORS = [
-  { label: "Weiß", hex: "#e8e5e0" },
+  { label: "Weiß", hex: "#FFFFFF" },
   { label: "Schwarz", hex: "#000000" },
 ];
 
