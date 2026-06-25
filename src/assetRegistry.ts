@@ -1,6 +1,6 @@
 import type { AssetCategory, AssetItem } from "./types/poster";
 
-const logoModules = import.meta.glob("./assets/logo/**/*.svg", {
+const logoModules = import.meta.glob("../assets/logo/**/*.svg", {
   eager: true,
   query: "?url",
   import: "default",
