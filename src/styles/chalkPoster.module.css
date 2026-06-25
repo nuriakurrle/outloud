@@ -17,6 +17,7 @@
   border-right: 1px solid #2a2a2a;
   display: flex;
   flex-direction: column;
+  padding-top: 2vh;
 }
 
 .sidebarHeader {
@@ -43,9 +44,25 @@
   overflow-y: auto;
 }
 
+.sidebarScroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebarScroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebarScroll::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 2px;
+}
+
 .sidebarFooter {
   padding: 14px 16px;
   border-top: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* ── Accordion sections ──────────────────────────────── */
