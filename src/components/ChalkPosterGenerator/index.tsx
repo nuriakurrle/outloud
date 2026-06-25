@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
+  AssetCategory,
   AssetItem,
   ChalkStroke,
   DrawBrush,
@@ -15,7 +16,7 @@ import { renderStretchBrush } from "../../lib/stretchBrushRenderer";
 import { STRETCH_BRUSHES } from "../../lib/stretchBrush";
 import { DrawingToolbar } from "./DrawingToolbar";
 import { smartPlace } from "../../lib/smartPlace";
-import { ASSET_REGISTRY } from "../../assetRegistry";
+import { ASSET_REGISTRY, LOGO_REGISTRY } from "../../assetRegistry";
 import { isDefaultWhite, isMaskAsset } from "../../lib/strokeStamps";
 import { SHAPE_ASSETS } from "../../lib/shapeAssets";
 import {
@@ -158,23 +159,35 @@ export function ChalkPosterGenerator() {
   const [bodyOutline, setBodyOutline] = useState(false);
   const [detailOutline, setDetailOutline] = useState(false);
 
-  // Positionen (%) für Drag & Drop
-  const [positions, setPositions] = useState<Record<PosKey, Position>>({
-    header: { x: 50, y: 22 },
-    sub: { x: 50, y: 35 },
-    body: { x: 50, y: 52 },
-    detail: { x: 50, y: 82 },
-  });
-  // Ausrichtung je Textfeld (vom Layout gesetzt, Default zentriert)
-  const [textAligns, setTextAligns] = useState<Record<PosKey, Align>>({
-    header: "center",
-    sub: "center",
-    body: "center",
-    detail: "center",
-  });
+  const [selectedLayoutId, setSelectedLayoutId] = useState(LAYOUTS[0].id);
 
-  // Platzierte Logos/Illustrationen
-  const [placedAssets, setPlacedAssets] = useState<PlacedAsset[]>([]);
+  // Positionen (%) für Drag & Drop — initialisiert aus erstem Layout
+  const [positions, setPositions] = useState<Record<PosKey, Position>>(
+    () => LAYOUTS[0].positions as Record<PosKey, Position>
+  );
+  const [textAligns, setTextAligns] = useState<Record<PosKey, Align>>(() => ({
+    header: LAYOUTS[0].aligns?.header ?? "center",
+    sub: LAYOUTS[0].aligns?.sub ?? "center",
+    body: LAYOUTS[0].aligns?.body ?? "center",
+    detail: LAYOUTS[0].aligns?.detail ?? "center",
+  }));
+
+  // Platzierte Logos/Illustrationen — Logo aus erstem Layout vorbelegt
+  const [placedAssets, setPlacedAssets] = useState<PlacedAsset[]>(() =>
+    LOGO_REGISTRY.length === 0
+      ? []
+      : LAYOUTS[0].logoSlots.map((slot, i) => ({
+          id: makeId(),
+          assetId: LOGO_REGISTRY[i % LOGO_REGISTRY.length].id,
+          x: slot.x,
+          y: slot.y,
+          scale: slot.scale,
+          rotation: 0,
+          opacity: 1,
+          flipX: false,
+          zIndex: i + 1,
+        }))
+  );
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   // Ausgewähltes Textfeld (für Auswahl-Rahmen)
   const [selectedTextKey, setSelectedTextKey] = useState<PosKey | null>(null);
@@ -183,19 +196,27 @@ export function ChalkPosterGenerator() {
   const imgRatios = useRef<Map<string, number>>(new Map());
   // Vom Nutzer hochgeladene Illustrationen (zusätzlich zum Registry)
   const [customAssets, setCustomAssets] = useState<AssetItem[]>([]);
-  const allAssets = useMemo(
-    () => [...ASSET_REGISTRY, ...SHAPE_ASSETS, ...customAssets],
+  const logoAssets = useMemo(
+    () => [...LOGO_REGISTRY, ...customAssets.filter((a) => a.category === "logos")],
     [customAssets]
   );
+  const illustrationAssets = useMemo(
+    () => [...ASSET_REGISTRY, ...SHAPE_ASSETS, ...customAssets.filter((a) => a.category !== "logos")],
+    [customAssets]
+  );
+  const allAssets = useMemo(
+    () => [...logoAssets, ...illustrationAssets],
+    [logoAssets, illustrationAssets]
+  );
 
-  const handleUpload = useCallback((file: File) => {
+  const handleUpload = useCallback((file: File, category: AssetCategory = "icons") => {
     const url = URL.createObjectURL(file);
     const id = `custom/${makeId()}`;
     const isSvg = /svg/i.test(file.type) || /\.svg$/i.test(file.name);
     const asset: AssetItem = {
       id,
       name: file.name.replace(/\.(svg|png|jpe?g)$/i, ""),
-      category: "logos",
+      category,
       src: url,
       defaultScale: 0.25,
       anchor: "center",
@@ -544,8 +565,8 @@ export function ChalkPosterGenerator() {
       body: layout.aligns?.body ?? "center",
       detail: layout.aligns?.detail ?? "center",
     });
-    const logos = ASSET_REGISTRY.filter((a) => a.category === "logos");
-    if (logos.length === 0) {
+    setSelectedLayoutId(layout.id);
+    if (LOGO_REGISTRY.length === 0) {
       setPlacedAssets([]);
       setSelectedAssetId(null);
       return;
@@ -553,7 +574,7 @@ export function ChalkPosterGenerator() {
     setPlacedAssets(
       layout.logoSlots.map((slot, i) => ({
         id: makeId(),
-        assetId: logos[i % logos.length].id,
+        assetId: LOGO_REGISTRY[i % LOGO_REGISTRY.length].id,
         x: slot.x,
         y: slot.y,
         scale: slot.scale,
@@ -614,17 +635,17 @@ export function ChalkPosterGenerator() {
     });
     // 2) Logos neu in die Layout-Plätze setzen; andere platzierte
     //    Illustrationen (Porträts, Icons …) bleiben erhalten.
-    const logos = ASSET_REGISTRY.filter((a) => a.category === "logos");
+    setSelectedLayoutId(layout.id);
     setPlacedAssets((prev) => {
       const others = prev.filter((p) => {
         const item = allAssets.find((a) => a.id === p.assetId);
         return item?.category !== "logos";
       });
-      if (logos.length === 0) return others;
+      if (LOGO_REGISTRY.length === 0) return others;
       const baseZ = others.reduce((m, p) => Math.max(m, p.zIndex), 0);
       const newLogos = layout.logoSlots.map((slot, i) => ({
         id: makeId(),
-        assetId: logos[i % logos.length].id,
+        assetId: LOGO_REGISTRY[i % LOGO_REGISTRY.length].id,
         x: slot.x,
         y: slot.y,
         scale: slot.scale,
@@ -1053,19 +1074,32 @@ export function ChalkPosterGenerator() {
           <LayoutPanel
             layouts={LAYOUTS}
             onApply={applyLayout}
-            hasLogos={ASSET_REGISTRY.some((a) => a.category === "logos")}
+            hasLogos={LOGO_REGISTRY.length > 0}
+            selectedId={selectedLayoutId}
           />
         }
         header={headerField}
         sub={subField}
         body={bodyField}
         detail={detailField}
-        assetSection={
+        logoSection={
           <AssetPanel
-            assets={allAssets}
+            assets={logoAssets}
             onPlace={handlePlace}
-            onUpload={handleUpload}
-            selected={selectedAsset}
+            onUpload={(file) => handleUpload(file, "logos")}
+            selected={allAssets.find((a) => a.id === selectedAsset?.assetId)?.category === "logos" ? selectedAsset : null}
+            onUpdateSelected={updateSelected}
+            onDeleteSelected={deleteSelected}
+            onLayer={handleLayer}
+            onChalkChange={updateAssetChalk}
+          />
+        }
+        illustrationSection={
+          <AssetPanel
+            assets={illustrationAssets}
+            onPlace={handlePlace}
+            onUpload={(file) => handleUpload(file, "icons")}
+            selected={allAssets.find((a) => a.id === selectedAsset?.assetId)?.category !== "logos" ? selectedAsset : null}
             onUpdateSelected={updateSelected}
             onDeleteSelected={deleteSelected}
             onLayer={handleLayer}

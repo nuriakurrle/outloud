@@ -114,25 +114,27 @@ export function AssetPanel({
   const [filter, setFilter] = useState<AssetCategory | "all">("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Nur Kategorien anbieten, die tatsächlich Assets enthalten
   const availableCats = Array.from(new Set(assets.map((a) => a.category)));
   const shown =
     filter === "all" ? assets : assets.filter((a) => a.category === filter);
+  const showFilter = availableCats.length > 1;
 
   return (
     <>
-      <select
-        className={styles.select}
-        value={filter}
-        onChange={(e) => setFilter(e.target.value as AssetCategory | "all")}
-      >
-        <option value="all">{CATEGORY_LABELS.all}</option>
-        {availableCats.map((c) => (
-          <option key={c} value={c}>
-            {CATEGORY_LABELS[c]}
-          </option>
-        ))}
-      </select>
+      {showFilter && (
+        <select
+          className={styles.select}
+          value={filter}
+          onChange={(e) => setFilter(e.target.value as AssetCategory | "all")}
+        >
+          <option value="all">{CATEGORY_LABELS.all}</option>
+          {availableCats.map((c) => (
+            <option key={c} value={c}>
+              {CATEGORY_LABELS[c] ?? c.charAt(0).toUpperCase() + c.slice(1)}
+            </option>
+          ))}
+        </select>
+      )}
 
       <div className={styles.assetGrid}>
         {shown.map((a) => (

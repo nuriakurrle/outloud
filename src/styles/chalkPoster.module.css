@@ -420,6 +420,11 @@
   border-color: #5a7fb5;
 }
 
+.layoutThumbActive {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: #2a2a2a;
+}
+
 .layoutThumbSvg {
   width: 100%;
   height: auto;

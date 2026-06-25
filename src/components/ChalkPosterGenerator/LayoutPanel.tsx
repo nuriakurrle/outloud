@@ -5,6 +5,7 @@ interface LayoutPanelProps {
   layouts: PosterLayout[];
   onApply: (layout: PosterLayout) => void;
   hasLogos: boolean;
+  selectedId?: string;
 }
 
 /** Winziges schematisches Vorschaubild eines Layouts. */
@@ -57,14 +58,14 @@ function LayoutThumb({ layout }: { layout: PosterLayout }) {
   );
 }
 
-export function LayoutPanel({ layouts, onApply, hasLogos }: LayoutPanelProps) {
+export function LayoutPanel({ layouts, onApply, hasLogos, selectedId }: LayoutPanelProps) {
   return (
     <>
       <div className={styles.layoutGrid}>
         {layouts.map((l) => (
           <button
             key={l.id}
-            className={styles.layoutThumb}
+            className={`${styles.layoutThumb} ${l.id === selectedId ? styles.layoutThumbActive : ""}`}
             title={l.hint}
             onClick={() => onApply(l)}
           >

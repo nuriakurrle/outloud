@@ -72,7 +72,8 @@ interface SidebarProps {
   body: TextFieldState;
   detail: TextFieldState;
 
-  assetSection: React.ReactNode;
+  logoSection: React.ReactNode;
+  illustrationSection: React.ReactNode;
 
   onRandomize: () => void;
   onExport: () => void;
@@ -513,11 +514,19 @@ export function Sidebar(props: SidebarProps) {
         </Section>
 
         <Section
-          title="Illustrationen & Logos"
-          isOpen={open === "assets"}
-          onToggle={() => toggle("assets")}
+          title="Logos"
+          isOpen={open === "logos"}
+          onToggle={() => toggle("logos")}
         >
-          {props.assetSection}
+          {props.logoSection}
+        </Section>
+
+        <Section
+          title="Illustrationen"
+          isOpen={open === "illustrations"}
+          onToggle={() => toggle("illustrations")}
+        >
+          {props.illustrationSection}
         </Section>
 
         <Section

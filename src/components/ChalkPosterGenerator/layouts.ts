@@ -114,7 +114,7 @@ export const LAYOUTS: PosterLayout[] = [
     logoSlots: [{ x: 50, y: 17, scale: 0.26 }],
   },
 
-  // ── Referenz-Layouts (OUTLOUD / Голос!-Stil) ──────────────────────────
+  // ── Referenz-Layouts (OUTLOUD / Вголос!-Stil) ──────────────────────────
   // Linksbündig: Logo oben links, Titel/Text linksbündig, Hero-Illustration
   // füllt die Mitte (frei platzierbar), Event-Details unten links.
   {
