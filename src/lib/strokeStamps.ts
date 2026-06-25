@@ -77,7 +77,7 @@ export function isMaskAsset(category: AssetCategory): boolean {
   return category === "strokes" || category === "shapes";
 }
 
-const DEFAULT_CHALK_WHITE = "#e8e5e0";
+const DEFAULT_CHALK_WHITE = "#FFFFFF";
 
 /** True, wenn `color` praktisch dem weißen Standard entspricht (kein Tint nötig). */
 export function isDefaultWhite(color: string): boolean {

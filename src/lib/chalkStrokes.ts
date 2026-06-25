@@ -14,7 +14,7 @@ export const STROKE_SCHEMES: StrokeScheme[] = [
 ];
 
 /** Standardwerte für generierte (nicht freihand) Striche. */
-const DEFAULT_STROKE_COLOR = "#e8e5e0";
+const DEFAULT_STROKE_COLOR = "#FFFFFF";
 const DEFAULT_STROKE_BRUSH: DrawBrush = "verite";
 
 const uid = () => crypto.randomUUID();

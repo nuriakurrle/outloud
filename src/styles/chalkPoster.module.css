@@ -1,11 +1,11 @@
 .app {
   display: flex;
-  height: 100vh;
+  height: 100%;
   width: 100vw;
   overflow: hidden;
   background: #111;
   color: #ddd;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Inria Sans", system-ui, sans-serif;
 }
 
 /* ── Sidebar ─────────────────────────────────────────── */
@@ -145,7 +145,7 @@
 
 .slider {
   width: 100%;
-  accent-color: #e0e0e0;
+  accent-color: #ffffff;
   cursor: pointer;
 }
 
@@ -163,20 +163,19 @@
 
 .regenButton {
   background: #252525;
-  border: 1.5px solid rgba(245, 242, 237, 0.45);
-  color: #f0ede6;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  color: #ffffff;
   border-radius: 8px;
   padding: 8px 9px;
-  font-size: 15px;
-  font-family: "Caveat", "Permanent Marker", cursive;
-  letter-spacing: 0.3px;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
   cursor: pointer;
-  filter: url(#chalkRoughen);
 }
 
 .regenButton:hover {
   background: #303030;
-  border-color: rgba(245, 242, 237, 0.75);
+  border-color: rgba(255, 255, 255, 0.75);
 }
 
 .hint {
@@ -213,7 +212,7 @@
 }
 
 .brushCardSelected canvas {
-  border-color: #e0e0e0;
+  border-color: #ffffff;
 }
 
 .brushCard span {
@@ -224,7 +223,7 @@
 }
 
 .brushCardSelected span {
-  color: #e0e0e0;
+  color: #ffffff;
 }
 
 /* ── Werkzeug-Toolbar ────────────────────────────────── */
@@ -259,9 +258,9 @@
 }
 
 .toolButtonActive {
-  background: #e0e0e0;
+  background: #ffffff;
   color: #111;
-  border-color: #e0e0e0;
+  border-color: #ffffff;
   font-weight: 600;
 }
 
@@ -286,16 +285,14 @@
 
 .exportButton {
   width: 100%;
-  background: #e0e0e0;
+  background: #ffffff;
   color: #111;
   border: 1.5px solid rgba(17, 17, 17, 0.35);
   border-radius: 9px;
   padding: 9px 12px;
-  font-size: 19px;
-  letter-spacing: 0.5px;
+  font-size: 15px;
+  font-family: inherit;
   cursor: pointer;
-  font-family: "Caveat", "Permanent Marker", cursive;
-  filter: url(#chalkRoughen);
 }
 
 .exportButton:hover {
@@ -469,20 +466,19 @@
 .smallButton {
   flex: 1;
   background: #252525;
-  border: 1.5px solid rgba(245, 242, 237, 0.45);
-  color: #f0ede6;
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  color: #ffffff;
   border-radius: 8px;
   padding: 7px 8px;
-  font-size: 15px;
-  font-family: "Caveat", "Permanent Marker", cursive;
-  letter-spacing: 0.3px;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
   cursor: pointer;
-  filter: url(#chalkRoughen);
 }
 
 .smallButton:hover {
   background: #303030;
-  border-color: rgba(245, 242, 237, 0.75);
+  border-color: rgba(255, 255, 255, 0.75);
 }
 
 .danger {

@@ -20,7 +20,7 @@ export const DEFAULT_CHALKIFY: ChalkifyOptions = {
   contrast: 1.35,
   brightness: 0.05,
   threshold: 0,
-  tint: "#e8e5e0",
+  tint: "#FFFFFF",
 };
 
 const MAX_DIM = 1400; // Verarbeitungsgröße deckeln → flüssig, scharf genug

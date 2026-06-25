@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { Link } from "react-router";
+import { Camera, Image, Square, X } from "lucide-react";
 import {
   startBodySegmentation,
   type SegmentationHandle,
@@ -295,7 +296,7 @@ export default function Interactive() {
         <aside style={S.sidebar}>
           <div>
             <div style={S.brand}>OUTLOUD</div>
-            <div style={S.brandSub}>Голос!</div>
+            <div style={S.brandSub}>Вголос!</div>
           </div>
 
           {/* Quelle */}
@@ -306,13 +307,13 @@ export default function Interactive() {
                 onClick={() => switchSource("live")}
                 style={S.toggleBtn(source === "live")}
               >
-                📷 Live
+                <Camera size={14} style={{ flexShrink: 0 }} /> Live
               </button>
               <button
                 onClick={() => switchSource("upload")}
                 style={S.toggleBtn(source === "upload")}
               >
-                🖼 Upload
+                <Image size={14} style={{ flexShrink: 0 }} /> Upload
               </button>
             </div>
           </div>
@@ -322,7 +323,7 @@ export default function Interactive() {
               <div style={S.thumbRow}>
                 <img src={uploadedImage.url} style={S.thumb} alt="" />
                 <button onClick={clearUpload} style={S.thumbX}>
-                  ✕
+                  <X size={14} />
                 </button>
               </div>
             ) : (
@@ -345,7 +346,7 @@ export default function Interactive() {
               onClick={isLiveRunning ? handleStopLive : startLive}
               style={S.liveBtn(isLiveRunning)}
             >
-              {isLiveRunning ? "⏹ Kamera stoppen" : "📷 Kamera starten"}
+              {isLiveRunning ? <><Square size={14} /> Kamera stoppen</> : <><Camera size={14} /> Kamera starten</>}
             </button>
           )}
 
@@ -379,7 +380,7 @@ export default function Interactive() {
             SAVE PNG
           </button>
 
-          <Link to="/" style={S.editorLink} data-chalk>
+          <Link to="/poster-maker" style={S.editorLink} data-chalk>
             ← Zurück zum Editor
           </Link>
         </aside>
@@ -432,7 +433,7 @@ function Slider({
 const S = {
   root: {
     display: "flex",
-    height: "100vh",
+    height: "100%",
     background: "#0a0a0a",
     overflow: "hidden",
   } as React.CSSProperties,
@@ -493,6 +494,10 @@ const S = {
   toggleBtn: (active: boolean): React.CSSProperties => ({
     flex: 1,
     padding: "8px 0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
     background: active ? "#e0e0e0" : "#1a1a1a",
     color: active ? "#111" : "#777",
     border: "none",
@@ -536,6 +541,10 @@ const S = {
   liveBtn: (running: boolean): React.CSSProperties => ({
     width: "100%",
     padding: 10,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
     background: running ? "#333" : "#e0e0e0",
     color: running ? "#aaa" : "#111",
     border: "none",

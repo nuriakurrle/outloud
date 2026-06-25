@@ -80,7 +80,7 @@ function BrushPreviewButton({
         style={{
           fontSize: 9,
           textAlign: "center",
-          color: active ? "#e0e0e0" : "#666",
+          color: active ? "#FFFFFF" : "#666",
           padding: "2px 0",
           background: "rgba(0,0,0,0.5)",
           letterSpacing: "0.03em",

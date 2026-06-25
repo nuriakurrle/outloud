@@ -28,7 +28,7 @@ function LayoutThumb({ layout }: { layout: PosterLayout }) {
             width={w}
             height={key === "header" ? 6 : 4}
             rx={1}
-            fill={key === "header" ? "#e0e0e0" : "#888"}
+            fill={key === "header" ? "#FFFFFF" : "#888"}
             opacity={1 - i * 0.12}
           />
         );

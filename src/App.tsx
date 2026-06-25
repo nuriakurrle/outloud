@@ -1,13 +1,14 @@
 import { BrowserRouter, Routes, Route } from "react-router";
+import { Navbar } from "./components/Navbar";
 import { ChalkPosterGenerator } from "./components/ChalkPosterGenerator";
 import Interactive from "./pages/Interactive";
+import Home from "./pages/Home";
+import Merch from "./pages/Merch";
 import "./styles/chalkUi.css";
 
 export default function App() {
   return (
     <BrowserRouter>
-      {/* Hand-gezeichneter „Kreide"-Rand für UI-Elemente (CSS: filter: url(#chalkRoughen)).
-          feTurbulence + feDisplacementMap verwackeln Kanten & Text leicht → Skizzen-Look. */}
       <svg
         width="0"
         height="0"
@@ -34,10 +35,17 @@ export default function App() {
         </defs>
       </svg>
 
-      <Routes>
-        <Route path="/" element={<ChalkPosterGenerator />} />
-        <Route path="/interactive" element={<Interactive />} />
-      </Routes>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <Navbar />
+        <div style={{ flex: 1, overflow: "hidden", minHeight: 0 }}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/interactive" element={<Interactive />} />
+            <Route path="/poster-maker" element={<ChalkPosterGenerator />} />
+            <Route path="/merch" element={<Merch />} />
+          </Routes>
+        </div>
+      </div>
     </BrowserRouter>
   );
 }

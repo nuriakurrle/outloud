@@ -1,16 +1,14 @@
-// ── Brand-Konstanten: Голос! ────────────────────────────────────────────
+// ── Brand-Konstanten: Вголос! ────────────────────────────────────────────
 // Feste visuelle Identität — der Rahmen, innerhalb dessen das generative
 // System variiert. Diese Werte ändern sich nicht.
 
 export const BRAND = {
-  name: "Голос!",
+  name: "Вголос!",
   tagline: "Ukrainische Kulturabende",
 
-  // Kreidefarben für die schwarze Tafel
   colors: {
-    chalk: "#e8e5e0", // Primär — warmes Weiß
-    chalkBright: "#f5f2ed", // Heller Akzent
-    chalkDim: "#b0ada8", // Gedämpft für Sekundäres
+    chalk: "#FFFFFF",
+    chalkDim: "#FFFFFF",
     board: "#1e1e1e", // Tafel-Hintergrund
     boardLight: "#2a2a2a", // Leicht heller für Grain
     accent: {
@@ -37,7 +35,7 @@ export const BRAND = {
   // Feste Event-Elemente
   venue: "Mikado Café",
   address: "Schertlinstr. 6",
-  social: "@holos_muc",
+  social: "@outloud_muc",
 } as const;
 
 /** Alle Akzentfarben als Array (für den Random-Generator). */

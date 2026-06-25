@@ -10,7 +10,7 @@ import { isMaskAsset } from "../../lib/strokeStamps";
 
 // Formen sollen laut Vorgabe nur Weiß oder Schwarz sein.
 const SHAPE_COLORS = [
-  { label: "Weiß", hex: "#e8e5e0" },
+  { label: "Weiß", hex: "#FFFFFF" },
   { label: "Schwarz", hex: "#000000" },
 ];
 
@@ -210,7 +210,7 @@ export function AssetPanel({
                           border: active
                             ? "1px solid rgba(255,255,255,0.5)"
                             : "1px solid rgba(255,255,255,0.15)",
-                          color: "#f5f2ed",
+                          color: "#FFFFFF",
                           fontSize: 12,
                           cursor: "pointer",
                         }}
@@ -294,7 +294,7 @@ export function AssetPanel({
                 >
                   {tintPalette.map((c) => {
                     const active =
-                      (selected.tint ?? "#e8e5e0").toLowerCase() ===
+                      (selected.tint ?? "#FFFFFF").toLowerCase() ===
                       c.hex.toLowerCase();
                     return (
                       <button
@@ -303,7 +303,7 @@ export function AssetPanel({
                         data-no-chalk
                         onClick={() =>
                           onUpdateSelected({
-                            tint: c.hex === "#e8e5e0" ? undefined : c.hex,
+                            tint: c.hex === "#FFFFFF" ? undefined : c.hex,
                           })
                         }
                         style={{
