@@ -18,13 +18,13 @@ import { DrawingToolbar } from "./DrawingToolbar";
 import { smartPlace } from "../../lib/smartPlace";
 import { ASSET_REGISTRY, LOGO_REGISTRY } from "../../assetRegistry";
 import { isDefaultWhite, isMaskAsset } from "../../lib/strokeStamps";
-import { SHAPE_ASSETS } from "../../lib/shapeAssets";
 import {
   chalkifyImage,
   DEFAULT_CHALKIFY,
   type ChalkifyOptions,
 } from "../../lib/chalkifyImage";
 import { Sidebar, type TextFieldState } from "./Sidebar";
+import { TextPopup } from "./TextPopup";
 import { PosterCanvas, type PosterCanvasHandle } from "./PosterCanvas";
 import { TextOverlay } from "./TextOverlay";
 import { SelectionHandles } from "./SelectionHandles";
@@ -34,7 +34,6 @@ import { LAYOUTS, type PosterLayout } from "./layouts";
 import type { Align } from "../../lib/layouts";
 import { type PosterScene, type SceneAsset } from "../../lib/posterRender";
 import { exportPNG, downloadBlob } from "../../lib/exporter";
-import { TextPopup } from "./TextPopup";
 import styles from "../../styles/chalkPoster.module.css";
 import {
   makeId,
@@ -183,8 +182,16 @@ export function ChalkPosterGenerator() {
         }))
   );
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
-  // Ausgewähltes Textfeld (für Auswahl-Rahmen)
-  const [selectedTextKey, setSelectedTextKey] = useState<PosKey | null>(null);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+
+  // Dynamisch hinzugefügte Textelemente (zusätzlich zu den 4 benannten)
+  interface ExtraText {
+    id: string; text: string; font: string; size: number;
+    weight: string; align: Align; outline: boolean; position: Position;
+  }
+  const [extraTexts, setExtraTexts] = useState<ExtraText[]>([]);
+  const extraTextsRef = useRef<ExtraText[]>([]);
+  useEffect(() => { extraTextsRef.current = extraTexts; }, [extraTexts]);
   // Natürliches Höhen-/Breitenverhältnis je Asset (für die Skalier-Griffe),
   // beim Laden des Bildes erfasst.
   const imgRatios = useRef<Map<string, number>>(new Map());
@@ -195,7 +202,7 @@ export function ChalkPosterGenerator() {
     [customAssets]
   );
   const illustrationAssets = useMemo(
-    () => [...ASSET_REGISTRY, ...SHAPE_ASSETS, ...customAssets.filter((a) => a.category !== "logos")],
+    () => [...ASSET_REGISTRY, ...customAssets.filter((a) => a.category !== "logos")],
     [customAssets]
   );
   const allAssets = useMemo(
@@ -276,6 +283,7 @@ export function ChalkPosterGenerator() {
     patternStrokes: PatternStroke[];
     patternConfig: PatternConfig;
     patternLocked: boolean;
+    extraTexts: { id: string; text: string; font: string; size: number; weight: string; align: Align; outline: boolean; position: Position }[];
   };
   const getAssetSrc = useCallback(
     (assetId: string) => allAssets.find((a) => a.id === assetId)?.src ?? "",
@@ -290,6 +298,7 @@ export function ChalkPosterGenerator() {
     patternStrokes,
     patternConfig,
     patternLocked,
+    extraTexts,
   };
 
   const applySnapshot = useCallback((s: Snapshot) => {
@@ -299,6 +308,7 @@ export function ChalkPosterGenerator() {
     setStrokes(s.strokes);
     setPlacedAssets(s.placedAssets);
     setPositions(s.positions);
+    setExtraTexts(s.extraTexts);
     // Klon → garantiert neue Referenz, damit der Generator-Effekt feuert und das
     // Skip-Flag verlässlich konsumiert (sonst könnte es hängenbleiben).
     setPatternConfig({ ...s.patternConfig });
@@ -378,11 +388,17 @@ export function ChalkPosterGenerator() {
   // Text & Trenner
   const handlePointerDown = useCallback(
     (key: string, e: React.PointerEvent) => {
-      const k = key as PosKey;
-      setSelectedTextKey(k);
+      setSelectedTextId(key);
       setSelectedAssetId(null);
       setSelectedStrokeId(null);
-      beginDrag(k, positions[k].x, positions[k].y, e);
+      setSelectedPatternId(null);
+      if ((POS_KEYS as readonly string[]).includes(key)) {
+        const k = key as PosKey;
+        beginDrag(k, positions[k].x, positions[k].y, e);
+      } else {
+        const et = extraTextsRef.current.find((t) => t.id === key);
+        if (et) beginDrag(key, et.position.x, et.position.y, e);
+      }
     },
     [beginDrag, positions]
   );
@@ -393,7 +409,7 @@ export function ChalkPosterGenerator() {
       const a = placedAssets.find((p) => p.id === id);
       if (!a) return;
       setSelectedAssetId(id);
-      setSelectedTextKey(null);
+      setSelectedTextId(null);
       beginDrag(id, a.x, a.y, e);
     },
     [beginDrag, placedAssets]
@@ -409,7 +425,7 @@ export function ChalkPosterGenerator() {
       if (!s) return;
       commit();
       setSelectedStrokeId(id);
-      setSelectedTextKey(null);
+      setSelectedTextId(null);
       setSelectedAssetId(null);
       setDragging(id);
       strokeDrag.current = {
@@ -434,7 +450,7 @@ export function ChalkPosterGenerator() {
       commit();
       setSelectedPatternId(id);
       setSelectedStrokeId(null);
-      setSelectedTextKey(null);
+      setSelectedTextId(null);
       setSelectedAssetId(null);
       setDragging(id);
       patternDrag.current = {
@@ -493,6 +509,7 @@ export function ChalkPosterGenerator() {
       const SNAP = 2;
       const targets: { x: number; y: number }[] = [
         ...POS_KEYS.filter(k => k !== dragging).map(k => positionsRef.current[k]),
+        ...extraTextsRef.current.filter(t => t.id !== dragging).map(t => t.position),
         ...placedAssetsRef.current.filter(a => a.id !== dragging).map(a => ({ x: a.x, y: a.y })),
       ];
       const lines: { x?: number; y?: number }[] = [];
@@ -506,14 +523,11 @@ export function ChalkPosterGenerator() {
 
       if ((POS_KEYS as readonly string[]).includes(dragging)) {
         const k = dragging as PosKey;
-        setPositions((prev) => ({
-          ...prev,
-          [k]: { x: px, y: py },
-        }));
+        setPositions((prev) => ({ ...prev, [k]: { x: px, y: py } }));
+      } else if (extraTextsRef.current.some((t) => t.id === dragging)) {
+        setExtraTexts((prev) => prev.map((t) => t.id === dragging ? { ...t, position: { x: px, y: py } } : t));
       } else {
-        setPlacedAssets((prev) =>
-          prev.map((a) => (a.id === dragging ? { ...a, x: px, y: py } : a))
-        );
+        setPlacedAssets((prev) => prev.map((a) => (a.id === dragging ? { ...a, x: px, y: py } : a)));
       }
     };
     const onUp = () => {
@@ -571,6 +585,35 @@ export function ChalkPosterGenerator() {
       setSelectedAssetId(id);
     },
     [allAssets, placedAssets, positions, size.w, size.h, chalkColor]
+  );
+
+  const handleDragPlace = useCallback(
+    (assetId: string, clientX: number, clientY: number) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect || clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return;
+      const x = Math.max(5, Math.min(95, ((clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(5, Math.min(95, ((clientY - rect.top) / rect.height) * 100));
+      const asset = allAssets.find((a) => a.id === assetId);
+      if (!asset) return;
+      commit();
+      const maxZ = placedAssets.reduce((m, p) => Math.max(m, p.zIndex), 0);
+      const id = makeId();
+      const isStroke = asset.category === "strokes";
+      const isMask = isMaskAsset(asset.category);
+      setPlacedAssets((prev) => [
+        ...prev,
+        {
+          id, assetId, x, y,
+          scale: asset.defaultScale,
+          rotation: isStroke ? -8 + Math.random() * 16 : 0,
+          opacity: isStroke ? 0.9 : 1,
+          flipX: false, zIndex: maxZ + 1,
+          ...(isMask ? { scaleY: 1, flipY: false, tint: isDefaultWhite(chalkColor) ? undefined : chalkColor } : {}),
+        },
+      ]);
+      setSelectedAssetId(id);
+    },
+    [allAssets, placedAssets, chalkColor, commit]
   );
 
   // Wendet ein Layout an: ordnet Texte an und platziert die vorhandenen
@@ -879,6 +922,7 @@ export function ChalkPosterGenerator() {
       color: textColor,
       align: textAligns.header,
       outline: headerOutline,
+      position: positions.header,
     },
     {
       key: "sub" as PosKey,
@@ -889,6 +933,7 @@ export function ChalkPosterGenerator() {
       color: textColor,
       align: textAligns.sub,
       outline: subOutline,
+      position: positions.sub,
     },
     {
       key: "body" as PosKey,
@@ -899,6 +944,7 @@ export function ChalkPosterGenerator() {
       color: textColor,
       align: textAligns.body,
       outline: bodyOutline,
+      position: positions.body,
     },
     {
       key: "detail" as PosKey,
@@ -909,7 +955,19 @@ export function ChalkPosterGenerator() {
       color: textColor,
       align: textAligns.detail,
       outline: detailOutline,
+      position: positions.detail,
     },
+    ...extraTexts.map((et) => ({
+      key: et.id,
+      text: et.text,
+      font: et.font,
+      size: et.size,
+      weight: et.weight,
+      color: textColor,
+      align: et.align,
+      outline: et.outline,
+      position: et.position,
+    })),
   ];
 
   // ── Szene bauen (Single Source of Truth für Render + Export) ──
@@ -930,8 +988,8 @@ export function ChalkPosterGenerator() {
         color: t.color,
         align: t.align,
         outline: t.outline,
-        x: positions[t.key].x,
-        y: positions[t.key].y,
+        x: t.position.x,
+        y: t.position.y,
       })),
       assets: placedAssets.map((a): SceneAsset => {
         const item = allAssets.find((x) => x.id === a.assetId);
@@ -996,6 +1054,17 @@ export function ChalkPosterGenerator() {
       animFrameRef.current = null;
     };
   }, [isPlaying, animDuration]);
+
+  // ── Add free text ────────────────────────────────────
+  const addText = useCallback(() => {
+    const id = makeId();
+    commit();
+    setExtraTexts((prev) => [
+      ...prev,
+      { id, text: "Text", font: headerFont, size: 24, weight: "400", align: "center", outline: false, position: { x: 50, y: 50 } },
+    ]);
+    setSelectedTextId(id);
+  }, [commit, headerFont]);
 
   // ── Sidebar-Feld-Konfig ──────────────────────────────
   const headerField: TextFieldState = {
@@ -1079,6 +1148,7 @@ export function ChalkPosterGenerator() {
           <AssetPanel
             assets={logoAssets}
             onPlace={handlePlace}
+            onDragPlace={handleDragPlace}
             onUpload={(file) => handleUpload(file, "logos")}
             selected={allAssets.find((a) => a.id === selectedAsset?.assetId)?.category === "logos" ? selectedAsset : null}
             onUpdateSelected={updateSelected}
@@ -1091,6 +1161,7 @@ export function ChalkPosterGenerator() {
           <AssetPanel
             assets={illustrationAssets}
             onPlace={handlePlace}
+            onDragPlace={handleDragPlace}
             onUpload={(file) => handleUpload(file, "icons")}
             selected={allAssets.find((a) => a.id === selectedAsset?.assetId)?.category !== "logos" ? selectedAsset : null}
             onUpdateSelected={updateSelected}
@@ -1099,6 +1170,45 @@ export function ChalkPosterGenerator() {
             onChalkChange={updateAssetChalk}
           />
         }
+        textPanel={(() => {
+          if (!selectedTextId) return undefined;
+          const namedFields: Record<PosKey, TextFieldState> = { header: headerField, sub: subField, body: bodyField, detail: detailField };
+          if ((POS_KEYS as readonly string[]).includes(selectedTextId)) {
+            const k = selectedTextId as PosKey;
+            return (
+              <TextPopup
+                field={namedFields[k]}
+                align={textAligns[k]}
+                onAlignChange={(a) => setTextAligns((prev) => ({ ...prev, [k]: a }))}
+                fonts={FONTS}
+                onClose={() => setSelectedTextId(null)}
+              />
+            );
+          }
+          const et = extraTexts.find((t) => t.id === selectedTextId);
+          if (!et) return undefined;
+          const upd = (patch: Partial<typeof et>) =>
+            setExtraTexts((prev) => prev.map((t) => t.id === selectedTextId ? { ...t, ...patch } : t));
+          const etField: TextFieldState = {
+            text: et.text, setText: (v) => upd({ text: v }),
+            font: et.font, setFont: (v) => upd({ font: v }),
+            size: et.size, setSize: (v) => upd({ size: v }),
+            sizeMin: 8, sizeMax: 120, multiline: true,
+            weight: et.weight, setWeight: (v) => upd({ weight: v }),
+            outline: et.outline, setOutline: (v) => upd({ outline: v }),
+          };
+          return (
+            <TextPopup
+              field={etField}
+              align={et.align}
+              onAlignChange={(a) => upd({ align: a })}
+              fonts={FONTS}
+              onClose={() => setSelectedTextId(null)}
+              onDelete={() => { setExtraTexts((prev) => prev.filter((t) => t.id !== selectedTextId)); setSelectedTextId(null); }}
+            />
+          );
+        })()}
+        onAddText={addText}
         onRandomize={generateAll}
         onExport={handleExport}
       />
@@ -1116,7 +1226,7 @@ export function ChalkPosterGenerator() {
           onBackgroundClick={() => {
             setSelectedAssetId(null);
             setSelectedStrokeId(null);
-            setSelectedTextKey(null);
+            setSelectedTextId(null);
             setSelectedPatternId(null);
           }}
         >
@@ -1327,16 +1437,15 @@ export function ChalkPosterGenerator() {
               );
             })()}
 
-          {/* Trash bin near selected asset */}
+          {/* Trash bin — top-right corner of the poster */}
           {selectedAsset && (
             <button
               data-no-chalk
               onClick={() => { commit(); deleteSelected(); }}
               style={{
                 position: "absolute",
-                left: `${selectedAsset.x}%`,
-                top: `${selectedAsset.y}%`,
-                transform: "translate(-50%, calc(-50% - 40px))",
+                top: 8,
+                right: 8,
                 zIndex: 200,
                 background: "rgba(20,20,20,0.85)",
                 border: "1px solid rgba(255,255,255,0.2)",
@@ -1368,10 +1477,10 @@ export function ChalkPosterGenerator() {
               color={item.color}
               align={item.align}
               outline={item.outline}
-              position={positions[item.key]}
+              position={item.position}
               scale={scale}
               dragging={dragging === item.key}
-              selected={selectedTextKey === item.key}
+              selected={selectedTextId === item.key}
               onPointerDown={handlePointerDown}
             />
           ))}
@@ -1413,26 +1522,6 @@ export function ChalkPosterGenerator() {
           )}
         </PosterCanvas>
 
-        {/* TextPopup — floating panel for the selected text field */}
-        {selectedTextKey && (() => {
-          const fields: Record<PosKey, TextFieldState> = {
-            header: headerField,
-            sub: subField,
-            body: bodyField,
-            detail: detailField,
-          };
-          return (
-            <TextPopup
-              field={fields[selectedTextKey]}
-              align={textAligns[selectedTextKey]}
-              onAlignChange={(a) => setTextAligns((prev) => ({ ...prev, [selectedTextKey]: a }))}
-              position={positions[selectedTextKey]}
-              containerRef={containerRef}
-              fonts={FONTS}
-              onClose={() => setSelectedTextKey(null)}
-            />
-          );
-        })()}
 
         {/* Kreide-Cursor (folgt der Maus im Zeichen-Modus) */}
         {mode === "draw" && cursorPos && (

@@ -15,8 +15,9 @@ const SHAPE_COLORS = [
 ];
 
 interface AssetPanelProps {
-  assets: AssetItem[]; // Registry + hochgeladene Illustrationen
+  assets: AssetItem[];
   onPlace: (assetId: string) => void;
+  onDragPlace?: (assetId: string, clientX: number, clientY: number) => void;
   onUpload: (file: File) => void;
   selected: PlacedAsset | null;
   onUpdateSelected: (patch: Partial<PlacedAsset>) => void;
@@ -89,6 +90,7 @@ function AssetSlider({
 export function AssetPanel({
   assets,
   onPlace,
+  onDragPlace,
   onUpload,
   selected,
   onUpdateSelected,
@@ -113,6 +115,7 @@ export function AssetPanel({
 
   const [filter, setFilter] = useState<AssetCategory | "all">("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [drag, setDrag] = useState<{ id: string; src: string; startX: number; startY: number; curX: number; curY: number; started: boolean } | null>(null);
 
   const availableCats = Array.from(new Set(assets.map((a) => a.category)));
   const shown =
@@ -143,9 +146,6 @@ export function AssetPanel({
             className={styles.assetThumb}
             title={a.name}
             data-no-chalk
-            onClick={() => onPlace(a.id)}
-            // Weiß-auf-transparent → dunkler Hintergrund nötig; Striche zudem
-            // über die volle Breite (lange Stamps).
             style={
               a.category === "strokes"
                 ? { background: "#1e1e1e", gridColumn: "1 / -1" }
@@ -153,15 +153,39 @@ export function AssetPanel({
                   ? { background: "#1e1e1e" }
                   : undefined
             }
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              setDrag({ id: a.id, src: a.src, startX: e.clientX, startY: e.clientY, curX: e.clientX, curY: e.clientY, started: false });
+            }}
+            onPointerMove={(e) => {
+              if (!drag || drag.id !== a.id) return;
+              const started = drag.started || Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 6;
+              setDrag((prev) => prev ? { ...prev, curX: e.clientX, curY: e.clientY, started } : null);
+            }}
+            onPointerUp={(e) => {
+              if (!drag || drag.id !== a.id) { setDrag(null); return; }
+              if (drag.started && onDragPlace) {
+                onDragPlace(a.id, e.clientX, e.clientY);
+              } else {
+                onPlace(a.id);
+              }
+              setDrag(null);
+            }}
+            onPointerCancel={() => setDrag(null)}
           >
             <img className={styles.assetThumbImg} src={a.src} alt={a.name} />
           </button>
         ))}
       </div>
+      {drag?.started && (
+        <div style={{ position: "fixed", left: drag.curX - 24, top: drag.curY - 24, width: 48, height: 48, pointerEvents: "none", zIndex: 9999, opacity: 0.8 }}>
+          <img src={drag.src} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+        </div>
+      )}
       {shown.length === 0 && (
         <p className={styles.hint}>Keine Illustrationen in dieser Kategorie.</p>
       )}
-      <p className={styles.hint}>Klick = aufs Poster · dann frei verschieben</p>
+      <p className={styles.hint}>Klick oder auf Poster ziehen</p>
 
       <input
         ref={fileInputRef}

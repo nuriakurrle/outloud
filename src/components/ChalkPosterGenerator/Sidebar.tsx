@@ -1,8 +1,6 @@
 import { useState } from "react";
 import type { PatternConfig, PosterSize } from "../../types/poster";
-import styles from "../../styles/chalkPoster.module.css";
-
-export interface TextFieldState {
+import styles from "../../styles/chalkPoster.module.css";export interface TextFieldState {
   text: string;
   setText: (v: string) => void;
   font: string;
@@ -45,6 +43,8 @@ interface SidebarProps {
 
   logoSection: React.ReactNode;
   illustrationSection: React.ReactNode;
+  textPanel?: React.ReactNode;
+  onAddText?: () => void;
 
   onRandomize: () => void;
   onExport: () => void;
@@ -191,6 +191,31 @@ export function Sidebar(props: SidebarProps) {
       </button>
 
       <div className={styles.sidebarScroll}>
+        {props.textPanel && (
+          <div style={{ padding: "12px 16px 16px", borderBottom: "1px solid #2a2a2a" }}>
+            {props.textPanel}
+          </div>
+        )}
+        {props.onAddText && (
+          <div style={{ padding: "8px 12px 0" }}>
+            <button
+              onClick={props.onAddText}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "rgba(255,255,255,0.06)",
+                border: "1px dashed rgba(255,255,255,0.25)",
+                borderRadius: 7,
+                color: "#ccc",
+                fontSize: 14,
+                cursor: "pointer",
+                letterSpacing: "0.02em",
+              }}
+            >
+              + Text hinzufügen
+            </button>
+          </div>
+        )}
         <Section
           title="Größe"
           isOpen={open === "size"}
