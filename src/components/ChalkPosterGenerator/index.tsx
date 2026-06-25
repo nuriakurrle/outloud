@@ -126,27 +126,26 @@ export function ChalkPosterGenerator() {
   const animFrameRef = useRef<number | null>(null);
 
   // Text-Elemente
-  const [headerText, setHeaderText] = useState("Голос!");
-  const [headerFont, setHeaderFont] = useState("Playfair Display");
+  const [headerText, setHeaderText] = useState("Незабутній Захід");
+  const [headerFont, setHeaderFont] = useState("Oswald");
   const [headerSize, setHeaderSize] = useState(52);
   const [headerWeight, setHeaderWeight] = useState("700");
 
-  const [subText, setSubText] = useState("Вечір української поезії");
-  const [subFont, setSubFont] = useState("Caveat");
+  const [subText, setSubText] = useState("Який ви не пропустите");
+  const [subFont, setSubFont] = useState("Oswald");
   const [subSize, setSubSize] = useState(26);
 
   const [bodyText, setBodyText] = useState(
-    "Приєднуйтесь до нас\nна незабутній вечір"
+    "15:00 01.01\nMicado Café\nSchertlinstr. 6"
   );
   const [bodyFont, setBodyFont] = useState("Oswald");
   const [bodySize, setBodySize] = useState(18);
 
   const [detailText, setDetailText] = useState(
-    "12 червня · 19:00 · вул. Хрещатик 1"
+    "Реєстрація в Інстаграм"
   );
-  const [detailFont, setDetailFont] = useState("Special Elite");
+  const [detailFont, setDetailFont] = useState("Oswald");
   const [detailSize, setDetailSize] = useState(14);
-
   // Schriftfarbe je Textfeld: Weiß (Kreide) oder Schwarz.
   const [headerColor, setHeaderColor] = useState(CHALK);
   const [subColor, setSubColor] = useState(CHALK);
