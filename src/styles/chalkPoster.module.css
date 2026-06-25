@@ -35,7 +35,7 @@
 
 .sidebarSubtitle {
   margin: 4px 0 0;
-  font-size: 11px;
+  font-size: 13px;
   color: #777;
 }
 
@@ -80,7 +80,7 @@
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.8px;
   text-transform: uppercase;
@@ -116,7 +116,7 @@
 }
 
 .label {
-  font-size: 11px;
+  font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: #888;
@@ -130,7 +130,7 @@
   color: #ddd;
   border-radius: 5px;
   padding: 8px 9px;
-  font-size: 13px;
+  font-size: 15px;
   font-family: inherit;
   width: 100%;
   box-sizing: border-box;
@@ -173,7 +173,7 @@
 }
 
 .sliderValue {
-  font-size: 11px;
+  font-size: 13px;
   color: #aaa;
   font-variant-numeric: tabular-nums;
 }
@@ -184,7 +184,7 @@
   color: #ffffff;
   border-radius: 8px;
   padding: 8px 9px;
-  font-size: 13px;
+  font-size: 15px;
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -196,7 +196,7 @@
 }
 
 .hint {
-  font-size: 11px;
+  font-size: 13px;
   color: #777;
   line-height: 1.4;
 }
@@ -265,7 +265,7 @@
   color: #ccc;
   border-radius: 5px;
   padding: 9px 6px;
-  font-size: 12px;
+  font-size: 14px;
   font-family: inherit;
   cursor: pointer;
 }
@@ -347,7 +347,7 @@
 }
 
 .previewHint {
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
   letter-spacing: 0.5px;
 }
@@ -492,7 +492,7 @@
   color: #ffffff;
   border-radius: 8px;
   padding: 7px 8px;
-  font-size: 13px;
+  font-size: 15px;
   font-family: inherit;
   text-align: left;
   cursor: pointer;

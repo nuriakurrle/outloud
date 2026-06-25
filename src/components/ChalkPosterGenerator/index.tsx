@@ -34,6 +34,7 @@ import { LAYOUTS, type PosterLayout } from "./layouts";
 import type { Align } from "../../lib/layouts";
 import { type PosterScene, type SceneAsset } from "../../lib/posterRender";
 import { exportPNG, downloadBlob } from "../../lib/exporter";
+import { TextPopup } from "./TextPopup";
 import styles from "../../styles/chalkPoster.module.css";
 import {
   makeId,
@@ -41,13 +42,6 @@ import {
   type PosKey,
   FONTS,
   POSTER_SIZES,
-  DISPLAY_FONTS,
-  SCRIPT_FONTS,
-  BODY_FONTS,
-  DETAIL_FONTS,
-  pick,
-  CHALK,
-  CHALK_DIM,
   POSTER_BG,
 } from "./constants";
 import { useUndoRedo } from "./useUndoRedo";
@@ -57,8 +51,10 @@ export function ChalkPosterGenerator() {
   const [posterSizeIndex, setPosterSizeIndex] = useState(0);
   const size = POSTER_SIZES[posterSizeIndex];
 
-  // Hintergrundfarbe: dunkle Tafel oder helles Papier (wählbar)
-  const [bgColor, setBgColor] = useState(POSTER_BG);
+  // Invert: white-on-black (false) vs black-on-white (true)
+  const [inverted, setInverted] = useState(false);
+  const bgColor = inverted ? "#ffffff" : POSTER_BG;
+  const textColor = inverted ? "#000000" : "#FFFFFF";
 
   // Kreide-Muster (Hintergrund) — generative Striche, die sich animiert
   // selbst zeichnen können.
@@ -98,6 +94,9 @@ export function ChalkPosterGenerator() {
     if (patternLocked) return;
     setPatternStrokes(generateChalkStrokes(patternConfig, size.w, size.h));
   }, [patternConfig, size.w, size.h, patternLocked]);
+
+  // Derive effective pattern color from inverted state
+  const effectivePatternConfig = { ...patternConfig, color: inverted ? "black" as const : "white" as const };
 
   // ── Freihand-Kreide-Striche ──────────────────────────
   const [strokes, setStrokes] = useState<ChalkStroke[]>([]);
@@ -147,11 +146,6 @@ export function ChalkPosterGenerator() {
   );
   const [detailFont, setDetailFont] = useState("Oswald");
   const [detailSize, setDetailSize] = useState(14);
-  // Schriftfarbe je Textfeld: Weiß (Kreide) oder Schwarz.
-  const [headerColor, setHeaderColor] = useState(CHALK);
-  const [subColor, setSubColor] = useState(CHALK);
-  const [bodyColor, setBodyColor] = useState(CHALK);
-  const [detailColor, setDetailColor] = useState(CHALK_DIM);
 
   // Umriss-Stil je Textfeld (hohle Buchstaben mit Kontur, wie der Referenz-Titel)
   const [headerOutline, setHeaderOutline] = useState(false);
@@ -357,6 +351,13 @@ export function ChalkPosterGenerator() {
   const displayW = size.w * scale;
   const displayH = size.h * scale;
 
+  // ── Snap lines ───────────────────────────────────────
+  const [snapLines, setSnapLines] = useState<{ x?: number; y?: number }[]>([]);
+  const positionsRef = useRef(positions);
+  useEffect(() => { positionsRef.current = positions; }, [positions]);
+  const placedAssetsRef = useRef(placedAssets);
+  useEffect(() => { placedAssetsRef.current = placedAssets; }, [placedAssets]);
+
   // ── Drag & Drop ──────────────────────────────────────
   const beginDrag = useCallback(
     (id: string, curX: number, curY: number, e: React.PointerEvent) => {
@@ -481,12 +482,28 @@ export function ChalkPosterGenerator() {
         return;
       }
       const clamp = (v: number) => Math.max(5, Math.min(95, v));
-      const px = clamp(
+      let px = clamp(
         ((e.clientX - rect.left - dragOffset.current.x) / rect.width) * 100
       );
-      const py = clamp(
+      let py = clamp(
         ((e.clientY - rect.top - dragOffset.current.y) / rect.height) * 100
       );
+
+      // Snap lines
+      const SNAP = 2;
+      const targets: { x: number; y: number }[] = [
+        ...POS_KEYS.filter(k => k !== dragging).map(k => positionsRef.current[k]),
+        ...placedAssetsRef.current.filter(a => a.id !== dragging).map(a => ({ x: a.x, y: a.y })),
+      ];
+      const lines: { x?: number; y?: number }[] = [];
+      for (const t of targets) {
+        if (Math.abs(px - t.x) < SNAP) { px = t.x; lines.push({ x: t.x }); break; }
+      }
+      for (const t of targets) {
+        if (Math.abs(py - t.y) < SNAP) { py = t.y; lines.push({ y: t.y }); break; }
+      }
+      setSnapLines(lines);
+
       if ((POS_KEYS as readonly string[]).includes(dragging)) {
         const k = dragging as PosKey;
         setPositions((prev) => ({
@@ -503,6 +520,7 @@ export function ChalkPosterGenerator() {
       setDragging(null);
       strokeDrag.current = null;
       patternDrag.current = null;
+      setSnapLines([]);
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -618,10 +636,9 @@ export function ChalkPosterGenerator() {
   );
 
   // Alles neu generieren — komplett neue Komposition im Brand-Rahmen:
-  // zufälliges Layout (Positionen + Ausrichtung + Logo-Plätze), neue Schriften
-  // je Textfeld und ein neues Hintergrund-Muster. Erhalten bleiben: die
-  // Text-Inhalte, vom Nutzer platzierte Illustrationen (Porträts, Icons …)
-  // sowie Freihand-Striche.
+  // zufälliges Layout (Positionen + Ausrichtung + Logo-Plätze) und ein neues
+  // Hintergrund-Muster. Schriften, Text-Inhalte und platzierte Illustrationen
+  // bleiben erhalten.
   const generateAll = useCallback(() => {
     commit();
     // 1) Zufälliges Layout: Positionen + Ausrichtung
@@ -657,12 +674,7 @@ export function ChalkPosterGenerator() {
       return [...others, ...newLogos];
     });
     setSelectedAssetId(null);
-    // 3) Schriften je Textrolle neu würfeln (passende Pools)
-    setHeaderFont(pick(DISPLAY_FONTS));
-    setSubFont(pick(SCRIPT_FONTS));
-    setBodyFont(pick(BODY_FONTS));
-    setDetailFont(pick(DETAIL_FONTS));
-    // 4) Hintergrund-Muster komplett neu würfeln
+    // 3) Hintergrund-Muster komplett neu würfeln
     setPatternConfig((prev) => ({
       ...prev, // Farbe (Weiß/Schwarz) bleibt beim Würfeln erhalten
       count: Math.round(3 + Math.random() * 8),
@@ -864,7 +876,7 @@ export function ChalkPosterGenerator() {
       font: headerFont,
       size: headerSize,
       weight: headerWeight,
-      color: headerColor,
+      color: textColor,
       align: textAligns.header,
       outline: headerOutline,
     },
@@ -874,7 +886,7 @@ export function ChalkPosterGenerator() {
       font: subFont,
       size: subSize,
       weight: "600",
-      color: subColor,
+      color: textColor,
       align: textAligns.sub,
       outline: subOutline,
     },
@@ -884,7 +896,7 @@ export function ChalkPosterGenerator() {
       font: bodyFont,
       size: bodySize,
       weight: "400",
-      color: bodyColor,
+      color: textColor,
       align: textAligns.body,
       outline: bodyOutline,
     },
@@ -894,7 +906,7 @@ export function ChalkPosterGenerator() {
       font: detailFont,
       size: detailSize,
       weight: "400",
-      color: detailColor,
+      color: textColor,
       align: textAligns.detail,
       outline: detailOutline,
     },
@@ -906,7 +918,7 @@ export function ChalkPosterGenerator() {
       w: size.w,
       h: size.h,
       bg: bgColor,
-      pattern: patternConfig,
+      pattern: effectivePatternConfig,
       patternStrokes,
       strokes,
       texts: textItems.map((t) => ({
@@ -935,7 +947,7 @@ export function ChalkPosterGenerator() {
   }, [
     size,
     bgColor,
-    patternConfig,
+    effectivePatternConfig,
     patternStrokes,
     positions,
     strokes,
@@ -952,8 +964,6 @@ export function ChalkPosterGenerator() {
   }, [buildScene]);
 
   // ── Live-Pattern-Animation (rAF direkt auf der PosterCanvas) ──
-  // Nur Tafel + Muster animieren sich; fette Striche, Text & Assets bleiben
-  // statisch sichtbar (DOM-Overlays bzw. voll gezeichnet).
   const handleStopPlay = useCallback(() => {
     if (animFrameRef.current != null) cancelAnimationFrame(animFrameRef.current);
     animFrameRef.current = null;
@@ -999,8 +1009,6 @@ export function ChalkPosterGenerator() {
     sizeMax: 100,
     weight: headerWeight,
     setWeight: setHeaderWeight,
-    color: headerColor,
-    setColor: setHeaderColor,
     outline: headerOutline,
     setOutline: setHeaderOutline,
   };
@@ -1013,8 +1021,6 @@ export function ChalkPosterGenerator() {
     setSize: setSubSize,
     sizeMin: 14,
     sizeMax: 60,
-    color: subColor,
-    setColor: setSubColor,
     outline: subOutline,
     setOutline: setSubOutline,
   };
@@ -1028,8 +1034,6 @@ export function ChalkPosterGenerator() {
     sizeMin: 10,
     sizeMax: 40,
     multiline: true,
-    color: bodyColor,
-    setColor: setBodyColor,
     outline: bodyOutline,
     setOutline: setBodyOutline,
   };
@@ -1043,19 +1047,16 @@ export function ChalkPosterGenerator() {
     sizeMin: 8,
     sizeMax: 30,
     multiline: true,
-    color: detailColor,
-    setColor: setDetailColor,
   };
 
   return (
     <div className={`${styles.app} chalk-ui`}>
       <Sidebar
-        fonts={FONTS}
         sizes={POSTER_SIZES}
         posterSizeIndex={posterSizeIndex}
         setPosterSizeIndex={setPosterSizeIndex}
-        bg={bgColor}
-        setBg={setBgColor}
+        inverted={inverted}
+        onInvert={() => setInverted((i) => !i)}
         pattern={patternConfig}
         setPattern={updatePattern}
         onRegenerate={regeneratePattern}
@@ -1066,10 +1067,6 @@ export function ChalkPosterGenerator() {
         onTogglePlay={() => (isPlaying ? handleStopPlay() : setIsPlaying(true))}
         animDuration={animDuration}
         setAnimDuration={setAnimDuration}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
         layoutSection={
           <LayoutPanel
             layouts={LAYOUTS}
@@ -1078,10 +1075,6 @@ export function ChalkPosterGenerator() {
             selectedId={selectedLayoutId}
           />
         }
-        header={headerField}
-        sub={subField}
-        body={bodyField}
-        detail={detailField}
         logoSection={
           <AssetPanel
             assets={logoAssets}
@@ -1114,7 +1107,7 @@ export function ChalkPosterGenerator() {
         <PosterCanvas
           ref={posterCanvasRef}
           size={size}
-          pattern={patternConfig}
+          pattern={effectivePatternConfig}
           patternStrokes={patternStrokes}
           strokes={strokes}
           bg={bgColor}
@@ -1127,8 +1120,7 @@ export function ChalkPosterGenerator() {
             setSelectedPatternId(null);
           }}
         >
-          {/* Hintergrund-Linien: Hit-/Drag-Flächen (unterste interaktive Ebene).
-              Liegt als erstes Kind mit zIndex 0 unter Assets/Text/fetten Strichen. */}
+          {/* Hintergrund-Linien: Hit-/Drag-Flächen (unterste interaktive Ebene). */}
           <svg
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
@@ -1171,6 +1163,21 @@ export function ChalkPosterGenerator() {
             })}
           </svg>
 
+          {/* Snap lines */}
+          {snapLines.length > 0 && (
+            <svg
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 80, overflow: "visible" }}
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              {snapLines.map((l, i) =>
+                l.x !== undefined
+                  ? <line key={i} x1={l.x} y1={0} x2={l.x} y2={100} stroke="#4af" strokeWidth={0.4} strokeDasharray="2 1.5" />
+                  : <line key={i} x1={0} y1={l.y} x2={100} y2={l.y!} stroke="#4af" strokeWidth={0.4} strokeDasharray="2 1.5" />
+              )}
+            </svg>
+          )}
+
           {/* Fette Striche: präzise Klick-/Drag-Flächen entlang des Pfades */}
           <svg
             viewBox="0 0 100 100"
@@ -1181,7 +1188,6 @@ export function ChalkPosterGenerator() {
               width: "100%",
               height: "100%",
               zIndex: 40,
-              // Container lässt Klicks durch; nur die Pfade selbst fangen sie ab
               pointerEvents: "none",
               overflow: "visible",
             }}
@@ -1218,12 +1224,8 @@ export function ChalkPosterGenerator() {
 
           {placedAssets.map((asset) => {
             const item = allAssets.find((a) => a.id === asset.assetId);
-            // Auswahl wird jetzt über die On-Canvas-Griffe angezeigt
-            // (SelectionHandles), daher kein doppelter Outline am Element.
             const commonOutline = "none";
 
-            // Striche & Formen: weiß-auf-transparent als Maske → in
-            // Kreide-Farbe getönt, mit getrennter Stärke/Höhe (scaleY) & V-Flip.
             if (item && isMaskAsset(item.category)) {
               const nw = item.naturalWidth ?? 1;
               const nh = item.naturalHeight ?? 1;
@@ -1283,7 +1285,6 @@ export function ChalkPosterGenerator() {
                   position: "absolute",
                   left: `${asset.x}%`,
                   top: `${asset.y}%`,
-                  // Breite = Anteil der Posterbreite (in Anzeige-Pixeln)
                   width: `${asset.scale * displayW}px`,
                   height: "auto",
                   transform: `translate(-50%, -50%) rotate(${asset.rotation}deg) scale(${(asset.flipX ? -1 : 1) * (asset.scaleX ?? 1)}, ${asset.scaleY ?? 1})`,
@@ -1299,11 +1300,11 @@ export function ChalkPosterGenerator() {
               />
             );
           })}
+
           {/* On-Canvas-Griffe (Drehen/Skalieren) für das ausgewählte Asset */}
           {selectedAsset &&
             (() => {
               const it = allAssets.find((x) => x.id === selectedAsset.assetId);
-              // Natürliches Höhen-/Breitenverhältnis (ohne Stretch)
               const baseRatio =
                 it && isMaskAsset(it.category) && it.naturalWidth
                   ? it.naturalHeight! / it.naturalWidth
@@ -1325,6 +1326,36 @@ export function ChalkPosterGenerator() {
                 />
               );
             })()}
+
+          {/* Trash bin near selected asset */}
+          {selectedAsset && (
+            <button
+              data-no-chalk
+              onClick={() => { commit(); deleteSelected(); }}
+              style={{
+                position: "absolute",
+                left: `${selectedAsset.x}%`,
+                top: `${selectedAsset.y}%`,
+                transform: "translate(-50%, calc(-50% - 40px))",
+                zIndex: 200,
+                background: "rgba(20,20,20,0.85)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 6,
+                color: "#f08080",
+                width: 28,
+                height: 28,
+                cursor: "pointer",
+                fontSize: 14,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                pointerEvents: "auto",
+              }}
+              title="Löschen"
+            >
+              🗑
+            </button>
+          )}
 
           {textItems.map((item) => (
             <TextOverlay
@@ -1382,6 +1413,27 @@ export function ChalkPosterGenerator() {
           )}
         </PosterCanvas>
 
+        {/* TextPopup — floating panel for the selected text field */}
+        {selectedTextKey && (() => {
+          const fields: Record<PosKey, TextFieldState> = {
+            header: headerField,
+            sub: subField,
+            body: bodyField,
+            detail: detailField,
+          };
+          return (
+            <TextPopup
+              field={fields[selectedTextKey]}
+              align={textAligns[selectedTextKey]}
+              onAlignChange={(a) => setTextAligns((prev) => ({ ...prev, [selectedTextKey]: a }))}
+              position={positions[selectedTextKey]}
+              containerRef={containerRef}
+              fonts={FONTS}
+              onClose={() => setSelectedTextKey(null)}
+            />
+          );
+        })()}
+
         {/* Kreide-Cursor (folgt der Maus im Zeichen-Modus) */}
         {mode === "draw" && cursorPos && (
           <div
@@ -1413,12 +1465,14 @@ export function ChalkPosterGenerator() {
           setIsErasing={setIsErasing}
           onUndo={undo}
           canUndo={canUndo}
+          onRedo={redo}
+          canRedo={canRedo}
         />
 
         <p className={styles.previewHint}>
           {mode === "draw"
-            ? "Zeichnen aktiv · ziehen zum Malen · „Zeichnen“ ausschalten zum Bewegen"
-            : "Alles direkt verschieben: Striche, Texte, Linien & Logos anklicken & ziehen · Entf zum Löschen · Strg+Z für Rückgängig"}
+            ? "Zeichnen aktiv · ziehen zum Malen · Zeichnen ausschalten zum Bewegen"
+            : "Alles direkt verschieben: Striche, Texte, Linien & Logos anklicken & ziehen · Entf zum Löschen · Strg+Z für Rükgängig"}
         </p>
       </div>
 

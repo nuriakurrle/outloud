@@ -6,11 +6,14 @@ const logoModules = import.meta.glob("../assets/logo/**/*.svg", {
   import: "default",
 }) as Record<string, string>;
 
-const svgModules = import.meta.glob("./assets/illustrations/**/*.svg", {
-  eager: true,
-  query: "?url",
-  import: "default",
-}) as Record<string, string>;
+const svgModules = import.meta.glob(
+  ["./assets/illustrations/**/*.svg", "!./assets/illustrations/logos/**"],
+  {
+    eager: true,
+    query: "?url",
+    import: "default",
+  }
+) as Record<string, string>;
 
 const ILLUSTRATION_CATEGORY_DEFAULTS: Partial<Record<AssetCategory, { defaultScale: number; anchor: AssetItem["anchor"] }>> = {
   portraits: { defaultScale: 0.5, anchor: "center" },

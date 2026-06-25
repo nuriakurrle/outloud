@@ -2,11 +2,6 @@ import { useState } from "react";
 import type { PatternConfig, PosterSize } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 
-interface FontOption {
-  label: string;
-  value: string;
-}
-
 export interface TextFieldState {
   text: string;
   setText: (v: string) => void;
@@ -19,39 +14,26 @@ export interface TextFieldState {
   multiline?: boolean;
   weight?: string;
   setWeight?: (v: string) => void;
-  color?: string;
-  setColor?: (v: string) => void;
   // Umriss-Stil: hohle Buchstaben mit Kontur (wie der Referenz-Titel)
   outline?: boolean;
   setOutline?: (v: boolean) => void;
 }
 
-const TEXT_COLORS = [
-  { label: "Weiß", hex: "#ffffff" },
-  { label: "Schwarz", hex: "#000000" },
-];
-
-const BG_COLORS = [
-  { label: "Schwarz", hex: "#000000" },
-  { label: "Weiß", hex: "#ffffff" },
-];
-
 interface SidebarProps {
-  fonts: FontOption[];
   sizes: PosterSize[];
   posterSizeIndex: number;
   setPosterSizeIndex: (v: number) => void;
 
-  // Hintergrundfarbe (Tafel/Papier)
-  bg: string;
-  setBg: (hex: string) => void;
+  // Invertiert: Schwarz auf Weiß statt Weiß auf Schwarz
+  inverted: boolean;
+  onInvert: () => void;
 
   // Kreide-Muster (Hintergrund)
   pattern: PatternConfig;
   setPattern: (patch: Partial<PatternConfig>) => void;
-  onRegenerate: () => void; // neuer Seed → neues Muster (entsperrt)
-  onAddLines: () => void; // weitere Linien an aktuelles Muster anhängen
-  patternLocked: boolean; // Muster gespeichert/eingefroren?
+  onRegenerate: () => void;
+  onAddLines: () => void;
+  patternLocked: boolean;
   onToggleLock: () => void;
   // Pattern-Selbstzeichen-Animation
   isPlaying: boolean;
@@ -59,25 +41,13 @@ interface SidebarProps {
   animDuration: number;
   setAnimDuration: (v: number) => void;
 
-  // Undo/Redo
-  onUndo: () => void;
-  onRedo: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
-
   layoutSection: React.ReactNode;
-
-  header: TextFieldState;
-  sub: TextFieldState;
-  body: TextFieldState;
-  detail: TextFieldState;
 
   logoSection: React.ReactNode;
   illustrationSection: React.ReactNode;
 
   onRandomize: () => void;
   onExport: () => void;
-
 }
 
 // ── kleine Hilfs-Komponenten ─────────────────────────────
@@ -122,8 +92,6 @@ function Slider({
   suffix?: string;
   onChange: (v: number) => void;
 }) {
-  // Einheitliche Anzeige: Nachkomma-Slider (step < 1) immer mit 2 Stellen,
-  // ganzzahlige gerundet — sonst zeigt z. B. Spread „0.6500000000001".
   const display = step < 1 ? value.toFixed(2) : `${Math.round(value)}`;
   return (
     <div className={styles.field}>
@@ -176,127 +144,32 @@ function Select({
   );
 }
 
-function TextSection({ fonts, field }: { fonts: FontOption[]; field: TextFieldState }) {
-  return (
-    <>
-      <div className={styles.field}>
-        <span className={styles.label}>Text</span>
-        {field.multiline ? (
-          <textarea
-            className={styles.textarea}
-            value={field.text}
-            rows={3}
-            onChange={(e) => field.setText(e.target.value)}
-          />
-        ) : (
-          <input
-            className={styles.input}
-            value={field.text}
-            onChange={(e) => field.setText(e.target.value)}
-          />
-        )}
-      </div>
-      <Select
-        label="Schriftart"
-        value={field.font}
-        options={fonts}
-        onChange={field.setFont}
-      />
-      <Slider
-        label="Größe"
-        value={field.size}
-        min={field.sizeMin}
-        max={field.sizeMax}
-        onChange={field.setSize}
-      />
-      {field.setColor && (
-        <div className={styles.field}>
-          <span className={styles.label}>Farbe</span>
-          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-            {TEXT_COLORS.map((c) => {
-              const isBlack = c.hex === "#000000";
-              const curBlack = (field.color ?? "#e0e0e0") === "#000000";
-              const active = isBlack ? curBlack : !curBlack;
-              return (
-                <button
-                  key={c.hex}
-                  title={c.label}
-                  data-no-chalk
-                  onClick={() => field.setColor?.(c.hex)}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: "50%",
-                    background: c.hex,
-                    border: active
-                      ? "2px solid #fff"
-                      : "2px solid rgba(255,255,255,0.25)",
-                    cursor: "pointer",
-                    padding: 0,
-                  }}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-      {field.setWeight && (
-        <Select
-          label="Gewicht"
-          value={field.weight ?? "400"}
-          options={[
-            { label: "Normal", value: "400" },
-            { label: "Bold", value: "700" },
-            { label: "Black", value: "900" },
-          ]}
-          onChange={field.setWeight}
-        />
-      )}
-      {field.setOutline && (
-        <div className={styles.field}>
-          <span className={styles.label}>Stil</span>
-          <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-            {[
-              { label: "Gefüllt", val: false },
-              { label: "Umriss", val: true },
-            ].map((o) => {
-              const active = (field.outline ?? false) === o.val;
-              return (
-                <button
-                  key={o.label}
-                  onClick={() => field.setOutline?.(o.val)}
-                  style={{
-                    flex: 1,
-                    padding: "5px 8px",
-                    borderRadius: 6,
-                    background: active
-                      ? "rgba(255,255,255,0.16)"
-                      : "rgba(255,255,255,0.04)",
-                    border: active
-                      ? "1px solid rgba(255,255,255,0.5)"
-                      : "1px solid rgba(255,255,255,0.15)",
-                    color: "#f5f2ed",
-                    fontSize: 12,
-                    cursor: "pointer",
-                  }}
-                >
-                  {o.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
 export function Sidebar(props: SidebarProps) {
   const [open, setOpen] = useState<string>("layout");
   const toggle = (key: string) => setOpen((o) => (o === key ? "" : key));
 
   return (
     <aside className={styles.sidebar}>
+      {/* Invert toggle — above "Alles neu generieren" */}
+      <button
+        onClick={props.onInvert}
+        style={{
+          margin: "0 12px 6px",
+          padding: "10px 12px",
+          background: props.inverted ? "#ffffff" : "rgba(255,255,255,0.08)",
+          border: "1px solid rgba(255,255,255,0.3)",
+          borderRadius: 8,
+          color: props.inverted ? "#111111" : "#f5f2ed",
+          fontSize: 15,
+          fontWeight: 600,
+          cursor: "pointer",
+          letterSpacing: "0.02em",
+          width: "calc(100% - 24px)",
+        }}
+      >
+        {props.inverted ? "Schwarz auf Weiß" : "Weiß auf Schwarz"}
+      </button>
+
       <button
         onClick={props.onRandomize}
         title="Komplett neues Design: Layout, Schriften & Hintergrund-Muster (Text-Inhalte & platzierte Illustrationen bleiben erhalten)"
@@ -308,7 +181,7 @@ export function Sidebar(props: SidebarProps) {
           border: "1px solid rgba(255,255,255,0.18)",
           borderRadius: 8,
           color: "#f5f2ed",
-          fontSize: 13,
+          fontSize: 15,
           fontWeight: 600,
           cursor: "pointer",
           letterSpacing: "0.02em",
@@ -316,9 +189,6 @@ export function Sidebar(props: SidebarProps) {
       >
         Alles neu generieren
       </button>
-
-      {/* Werkzeug-Umschalter & Freihand-Regler leben jetzt komplett in der
-          schwebenden Bar über dem Poster (siehe DrawingToolbar). */}
 
       <div className={styles.sidebarScroll}>
         <Section
@@ -335,33 +205,6 @@ export function Sidebar(props: SidebarProps) {
             }))}
             onChange={(v) => props.setPosterSizeIndex(Number(v))}
           />
-          <div className={styles.field}>
-            <span className={styles.label}>Hintergrund</span>
-            <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              {BG_COLORS.map((c) => {
-                const active = props.bg.toLowerCase() === c.hex.toLowerCase();
-                return (
-                  <button
-                    key={c.hex}
-                    title={c.label}
-                    data-no-chalk
-                    onClick={() => props.setBg(c.hex)}
-                    style={{
-                      width: 26,
-                      height: 26,
-                      borderRadius: "50%",
-                      background: c.hex,
-                      border: active
-                        ? "2px solid #fff"
-                        : "2px solid rgba(255,255,255,0.25)",
-                      cursor: "pointer",
-                      padding: 0,
-                    }}
-                  />
-                );
-              })}
-            </div>
-          </div>
         </Section>
 
         <Section
@@ -528,57 +371,9 @@ export function Sidebar(props: SidebarProps) {
         >
           {props.illustrationSection}
         </Section>
-
-        <Section
-          title="Überschrift"
-          isOpen={open === "header"}
-          onToggle={() => toggle("header")}
-        >
-          <TextSection fonts={props.fonts} field={props.header} />
-        </Section>
-
-        <Section
-          title="Untertitel"
-          isOpen={open === "sub"}
-          onToggle={() => toggle("sub")}
-        >
-          <TextSection fonts={props.fonts} field={props.sub} />
-        </Section>
-
-        <Section
-          title="Fließtext"
-          isOpen={open === "body"}
-          onToggle={() => toggle("body")}
-        >
-          <TextSection fonts={props.fonts} field={props.body} />
-        </Section>
-
-        <Section
-          title="Details"
-          isOpen={open === "detail"}
-          onToggle={() => toggle("detail")}
-        >
-          <TextSection fonts={props.fonts} field={props.detail} />
-        </Section>
       </div>
 
       <div className={styles.sidebarFooter}>
-        <div className={styles.assetButtonRow}>
-          <button
-            className={styles.smallButton}
-            onClick={props.onUndo}
-            disabled={!props.canUndo}
-          >
-            ↶ Rückgängig
-          </button>
-          <button
-            className={styles.smallButton}
-            onClick={props.onRedo}
-            disabled={!props.canRedo}
-          >
-            ↷ Wiederholen
-          </button>
-        </div>
         <button className={styles.exportButton} onClick={props.onExport}>
           Export PNG
         </button>

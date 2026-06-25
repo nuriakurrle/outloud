@@ -38,5 +38,5 @@ export const DETAIL_FONTS = ["Special Elite", "Oswald", "Caveat"];
 export const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 export const CHALK = "#FFFFFF";
-export const CHALK_DIM = "#b0aca8";
+export const CHALK_DIM = "#FFFFFF";
 export const POSTER_BG = "#000000";

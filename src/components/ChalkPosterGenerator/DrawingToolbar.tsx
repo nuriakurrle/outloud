@@ -6,13 +6,7 @@ import { renderBrushPreview } from "../../lib/stretchBrushRenderer";
 /** Kreide-Farben, die auf schwarzer Tafel gut aussehen (für Asset-Tönung). */
 export const CHALK_COLORS = [
   { label: "Weiß", hex: "#FFFFFF" },
-  { label: "Gelb", hex: "#f5e6a3" },
-  { label: "Rosa", hex: "#e8a0b4" },
-  { label: "Blau", hex: "#8cb8d4" },
-  { label: "Grün", hex: "#9cc4a0" },
-  { label: "Orange", hex: "#e8b87a" },
-  { label: "Rot", hex: "#c45c5c" },
-  { label: "Lila", hex: "#b89ad4" },
+  { label: "Schwarz", hex: "#000000" },
 ];
 
 /** Zeichen-Farben in der Bar: nur Schwarz & Weiß. */
@@ -36,6 +30,8 @@ interface DrawingToolbarProps {
   setIsErasing: (v: boolean) => void;
   onUndo: () => void;
   canUndo: boolean;
+  onRedo: () => void;
+  canRedo: boolean;
 }
 
 const DIVIDER: React.CSSProperties = {
@@ -108,6 +104,8 @@ export function DrawingToolbar({
   setIsErasing,
   onUndo,
   canUndo,
+  onRedo,
+  canRedo,
 }: DrawingToolbarProps) {
   const isDraw = mode === "draw";
   return (
@@ -145,7 +143,7 @@ export function DrawingToolbar({
           background: isDraw ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.06)",
           border: isDraw ? "2px solid #fff" : "2px solid rgba(255,255,255,0.12)",
           color: isDraw ? "#1e1e1e" : "#ddd",
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: 600,
           cursor: "pointer",
           whiteSpace: "nowrap",
@@ -224,7 +222,7 @@ export function DrawingToolbar({
               title="Pinselgröße"
               style={{
                 color: "#aaa",
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: 600,
                 minWidth: 28,
                 textAlign: "right",
@@ -252,7 +250,7 @@ export function DrawingToolbar({
               title="Deckkraft"
               style={{
                 color: "#aaa",
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: 600,
                 minWidth: 34,
                 textAlign: "right",
@@ -297,7 +295,7 @@ export function DrawingToolbar({
 
       {isDraw && <div style={DIVIDER} />}
 
-      {/* Undo */}
+      {/* Undo / Redo */}
       <button
         onClick={onUndo}
         disabled={!canUndo}
@@ -320,6 +318,28 @@ export function DrawingToolbar({
         }}
       >
         ↩
+      </button>
+      <button
+        onClick={onRedo}
+        disabled={!canRedo}
+        title="Wiederholen (Strg+Y)"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 32,
+          height: 32,
+          borderRadius: 6,
+          background: "rgba(255,255,255,0.06)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          color: "#ddd",
+          fontSize: 14,
+          cursor: canRedo ? "pointer" : "not-allowed",
+          opacity: canRedo ? 1 : 0.4,
+          flexShrink: 0,
+        }}
+      >
+        ↪
       </button>
     </div>
   );
