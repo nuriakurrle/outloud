@@ -68,6 +68,7 @@ export function TextOverlay({
         cursor: dragging ? "grabbing" : "grab",
         outline: selected ? "1.5px dashed rgba(255,255,255,0.7)" : "none",
         outlineOffset: 4,
+        pointerEvents: "auto",
         ...outlineStyle,
       }}
       onPointerDown={(e) => onPointerDown(id, e)}

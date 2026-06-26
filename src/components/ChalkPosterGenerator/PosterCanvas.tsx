@@ -1,26 +1,5 @@
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-} from "react";
-import type {
-  ChalkStroke,
-  PatternConfig,
-  PatternStroke,
-  PosterSize,
-} from "../../types/poster";
-import {
-  drawChalkBackground,
-  patternChalkRgb,
-  renderPatternStrokeCanvas,
-} from "../../lib/chalkBackground";
-import {
-  renderStroke,
-  compositeStroke,
-  strokeGeometrySignature,
-} from "../../lib/chalkStrokes";
+import { forwardRef, useImperativeHandle } from "react";
+import type { ChalkStroke, PatternConfig, PatternStroke, PosterSize } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 
 interface PosterCanvasProps {
@@ -33,159 +12,108 @@ interface PosterCanvasProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   onBackgroundClick?: () => void;
   children: React.ReactNode;
+  liveStrokePath?: string;
+  liveStrokeColor?: string;
+  liveStrokeOpacity?: number;
+  // Stroke interaction
+  selectedStrokeId?: string | null;
+  onStrokePointerDown?: (id: string, e: React.PointerEvent) => void;
+  selectedPatternId?: string | null;
+  onPatternPointerDown?: (id: string, e: React.PointerEvent) => void;
+  drawMode?: boolean;
 }
 
-/** Imperative Steuerung für die Pattern-Selbstzeichen-Animation. */
 export interface PosterCanvasHandle {
-  /** Zeichnet den Hintergrund bei gegebenem Animations-Fortschritt (0–1). */
-  renderAt: (progress: number) => void;
-  /** Zeichnet das vollständige, statische Poster neu (progress = 1). */
   redraw: () => void;
 }
+
+const patternFill = (color: "white" | "black"): string =>
+  color === "white" ? "#FFFFFF" : "#000000";
 
 export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
   function PosterCanvas(
     {
-      size,
-      pattern,
-      patternStrokes,
-      strokes,
-      bg,
-      scale,
-      containerRef,
-      onBackgroundClick,
-      children,
+      size, pattern, patternStrokes, strokes, bg, scale,
+      containerRef, onBackgroundClick, children,
+      liveStrokePath, liveStrokeColor = "#ffffff", liveStrokeOpacity = 0.8,
+      selectedStrokeId, onStrokePointerDown,
+      selectedPatternId, onPatternPointerDown,
+      drawMode,
     },
     ref
   ) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  // Cache gerenderter Strich-Texturen: id → { sig, canvas }. Transform
-  // (offset/rotation/scale) invalidiert den Cache nicht.
-  const strokeCache = useRef<
-    Map<string, { sig: string; canvas: HTMLCanvasElement }>
-  >(new Map());
-  // Cache der Hintergrund-Linien (Pattern): id → { sig, canvas }. Der Offset
-  // (Drag) fließt NICHT in die Signatur ein → Verschieben ist nur ein
-  // drawImage und bleibt flüssig.
-  const patternCache = useRef<
-    Map<string, { sig: string; canvas: HTMLCanvasElement }>
-  >(new Map());
+    useImperativeHandle(ref, () => ({ redraw: () => {} }), []);
 
-  // `progress` < 1 = Pattern-Selbstzeichen-Animation; die fetten Striche und
-  // alles andere bleiben dabei voll sichtbar.
-  const draw = useCallback(
-    (progress = 1) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+    const displayW = size.w * scale;
+    const displayH = size.h * scale;
+    const fillColor = patternFill(pattern.color);
+    const ordered = [...strokes].sort((a, b) => a.zIndex - b.zIndex);
 
-      // Doppelte Auflösung für scharfe Kreide-Textur
-      const dpr = 2;
-      if (canvas.width !== size.w * dpr) canvas.width = size.w * dpr;
-      if (canvas.height !== size.h * dpr) canvas.height = size.h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, size.w, size.h);
-
-      // Hintergrund + Pattern-Linien.
-      if (progress < 1) {
-        // Selbstzeichen-Animation: voller Re-Render (Offsets werden in
-        // renderPatternStrokes berücksichtigt).
-        drawChalkBackground(
-          ctx,
-          size.w,
-          size.h,
-          patternStrokes,
-          pattern.seed,
-          progress,
-          bg,
-          patternChalkRgb(pattern.color)
-        );
-      } else {
-        // Statische Vorschau: jede Linie aus dem Cache compositen + Offset.
-        // → Verschieben ist flüssig (kein Grain-Re-Render pro Frame).
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, size.w, size.h);
-        const chalkRgb = patternChalkRgb(pattern.color);
-        const pcache = patternCache.current;
-        const liveP = new Set(patternStrokes.map((s) => s.id));
-        for (const id of [...pcache.keys()]) {
-          if (!liveP.has(id)) pcache.delete(id);
-        }
-        for (const ps of patternStrokes) {
-          const sig = `${ps.seed}|${Math.round(ps.weight)}|${ps.opacity.toFixed(
-            2
-          )}|${size.w}x${size.h}|${chalkRgb}`;
-          let entry = pcache.get(ps.id);
-          if (!entry || entry.sig !== sig) {
-            entry = {
-              sig,
-              canvas: renderPatternStrokeCanvas(ps, size.w, size.h, dpr, chalkRgb),
-            };
-            pcache.set(ps.id, entry);
-          }
-          const ox = ((ps.offsetX ?? 0) / 100) * size.w;
-          const oy = ((ps.offsetY ?? 0) / 100) * size.h;
-          ctx.drawImage(entry.canvas, ox, oy, size.w, size.h);
-        }
-      }
-
-      // Fette Kreide-Striche (generiert + freihand) in zIndex-Reihenfolge
-      const cache = strokeCache.current;
-      const liveIds = new Set(strokes.map((s) => s.id));
-      for (const id of [...cache.keys()]) {
-        if (!liveIds.has(id)) cache.delete(id);
-      }
-      const ordered = [...strokes].sort((a, b) => a.zIndex - b.zIndex);
-      for (const stroke of ordered) {
-        const sig = strokeGeometrySignature(stroke, size.w, size.h);
-        let entry = cache.get(stroke.id);
-        if (!entry || entry.sig !== sig) {
-          entry = { sig, canvas: renderStroke(stroke, size.w, size.h) };
-          cache.set(stroke.id, entry);
-        }
-        compositeStroke(ctx, entry.canvas, stroke, size.w, size.h);
-      }
-    },
-    [size, pattern.seed, pattern.color, patternStrokes, strokes, bg]
-  );
-
-  useEffect(() => {
-    draw();
-  }, [draw]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      renderAt: (progress: number) => draw(progress),
-      redraw: () => draw(1),
-    }),
-    [draw]
-  );
-
-  const displayW = size.w * scale;
-  const displayH = size.h * scale;
-
-  return (
-    <div
-      ref={containerRef}
-      className={styles.posterWrap}
-      style={{ width: displayW, height: displayH }}
-    >
-      <canvas
-        ref={canvasRef}
-        className={styles.canvas}
-        style={{ width: displayW, height: displayH }}
-      />
+    return (
       <div
-        className={styles.overlayLayer}
-        onPointerDown={(e) => {
-          if (e.target === e.currentTarget) onBackgroundClick?.();
-        }}
+        ref={containerRef}
+        className={styles.posterWrap}
+        style={{ width: displayW, height: displayH, background: bg }}
       >
-        {children}
+        {/* SVG: background patterns + freehand strokes + live preview */}
+        <svg
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%",
+            overflow: "visible", zIndex: 1,
+            pointerEvents: drawMode ? "none" : "auto",
+          }}
+        >
+          {/* Background click catcher — below all paths */}
+          <rect x="0" y="0" width="100" height="100" fill="transparent"
+            onClick={onBackgroundClick}
+            style={{ cursor: "default" }}
+          />
+
+          {patternStrokes.map((ps) => (
+            <g key={ps.id}
+              opacity={ps.opacity}
+              transform={`translate(${ps.offsetX ?? 0} ${ps.offsetY ?? 0})`}
+              style={{ cursor: onPatternPointerDown ? "grab" : "default" }}
+              onPointerDown={onPatternPointerDown ? (e) => { e.stopPropagation(); onPatternPointerDown(ps.id, e); } : undefined}
+            >
+              <path d={ps.svgPath} fill={fillColor} />
+              {selectedPatternId === ps.id && (
+                <path d={ps.svgPath} fill="none" stroke="rgba(255,255,255,0.5)"
+                  strokeWidth={0.5} strokeDasharray="2 1.5" />
+              )}
+            </g>
+          ))}
+
+          {ordered.map((s) => (
+            <g key={s.id}
+              opacity={s.opacity}
+              transform={`translate(${s.offsetX} ${s.offsetY})`}
+              style={{ cursor: onStrokePointerDown ? "grab" : "default" }}
+              onPointerDown={onStrokePointerDown ? (e) => { e.stopPropagation(); onStrokePointerDown(s.id, e); } : undefined}
+            >
+              <path d={s.svgPath} fill={s.color} />
+              {selectedStrokeId === s.id && (
+                <path d={s.svgPath} fill="none" stroke="rgba(255,255,255,0.5)"
+                  strokeWidth={0.5} strokeDasharray="2 1.5" />
+              )}
+            </g>
+          ))}
+
+          {liveStrokePath && (
+            <path d={liveStrokePath} fill={liveStrokeColor} opacity={liveStrokeOpacity} />
+          )}
+        </svg>
+
+        {/* Interactive overlay: text, assets, handles, draw capture */}
+        <div
+          className={styles.overlayLayer}
+          style={{ zIndex: 2, pointerEvents: "none" }}
+        >
+          {children}
+        </div>
       </div>
-    </div>
-  );
+    );
   }
 );

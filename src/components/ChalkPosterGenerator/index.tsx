@@ -3,17 +3,13 @@ import type {
   AssetCategory,
   AssetItem,
   ChalkStroke,
-  DrawBrush,
   PatternConfig,
   PatternStroke,
   PlacedAsset,
   Position,
   ToolMode,
 } from "../../types/poster";
-import { makeFreehandStroke, smoothPoints } from "../../lib/chalkStrokes";
-import { generateChalkStrokes } from "../../lib/chalkBackground";
-import { renderStretchBrush } from "../../lib/stretchBrushRenderer";
-import { STRETCH_BRUSHES } from "../../lib/stretchBrush";
+import { generatePatternStrokes, makeFreehandStroke, getAllBrushes, createLivePath } from "../../lib/brushStrokes";
 import { DrawingToolbar } from "./DrawingToolbar";
 import { smartPlace } from "../../lib/smartPlace";
 import { ASSET_REGISTRY, LOGO_REGISTRY } from "../../assetRegistry";
@@ -58,71 +54,45 @@ export function ChalkPosterGenerator() {
   // Kreide-Muster (Hintergrund) — generative Striche, die sich animiert
   // selbst zeichnen können.
   const [patternConfig, setPatternConfig] = useState<PatternConfig>({
+    patternType: "lines",
     count: 5,
-    straightness: 0.6,
-    weight: 40,
-    opacity: 65,
-    direction: 135,
-    spread: 0.4,
+    brushName: "Figma Verite",
+    strokeWidth: 1.0,
+    opacity: 100,
     color: "white",
     seed: Math.floor(Math.random() * 999999),
   });
   const [patternStrokes, setPatternStrokes] = useState<PatternStroke[]>([]);
-  // Ausgewählte Hintergrund-Linie (für Auswahl-Rahmen & Löschen)
-  const [selectedPatternId, setSelectedPatternId] = useState<string | null>(
-    null
-  );
-  // „Gespeichert": friert das aktuelle Muster ein → Slider/Seed überschreiben
-  // es nicht mehr, sodass man darauf weiter aufbauen kann.
-  const [patternLocked, setPatternLocked] = useState(false);
+  const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
   const updatePattern = useCallback(
     (patch: Partial<PatternConfig>) =>
       setPatternConfig((c) => ({ ...c, ...patch })),
     []
   );
-  // Beim Undo/Redo wird die Config UND die exakten Striche wiederhergestellt;
-  // dann darf der Generator-Effekt nicht erneut würfeln und sie überschreiben.
   const skipRegenRef = useRef(false);
-  // Striche neu erzeugen, sobald sich Config oder Postergröße ändert —
-  // außer das Muster ist gespeichert (dann bleibt es unangetastet).
   useEffect(() => {
-    if (skipRegenRef.current) {
-      skipRegenRef.current = false;
-      return;
-    }
-    if (patternLocked) return;
-    setPatternStrokes(generateChalkStrokes(patternConfig, size.w, size.h));
-  }, [patternConfig, size.w, size.h, patternLocked]);
+    if (skipRegenRef.current) { skipRegenRef.current = false; return; }
+    setPatternStrokes(generatePatternStrokes(patternConfig, size.w, size.h));
+  }, [patternConfig, size.w, size.h]);
 
-  // Derive effective pattern color from inverted state
   const effectivePatternConfig = { ...patternConfig, color: inverted ? "black" as const : "white" as const };
 
   // ── Freihand-Kreide-Striche ──────────────────────────
   const [strokes, setStrokes] = useState<ChalkStroke[]>([]);
   const [selectedStrokeId, setSelectedStrokeId] = useState<string | null>(null);
 
-  // ── Werkzeug-Modus + Freihand-Pinsel ─────────────────
+  // ── Werkzeug-Modus + svg-brush Zeichnen ──────────────
   const [mode, setMode] = useState<ToolMode>("move");
-  const [brushSize, setBrushSize] = useState(45);
-  const [brushOpacity, setBrushOpacity] = useState(0.8);
-  const [chalkColor, setChalkColor] = useState("#e8e5e0");
-  const [drawBrush, setDrawBrush] = useState<DrawBrush>("verite");
-  // Radiergummi: malt in Tafel-Hintergrundfarbe → deckt Kreide & Muster ab.
+  const [brushName, setBrushName] = useState("Figma Verite");
+  const [brushWidth, setBrushWidth] = useState(0.3);
+  const [brushOpacity, setBrushOpacity] = useState(1.0);
+  const [chalkColor, setChalkColor] = useState("#FFFFFF");
   const [isErasing, setIsErasing] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const drawPointsRef = useRef<{ x: number; y: number }[]>([]);
-  const drawCanvasRef = useRef<HTMLCanvasElement>(null);
-  // Fester Seed pro Strich, damit Live-Vorschau und finaler Render identisch sind
-  const liveSeedRef = useRef(0);
-  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(
-    null
-  );
-
-  // ── Pattern-Selbstzeichen-Animation ──────────────────
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [animDuration, setAnimDuration] = useState(5);
+  const [liveStrokePath, setLiveStrokePath] = useState<string | undefined>();
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   const posterCanvasRef = useRef<PosterCanvasHandle>(null);
-  const animFrameRef = useRef<number | null>(null);
 
   // Text-Elemente
   const [headerText, setHeaderText] = useState("Незабутній Захід");
@@ -282,7 +252,6 @@ export function ChalkPosterGenerator() {
     positions: Record<PosKey, Position>;
     patternStrokes: PatternStroke[];
     patternConfig: PatternConfig;
-    patternLocked: boolean;
     extraTexts: { id: string; text: string; font: string; size: number; weight: string; align: Align; outline: boolean; position: Position }[];
   };
   const getAssetSrc = useCallback(
@@ -297,7 +266,6 @@ export function ChalkPosterGenerator() {
     positions,
     patternStrokes,
     patternConfig,
-    patternLocked,
     extraTexts,
   };
 
@@ -312,7 +280,6 @@ export function ChalkPosterGenerator() {
     // Klon → garantiert neue Referenz, damit der Generator-Effekt feuert und das
     // Skip-Flag verlässlich konsumiert (sonst könnte es hängenbleiben).
     setPatternConfig({ ...s.patternConfig });
-    setPatternLocked(s.patternLocked);
     setPatternStrokes(s.patternStrokes);
   }, []);
 
@@ -744,27 +711,11 @@ export function ChalkPosterGenerator() {
     setSelectedPatternId(null);
   }, [selectedPatternId, commit]);
 
-  // „Mehr Linien": zusätzliche Striche (neuer Seed) an das aktuelle Muster
-  // anhängen und es gleich speichern, damit nichts überschrieben wird.
-  const addPatternLines = useCallback(() => {
-    commit();
-    const extra = generateChalkStrokes(
-      { ...patternConfig, seed: Math.floor(Math.random() * 999999) },
-      size.w,
-      size.h
-    ).map((s) => ({ ...s, id: makeId() })); // eindeutige IDs (keine Kollision mit p0…pN)
-    setPatternStrokes((prev) => [...prev, ...extra]);
-    setPatternLocked(true);
-  }, [patternConfig, size.w, size.h, commit]);
-
-  // Speichern an/aus. Beim Würfeln neuer Linien wird automatisch entsperrt.
-  const togglePatternLock = useCallback(() => setPatternLocked((l) => !l), []);
   const regeneratePattern = useCallback(() => {
-    setPatternLocked(false);
     updatePattern({ seed: Math.floor(Math.random() * 999999) });
   }, [updatePattern]);
 
-  // ── Freihand-Zeichnen ────────────────────────────────
+  // ── Freihand-Zeichnen (svg-brush) ────────────────────
   const getPointerPercent = useCallback((e: React.PointerEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return { x: 50, y: 50 };
@@ -774,41 +725,6 @@ export function ChalkPosterGenerator() {
     };
   }, []);
 
-  const clearLiveCanvas = useCallback(() => {
-    const canvas = drawCanvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (canvas && ctx) {
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-  }, []);
-
-  // Live-Vorschau: den kompletten laufenden Strich mit dem Stretch Brush neu
-  // rendern (gleiche Engine + Seed wie der finale Render → identischer Look).
-  const renderLiveStroke = useCallback(() => {
-    const canvas = drawCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const pts = drawPointsRef.current.map((p) => ({
-      x: (p.x / 100) * size.w,
-      y: (p.y / 100) * size.h,
-    }));
-    if (pts.length < 2) return;
-    ctx.setTransform(2, 0, 0, 2, 0, 0);
-    renderStretchBrush(
-      ctx,
-      pts,
-      STRETCH_BRUSHES[drawBrush],
-      brushSize,
-      isErasing ? bgColor : chalkColor,
-      isErasing ? 1 : brushOpacity,
-      liveSeedRef.current
-    );
-  }, [drawBrush, brushSize, chalkColor, brushOpacity, isErasing, bgColor, size.w, size.h]);
-
   const handleDrawStart = useCallback(
     (e: React.PointerEvent) => {
       if (mode !== "draw") return;
@@ -816,11 +732,9 @@ export function ChalkPosterGenerator() {
       (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
       setIsDrawing(true);
       drawPointsRef.current = [getPointerPercent(e)];
-      // Fester Seed für diesen Strich (Live == final)
-      liveSeedRef.current = (Math.random() * 99999) | 0;
-      clearLiveCanvas();
+      setLiveStrokePath(undefined);
     },
-    [mode, getPointerPercent, clearLiveCanvas]
+    [mode, getPointerPercent]
   );
 
   const handleDrawMove = useCallback(
@@ -830,12 +744,20 @@ export function ChalkPosterGenerator() {
       const pos = getPointerPercent(e);
       const pts = drawPointsRef.current;
       const last = pts[pts.length - 1];
-      if (Math.hypot(pos.x - last.x, pos.y - last.y) > 0.3) {
+      if (Math.hypot(pos.x - last.x, pos.y - last.y) > 0.5) {
         drawPointsRef.current = [...pts, pos];
-        renderLiveStroke();
+        if (drawPointsRef.current.length >= 2) {
+          setLiveStrokePath(
+            createLivePath(
+              drawPointsRef.current,
+              isErasing ? "Figma Verite" : brushName,
+              isErasing ? brushWidth * 2 : brushWidth
+            )
+          );
+        }
       }
     },
-    [mode, isDrawing, getPointerPercent, renderLiveStroke]
+    [mode, isDrawing, getPointerPercent, brushName, brushWidth, isErasing]
   );
 
   const handleDrawEnd = useCallback(() => {
@@ -843,24 +765,16 @@ export function ChalkPosterGenerator() {
     setIsDrawing(false);
     const pts = drawPointsRef.current;
     drawPointsRef.current = [];
-    // Live-Preview leeren (das finale Rendering übernimmt jetzt)
-    clearLiveCanvas();
+    setLiveStrokePath(undefined);
     if (pts.length < 2) return;
     commit();
-    const smoothed = smoothPoints(pts, 3);
+    const color = isErasing ? bgColor : chalkColor;
+    const opacity = isErasing ? 1 : brushOpacity;
     setStrokes((prev) => [
       ...prev,
-      makeFreehandStroke(
-        smoothed,
-        brushSize,
-        isErasing ? 1 : brushOpacity,
-        isErasing ? bgColor : chalkColor,
-        drawBrush,
-        prev.length,
-        liveSeedRef.current
-      ),
+      makeFreehandStroke(pts, isErasing ? "Figma Verite" : brushName, isErasing ? brushWidth * 2 : brushWidth, color, opacity, prev.length),
     ]);
-  }, [isDrawing, commit, brushSize, brushOpacity, chalkColor, drawBrush, isErasing, bgColor, clearLiveCanvas]);
+  }, [isDrawing, commit, brushName, brushWidth, brushOpacity, chalkColor, isErasing, bgColor]);
 
   // Delete-Taste, Undo/Redo
   useEffect(() => {
@@ -892,8 +806,8 @@ export function ChalkPosterGenerator() {
       if (e.key === "d" || e.key === "D") setMode("draw");
       else if (e.key === "v" || e.key === "V" || e.key === "Escape")
         setMode("move");
-      else if (e.key === "[") setBrushSize((s) => Math.max(4, s - 5));
-      else if (e.key === "]") setBrushSize((s) => Math.min(120, s + 5));
+      else if (e.key === "[") setBrushWidth((w) => Math.max(0.3, Math.round((w - 0.2) * 10) / 10));
+      else if (e.key === "]") setBrushWidth((w) => Math.min(4, Math.round((w + 0.2) * 10) / 10));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1021,39 +935,6 @@ export function ChalkPosterGenerator() {
     downloadBlob(blob, "holos-poster.png");
   }, [buildScene]);
 
-  // ── Live-Pattern-Animation (rAF direkt auf der PosterCanvas) ──
-  const handleStopPlay = useCallback(() => {
-    if (animFrameRef.current != null) cancelAnimationFrame(animFrameRef.current);
-    animFrameRef.current = null;
-    setIsPlaying(false);
-    posterCanvasRef.current?.redraw();
-  }, []);
-
-  useEffect(() => {
-    if (!isPlaying) return;
-    const start = performance.now();
-    const ms = Math.max(0.2, animDuration) * 1000;
-
-    const tick = (now: number) => {
-      const raw = Math.min(1, (now - start) / ms);
-      const progress = 1 - Math.pow(1 - raw, 2.5); // easeOut
-      posterCanvasRef.current?.renderAt(progress);
-      if (raw < 1) {
-        animFrameRef.current = requestAnimationFrame(tick);
-      } else {
-        animFrameRef.current = null;
-        setIsPlaying(false);
-        posterCanvasRef.current?.redraw();
-      }
-    };
-    animFrameRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (animFrameRef.current != null)
-        cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
-    };
-  }, [isPlaying, animDuration]);
 
   // ── Add free text ────────────────────────────────────
   const addText = useCallback(() => {
@@ -1129,13 +1010,7 @@ export function ChalkPosterGenerator() {
         pattern={patternConfig}
         setPattern={updatePattern}
         onRegenerate={regeneratePattern}
-        onAddLines={addPatternLines}
-        patternLocked={patternLocked}
-        onToggleLock={togglePatternLock}
-        isPlaying={isPlaying}
-        onTogglePlay={() => (isPlaying ? handleStopPlay() : setIsPlaying(true))}
-        animDuration={animDuration}
-        setAnimDuration={setAnimDuration}
+        brushNames={getAllBrushes().map((b) => b.name)}
         layoutSection={
           <LayoutPanel
             layouts={LAYOUTS}
@@ -1229,50 +1104,15 @@ export function ChalkPosterGenerator() {
             setSelectedTextId(null);
             setSelectedPatternId(null);
           }}
+          liveStrokePath={liveStrokePath}
+          liveStrokeColor={isErasing ? bgColor : chalkColor}
+          liveStrokeOpacity={isErasing ? 1 : brushOpacity}
+          selectedStrokeId={selectedStrokeId}
+          onStrokePointerDown={mode === "move" ? handleStrokePointerDown : undefined}
+          selectedPatternId={selectedPatternId}
+          onPatternPointerDown={mode === "move" ? handlePatternPointerDown : undefined}
+          drawMode={mode === "draw"}
         >
-          {/* Hintergrund-Linien: Hit-/Drag-Flächen (unterste interaktive Ebene). */}
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              zIndex: 0,
-              pointerEvents: "none",
-              overflow: "visible",
-            }}
-          >
-            {patternStrokes.map((ps) => {
-              const ox = ps.offsetX ?? 0;
-              const oy = ps.offsetY ?? 0;
-              const d = ps.points
-                .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x + ox} ${p.y + oy}`)
-                .join(" ");
-              const sw = Math.max((ps.weight / size.w) * 100, 2.5);
-              const isSel = selectedPatternId === ps.id;
-              return (
-                <path
-                  key={ps.id}
-                  d={d}
-                  fill="none"
-                  stroke={isSel ? "rgba(255,255,255,0.5)" : "transparent"}
-                  strokeWidth={sw}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeDasharray={isSel ? "1.5 1.5" : undefined}
-                  style={{
-                    pointerEvents: mode === "move" ? "stroke" : "none",
-                    cursor: dragging === ps.id ? "grabbing" : "grab",
-                  }}
-                  onPointerDown={(e) => handlePatternPointerDown(ps.id, e)}
-                  onClick={() => setSelectedPatternId(ps.id)}
-                />
-              );
-            })}
-          </svg>
-
           {/* Snap lines */}
           {snapLines.length > 0 && (
             <svg
@@ -1287,50 +1127,6 @@ export function ChalkPosterGenerator() {
               )}
             </svg>
           )}
-
-          {/* Fette Striche: präzise Klick-/Drag-Flächen entlang des Pfades */}
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              zIndex: 40,
-              pointerEvents: "none",
-              overflow: "visible",
-            }}
-          >
-            {strokes.map((s) => {
-              const d = s.points
-                .map(
-                  (p, i) =>
-                    `${i === 0 ? "M" : "L"} ${p.x + s.offsetX} ${p.y + s.offsetY}`
-                )
-                .join(" ");
-              const sw = Math.max((s.weight / size.w) * 100 * s.scale, 2);
-              const isSel = selectedStrokeId === s.id;
-              return (
-                <path
-                  key={s.id}
-                  d={d}
-                  fill="none"
-                  stroke={isSel ? "rgba(255,255,255,0.55)" : "transparent"}
-                  strokeWidth={sw}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeDasharray={isSel ? "1.5 1.5" : undefined}
-                  style={{
-                    pointerEvents: mode === "move" ? "stroke" : "none",
-                    cursor: dragging === s.id ? "grabbing" : "grab",
-                  }}
-                  onPointerDown={(e) => handleStrokePointerDown(s.id, e)}
-                  onClick={() => setSelectedStrokeId(s.id)}
-                />
-              );
-            })}
-          </svg>
 
           {placedAssets.map((asset) => {
             const item = allAssets.find((a) => a.id === asset.assetId);
@@ -1485,39 +1281,17 @@ export function ChalkPosterGenerator() {
             />
           ))}
 
-          {/* Live-Preview-Canvas für Freihand-Zeichnen */}
-          <canvas
-            ref={drawCanvasRef}
-            width={size.w * 2}
-            height={size.h * 2}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              zIndex: 60,
-              pointerEvents: "none",
-            }}
-          />
-
-          {/* Erfassungsfläche im Zeichen-Modus */}
+          {/* Draw capture — only active in draw mode */}
           {mode === "draw" && (
             <div
               style={{
-                position: "absolute",
-                inset: 0,
-                zIndex: 61,
-                pointerEvents: "auto",
-                cursor: "none",
-                touchAction: "none",
+                position: "absolute", inset: 0, zIndex: 61,
+                pointerEvents: "auto", cursor: "none", touchAction: "none",
               }}
               onPointerDown={handleDrawStart}
               onPointerMove={handleDrawMove}
               onPointerUp={handleDrawEnd}
-              onPointerLeave={() => {
-                handleDrawEnd();
-                setCursorPos(null);
-              }}
+              onPointerLeave={() => { handleDrawEnd(); setCursorPos(null); }}
             />
           )}
         </PosterCanvas>
@@ -1530,8 +1304,8 @@ export function ChalkPosterGenerator() {
             style={{
               left: cursorPos.x,
               top: cursorPos.y,
-              width: brushSize * scale,
-              height: brushSize * scale,
+              width: brushWidth * 20 * scale,
+              height: brushWidth * 20 * scale,
               borderColor: isErasing ? "rgba(255,255,255,0.7)" : `${chalkColor}88`,
               borderStyle: isErasing ? "dashed" : "solid",
             }}
@@ -1544,12 +1318,12 @@ export function ChalkPosterGenerator() {
           setMode={setMode}
           chalkColor={chalkColor}
           setChalkColor={setChalkColor}
-          brushSize={brushSize}
-          setBrushSize={setBrushSize}
+          brushName={brushName}
+          setBrushName={setBrushName}
+          brushWidth={brushWidth}
+          setBrushWidth={setBrushWidth}
           brushOpacity={brushOpacity}
           setBrushOpacity={setBrushOpacity}
-          drawBrush={drawBrush}
-          setDrawBrush={setDrawBrush}
           isErasing={isErasing}
           setIsErasing={setIsErasing}
           onUndo={undo}

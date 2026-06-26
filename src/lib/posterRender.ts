@@ -7,8 +7,6 @@
 // Bilder werden vorab über `loadSceneImages` geladen, damit das Rendering
 // selbst synchron (pro Frame) laufen kann.
 
-import { drawChalkBackground, patternChalkRgb } from "./chalkBackground";
-import { renderStroke, compositeStroke } from "./chalkStrokes";
 import { tintStrokeImage, isMaskAsset } from "./strokeStamps";
 import { renderPlacedStroke } from "./warpRenderer";
 import type {
@@ -92,32 +90,53 @@ export async function loadSceneImages(
  * Auflösung skaliert sein (z.B. `ctx.scale(3,3)` für 3x-Export); gezeichnet
  * wird in Poster-Koordinaten (scene.w × scene.h).
  */
-export function renderPosterScene(
+/** Renders all SVG-based strokes (patterns + freehand) onto the canvas via SVG blob. */
+async function renderSvgStrokes(
+  ctx: CanvasRenderingContext2D,
+  scene: PosterScene,
+  w: number,
+  h: number
+): Promise<void> {
+  const fillColor = scene.pattern.color === "white" ? "#e8e5e0" : "#222222";
+  const ordered = [...scene.strokes].sort((a, b) => a.zIndex - b.zIndex);
+
+  const pathsHtml = [
+    ...scene.patternStrokes.map(
+      (ps) => `<g opacity="${ps.opacity}" transform="translate(${ps.offsetX ?? 0} ${ps.offsetY ?? 0})"><path d="${ps.svgPath}" fill="${fillColor}"/></g>`
+    ),
+    ...ordered.map(
+      (s) => `<g opacity="${s.opacity}" transform="translate(${s.offsetX} ${s.offsetY})"><path d="${s.svgPath}" fill="${s.color}"/></g>`
+    ),
+  ].join("");
+
+  if (!pathsHtml) return;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none" width="${w}" height="${h}">${pathsHtml}</svg>`;
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    img.src = url;
+    await new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); });
+    ctx.drawImage(img, 0, 0, w, h);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export async function renderPosterScene(
   ctx: CanvasRenderingContext2D,
   scene: PosterScene,
   images: Map<string, HTMLImageElement>,
-  patternProgress = 1
-): void {
+): Promise<void> {
   const { w, h } = scene;
 
-  // 1.–3. Tafel + Grain + Hintergrund-Muster (mit Selbstzeichen-Fortschritt)
-  drawChalkBackground(
-    ctx,
-    w,
-    h,
-    scene.patternStrokes,
-    scene.pattern.seed,
-    patternProgress,
-    scene.bg,
-    patternChalkRgb(scene.pattern.color)
-  );
+  // 1. Background fill
+  ctx.fillStyle = scene.bg;
+  ctx.fillRect(0, 0, w, h);
 
-  // 4. Fette Kreide-Striche (zIndex-Reihenfolge, statisch)
-  const ordered = [...scene.strokes].sort((a, b) => a.zIndex - b.zIndex);
-  ordered.forEach((stroke) => {
-    const strokeCanvas = renderStroke(stroke, w, h);
-    compositeStroke(ctx, strokeCanvas, stroke, w, h);
-  });
+  // 2. SVG strokes (patterns + freehand)
+  await renderSvgStrokes(ctx, scene, w, h);
 
   // 5. Text
   ctx.textBaseline = "middle";

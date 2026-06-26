@@ -26,18 +26,10 @@ interface SidebarProps {
   inverted: boolean;
   onInvert: () => void;
 
-  // Kreide-Muster (Hintergrund)
   pattern: PatternConfig;
   setPattern: (patch: Partial<PatternConfig>) => void;
   onRegenerate: () => void;
-  onAddLines: () => void;
-  patternLocked: boolean;
-  onToggleLock: () => void;
-  // Pattern-Selbstzeichen-Animation
-  isPlaying: boolean;
-  onTogglePlay: () => void;
-  animDuration: number;
-  setAnimDuration: (v: number) => void;
+  brushNames: string[];
 
   layoutSection: React.ReactNode;
 
@@ -245,140 +237,58 @@ export function Sidebar(props: SidebarProps) {
           isOpen={open === "pattern"}
           onToggle={() => toggle("pattern")}
         >
-          <button
-            className={styles.regenButton}
-            onClick={props.onRegenerate}
-            title="Alle Hintergrund-Linien neu würfeln (entsperrt das Muster)"
-          >
-            Neue Linien
-          </button>
-          <div className={styles.assetButtonRow} style={{ marginTop: 8 }}>
-            <button
-              className={styles.smallButton}
-              onClick={props.onAddLines}
-              title="Weitere Linien zum aktuellen Muster hinzufügen (Muster bleibt erhalten)"
-            >
-              Mehr Linien
-            </button>
-            <button
-              className={styles.smallButton}
-              onClick={props.onToggleLock}
-              title={
-                props.patternLocked
-                  ? "Muster ist gespeichert – Regler/Würfeln verändern es nicht. Zum Entsperren klicken."
-                  : "Muster speichern/einfrieren, damit Regler es nicht überschreiben"
-              }
-              style={
-                props.patternLocked
-                  ? { borderColor: "rgba(245,230,163,0.8)", color: "#f5e6a3" }
-                  : undefined
-              }
-            >
-              {props.patternLocked ? "Gespeichert" : "Speichern"}
-            </button>
-          </div>
-          <Slider
-            label="Striche"
-            value={props.pattern.count}
-            min={1}
-            max={15}
-            onChange={(v) => props.setPattern({ count: v })}
+          {/* Pattern type */}
+          <Select
+            label="Muster"
+            value={props.pattern.patternType}
+            options={[
+              { label: "Linien", value: "lines" },
+              { label: "Wellenlinien", value: "wavy" },
+              { label: "Raster", value: "grid" },
+            ]}
+            onChange={(v) => props.setPattern({ patternType: v as "lines" | "wavy" | "grid" })}
           />
-          <Slider
-            label="Geradheit"
-            value={props.pattern.straightness}
-            min={0}
-            max={1}
-            step={0.05}
-            onChange={(v) => props.setPattern({ straightness: v })}
-          />
+          {/* Brush selector */}
           <div className={styles.field}>
-            <span className={styles.label}>Linienfarbe</span>
+            <span className={styles.label}>Pinsel</span>
+            <select
+              className={styles.select}
+              value={props.pattern.brushName}
+              onChange={(e) => props.setPattern({ brushName: e.target.value })}
+            >
+              {props.brushNames.map((n) => (
+                <option key={n} value={n}>{n.replace("Figma ", "")}</option>
+              ))}
+            </select>
+          </div>
+          <Slider label="Striche" value={props.pattern.count} min={1} max={20}
+            onChange={(v) => props.setPattern({ count: v })} />
+          <Slider label="Stärke" value={props.pattern.strokeWidth} min={0.3} max={4} step={0.1}
+            onChange={(v) => props.setPattern({ strokeWidth: v })} />
+          <Slider label="Deckkraft" value={props.pattern.opacity} min={10} max={100} suffix="%"
+            onChange={(v) => props.setPattern({ opacity: v })} />
+          {/* Color toggle */}
+          <div className={styles.field}>
+            <span className={styles.label}>Farbe</span>
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              {([
-                { label: "Weiß", val: "white" as const },
-                { label: "Schwarz", val: "black" as const },
-              ]).map((o) => {
-                const active = props.pattern.color === o.val;
+              {(["white", "black"] as const).map((val) => {
+                const active = props.pattern.color === val;
                 return (
-                  <button
-                    key={o.val}
-                    onClick={() => props.setPattern({ color: o.val })}
-                    style={{
-                      flex: 1,
-                      padding: "5px 8px",
-                      borderRadius: 6,
-                      background: active
-                        ? "rgba(255,255,255,0.16)"
-                        : "rgba(255,255,255,0.04)",
-                      border: active
-                        ? "1px solid rgba(255,255,255,0.5)"
-                        : "1px solid rgba(255,255,255,0.15)",
-                      color: "#f5f2ed",
-                      fontSize: 12,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {o.label}
+                  <button key={val} onClick={() => props.setPattern({ color: val })}
+                    style={{ flex: 1, padding: "5px 8px", borderRadius: 6, cursor: "pointer",
+                      background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.04)",
+                      border: active ? "1px solid rgba(255,255,255,0.5)" : "1px solid rgba(255,255,255,0.15)",
+                      color: "#f5f2ed", fontSize: 13,
+                    }}>
+                    {val === "white" ? "Weiß" : "Schwarz"}
                   </button>
                 );
               })}
             </div>
           </div>
-          <Slider
-            label="Stärke"
-            value={props.pattern.weight}
-            min={5}
-            max={120}
-            onChange={(v) => props.setPattern({ weight: v })}
-          />
-          <Slider
-            label="Deckkraft"
-            value={props.pattern.opacity}
-            min={10}
-            max={100}
-            suffix="%"
-            onChange={(v) => props.setPattern({ opacity: v })}
-          />
-          <Slider
-            label="Richtung"
-            value={props.pattern.direction}
-            min={0}
-            max={360}
-            suffix="°"
-            onChange={(v) => props.setPattern({ direction: v })}
-          />
-          <Slider
-            label="Spread"
-            value={props.pattern.spread}
-            min={0}
-            max={1}
-            step={0.05}
-            onChange={(v) => props.setPattern({ spread: v })}
-          />
-
-          <div className={styles.label} style={{ marginTop: 14 }}>
-            Animation
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button
-              className={styles.regenButton}
-              style={{ flex: "0 0 auto", margin: 0 }}
-              onClick={props.onTogglePlay}
-            >
-              {props.isPlaying ? "Stopp" : "Play"}
-            </button>
-            <div style={{ flex: 1 }}>
-              <Slider
-                label="Dauer"
-                value={props.animDuration}
-                min={1}
-                max={15}
-                suffix="s"
-                onChange={props.setAnimDuration}
-              />
-            </div>
-          </div>
+          <button className={styles.regenButton} onClick={props.onRegenerate}>
+            Neu generieren
+          </button>
         </Section>
 
         <Section
