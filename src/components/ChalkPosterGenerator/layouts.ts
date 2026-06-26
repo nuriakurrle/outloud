@@ -1,5 +1,5 @@
 import type { Position } from "../../types/poster";
-import type { Align } from "../../lib/layouts";
+import type { Align } from "../../types/poster";
 
 type PosKey = "header" | "sub" | "body" | "detail" | "divider";
 type TextKey = "header" | "sub" | "body" | "detail";

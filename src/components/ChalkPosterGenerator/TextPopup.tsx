@@ -1,5 +1,5 @@
 import type { TextFieldState } from "./Sidebar";
-import type { Align } from "../../lib/layouts";
+import type { Align } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 
 interface TextPopupProps {

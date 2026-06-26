@@ -7,8 +7,6 @@
 // Bilder werden vorab über `loadSceneImages` geladen, damit das Rendering
 // selbst synchron (pro Frame) laufen kann.
 
-import { tintStrokeImage, isMaskAsset } from "./strokeStamps";
-import { renderPlacedStroke } from "./warpRenderer";
 import type {
   AssetCategory,
   ChalkStroke,
@@ -50,8 +48,6 @@ export interface PosterScene {
   texts: SceneText[];
   assets: SceneAsset[];
 }
-
-type Drawable = HTMLImageElement | HTMLCanvasElement;
 
 /** Lädt ein einzelnes Bild und wartet, bis es dekodiert ist. */
 export async function loadImage(src: string): Promise<HTMLImageElement> {
@@ -172,22 +168,6 @@ export async function renderPosterScene(
     const ih = img.naturalHeight || img.height || 100;
     const px = (asset.x / 100) * w;
     const py = (asset.y / 100) * h;
-
-    if (isMaskAsset(asset.category)) {
-      const drawImg: Drawable = asset.tint ? tintStrokeImage(img, asset.tint) : img;
-      const sc = (asset.scale * w) / iw;
-      renderPlacedStroke(ctx, drawImg, {
-        px,
-        py,
-        scaleX: sc * (asset.scaleX ?? 1),
-        scaleY: sc * (asset.scaleY ?? 1),
-        rotation: asset.rotation,
-        flipX: asset.flipX,
-        flipY: asset.flipY ?? false,
-        opacity: asset.opacity,
-      });
-      continue;
-    }
 
     const baseW = asset.scale * w;
     const targetW = baseW * (asset.scaleX ?? 1);

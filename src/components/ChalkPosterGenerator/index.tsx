@@ -13,7 +13,8 @@ import { generatePatternStrokes, makeFreehandStroke, getAllBrushes, createLivePa
 import { DrawingToolbar } from "./DrawingToolbar";
 import { smartPlace } from "../../lib/smartPlace";
 import { ASSET_REGISTRY, LOGO_REGISTRY } from "../../assetRegistry";
-import { isDefaultWhite, isMaskAsset } from "../../lib/strokeStamps";
+const isMaskAsset = (cat: string) => cat === "strokes" || cat === "shapes";
+const isDefaultWhite = (c: string) => c.toLowerCase() === "#ffffff";
 import {
   chalkifyImage,
   DEFAULT_CHALKIFY,
@@ -27,7 +28,7 @@ import { SelectionHandles } from "./SelectionHandles";
 import { AssetPanel } from "./AssetPanel";
 import { LayoutPanel } from "./LayoutPanel";
 import { LAYOUTS, type PosterLayout } from "./layouts";
-import type { Align } from "../../lib/layouts";
+import type { Align } from "../../types/poster";
 import { type PosterScene, type SceneAsset } from "../../lib/posterRender";
 import { exportPNG, downloadBlob } from "../../lib/exporter";
 import styles from "../../styles/chalkPoster.module.css";
@@ -120,7 +121,7 @@ export function ChalkPosterGenerator() {
   const [headerOutline, setHeaderOutline] = useState(false);
   const [subOutline, setSubOutline] = useState(false);
   const [bodyOutline, setBodyOutline] = useState(false);
-  const [detailOutline, setDetailOutline] = useState(false);
+  const [detailOutline] = useState(false);
 
   const [selectedLayoutId, setSelectedLayoutId] = useState(LAYOUTS[0].id);
 
@@ -326,7 +327,6 @@ export function ChalkPosterGenerator() {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const displayW = size.w * scale;
-  const displayH = size.h * scale;
 
   // ── Snap lines ───────────────────────────────────────
   const [snapLines, setSnapLines] = useState<{ x?: number; y?: number }[]>([]);

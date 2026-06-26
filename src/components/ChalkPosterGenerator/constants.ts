@@ -23,20 +23,5 @@ export const POSTER_SIZES: PosterSize[] = [
   { label: "Instagram", w: 400, h: 400 },
 ];
 
-// Schrift-Pools für „Alles neu generieren" — pro Textrolle passend gewählt,
-// damit der gewürfelte Look im Brand-Rahmen bleibt.
-export const DISPLAY_FONTS = [
-  "Playfair Display",
-  "Abril Fatface",
-  "Permanent Marker",
-  "Pacifico",
-  "Rock Salt",
-];
-export const SCRIPT_FONTS = ["Caveat", "Pacifico", "Permanent Marker"];
-export const BODY_FONTS = ["Oswald", "Special Elite", "Caveat"];
-export const DETAIL_FONTS = ["Special Elite", "Oswald", "Caveat"];
-export const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-
 export const CHALK = "#FFFFFF";
-export const CHALK_DIM = "#FFFFFF";
 export const POSTER_BG = "#000000";

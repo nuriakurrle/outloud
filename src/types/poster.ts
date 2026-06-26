@@ -1,3 +1,5 @@
+export type Align = "center" | "left" | "right";
+
 export interface Position {
   x: number; // Prozent (0–100)
   y: number; // Prozent (0–100)
@@ -41,14 +43,6 @@ export interface ChalkStroke {
   offsetY: number;
   zIndex: number;
   isGenerated: boolean;
-}
-
-export interface TextElement {
-  text: string;
-  font: string;
-  size: number;
-  weight?: string;
-  position: Position;
 }
 
 export type AssetCategory =
@@ -102,11 +96,3 @@ export interface PlacedAsset {
   tint?: string; // Kreide-Farbe (Hex); leer = weiß
 }
 
-export interface PosterState {
-  size: PosterSize;
-  pattern: PatternConfig;
-  header: TextElement;
-  sub: TextElement;
-  body: TextElement;
-  detail: TextElement;
-}

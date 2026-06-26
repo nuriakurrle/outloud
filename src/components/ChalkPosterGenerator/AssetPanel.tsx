@@ -6,7 +6,7 @@ import type {
 } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 import { CHALK_COLORS } from "./DrawingToolbar";
-import { isMaskAsset } from "../../lib/strokeStamps";
+const isMaskAsset = (cat: string) => cat === "strokes" || cat === "shapes";
 
 // Formen sollen laut Vorgabe nur Weiß oder Schwarz sein.
 const SHAPE_COLORS = [

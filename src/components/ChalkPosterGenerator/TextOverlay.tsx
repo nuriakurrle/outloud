@@ -1,5 +1,5 @@
 import type { Position } from "../../types/poster";
-import type { Align } from "../../lib/layouts";
+import type { Align } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 
 interface TextOverlayProps {
