@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { ToolMode } from "../../types/poster";
 import { getAllBrushes, brushPreviewPath } from "../../lib/brushStrokes";
+import { useT } from "../../i18n";
 
 export const CHALK_COLORS = [
   { label: "Weiß", hex: "#FFFFFF" },
@@ -19,7 +20,6 @@ interface DrawingToolbarProps {
   brushName: string; setBrushName: (n: string) => void;
   brushWidth: number; setBrushWidth: (v: number) => void;
   brushOpacity: number; setBrushOpacity: (v: number) => void;
-  isErasing: boolean; setIsErasing: (v: boolean) => void;
   onUndo: () => void; canUndo: boolean;
   onRedo: () => void; canRedo: boolean;
 }
@@ -27,10 +27,11 @@ interface DrawingToolbarProps {
 export function DrawingToolbar({
   mode, setMode, chalkColor, setChalkColor,
   brushName, setBrushName, brushWidth, setBrushWidth,
-  brushOpacity, setBrushOpacity, isErasing, setIsErasing,
+  brushOpacity, setBrushOpacity,
   onUndo, canUndo, onRedo, canRedo,
 }: DrawingToolbarProps) {
   const isDraw = mode === "draw";
+  const { t } = useT();
   const previews = useMemo(() => ALL_BRUSHES.map((b) => ({
     name: b.name, label: b.name.replace("Figma ", ""), path: brushPreviewPath(b.name, 1),
   })), []);
@@ -58,23 +59,17 @@ export function DrawingToolbar({
           border: isDraw ? "2px solid #fff" : "2px solid rgba(255,255,255,0.12)",
           color: isDraw ? "#1e1e1e" : "#ddd", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
         }}>
-        ✏️ {isDraw ? "Zeichnen an" : "Zeichnen"}
+        ✏️ {isDraw ? t.drawOn : t.drawOff}
       </button>
       {isDraw && <div style={DIVIDER} />}
       {isDraw && (
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           {[{ label: "Weiß", hex: "#FFFFFF" }, { label: "Schwarz", hex: "#000000" }].map((c) => (
             <button key={c.hex} data-no-chalk
-              onClick={() => { setIsErasing(false); setChalkColor(c.hex); }}
+              onClick={() => setChalkColor(c.hex)}
               style={{ width: 20, height: 20, borderRadius: "50%", background: c.hex, padding: 0, cursor: "pointer", flexShrink: 0,
-                border: !isErasing && chalkColor === c.hex ? "2px solid #fff" : "2px solid rgba(255,255,255,0.25)" }} />
+                border: chalkColor === c.hex ? "2px solid #fff" : "2px solid rgba(255,255,255,0.25)" }} />
           ))}
-          <button onClick={() => setIsErasing(!isErasing)} data-no-chalk
-            style={{ ...btnBase, marginLeft: 4,
-              background: isErasing ? "rgba(255,255,255,0.9)" : btnBase.background,
-              border: isErasing ? "2px solid #fff" : btnBase.border,
-              color: isErasing ? "#1e1e1e" : "#ddd",
-            }}>◻</button>
         </div>
       )}
       {isDraw && <div style={DIVIDER} />}

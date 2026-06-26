@@ -1,5 +1,6 @@
 import type { PosterLayout } from "./layouts";
 import styles from "../../styles/chalkPoster.module.css";
+import { useT } from "../../i18n";
 
 interface LayoutPanelProps {
   layouts: PosterLayout[];
@@ -59,6 +60,7 @@ function LayoutThumb({ layout }: { layout: PosterLayout }) {
 }
 
 export function LayoutPanel({ layouts, onApply, hasLogos, selectedId }: LayoutPanelProps) {
+  const { t } = useT();
   return (
     <>
       <div className={styles.layoutGrid}>
@@ -75,9 +77,7 @@ export function LayoutPanel({ layouts, onApply, hasLogos, selectedId }: LayoutPa
         ))}
       </div>
       <p className={styles.hint}>
-        {hasLogos
-          ? "Layout wählen · Texte & Logos werden angeordnet"
-          : "Layout ordnet die Texte an · Logos im Logo-Bereich hinzufügen"}
+        {hasLogos ? t.layoutHintLogos : t.layoutHintNoLogos}
       </p>
     </>
   );

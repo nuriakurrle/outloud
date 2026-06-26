@@ -93,7 +93,15 @@ export function makeFreehandStroke(
   const brush = resolveBrush(brushName);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svgPath = createBrushStroke(points, { brush: brush as any, strokeWidth });
-  return { id: uid(), svgPath, color, opacity, offsetX: 0, offsetY: 0, zIndex, isGenerated: false };
+  return { id: uid(), svgPath, points, brushName, strokeWidth, color, opacity, offsetX: 0, offsetY: 0, zIndex, isGenerated: false };
+}
+
+/** Re-render an existing stroke's svgPath with new brush/width. */
+export function rerenderStroke(stroke: ChalkStroke, brushName: string, strokeWidth: number): string {
+  if (stroke.points.length < 2) return stroke.svgPath;
+  const brush = resolveBrush(brushName);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return createBrushStroke(stroke.points, { brush: brush as any, strokeWidth });
 }
 
 /** Live preview path while drawing (same coordinate space as the poster %). */

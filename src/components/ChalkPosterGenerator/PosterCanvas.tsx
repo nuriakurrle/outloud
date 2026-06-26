@@ -2,7 +2,7 @@ import { forwardRef, useImperativeHandle } from "react";
 import type { ChalkStroke, PatternConfig, PatternStroke, PosterSize } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 
-interface PosterCanvasProps {
+export interface PosterCanvasProps {
   size: PosterSize;
   pattern: PatternConfig;
   patternStrokes: PatternStroke[];
@@ -12,6 +12,7 @@ interface PosterCanvasProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   onBackgroundClick?: () => void;
   children: React.ReactNode;
+  backdrop?: React.ReactNode;
   liveStrokePath?: string;
   liveStrokeColor?: string;
   liveStrokeOpacity?: number;
@@ -34,7 +35,7 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
   function PosterCanvas(
     {
       size, pattern, patternStrokes, strokes, bg, scale,
-      containerRef, onBackgroundClick, children,
+      containerRef, onBackgroundClick, children, backdrop,
       liveStrokePath, liveStrokeColor = "#ffffff", liveStrokeOpacity = 0.8,
       selectedStrokeId, onStrokePointerDown,
       selectedPatternId, onPatternPointerDown,
@@ -55,6 +56,7 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
         className={styles.posterWrap}
         style={{ width: displayW, height: displayH, background: bg }}
       >
+        {backdrop && <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>{backdrop}</div>}
         {/* SVG: background patterns + freehand strokes + live preview */}
         <svg
           viewBox="0 0 100 100"

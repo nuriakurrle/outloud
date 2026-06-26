@@ -6,6 +6,7 @@ import type {
 } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 import { CHALK_COLORS } from "./DrawingToolbar";
+import { useT } from "../../i18n";
 const isMaskAsset = (cat: string) => cat === "strokes" || cat === "shapes";
 
 // Formen sollen laut Vorgabe nur Weiß oder Schwarz sein.
@@ -35,16 +36,6 @@ interface AssetPanelProps {
   ) => void;
 }
 
-const CATEGORY_LABELS: Record<AssetCategory | "all", string> = {
-  all: "Alle",
-  portraits: "Personen",
-  buildings: "Gebäude",
-  icons: "Objekte",
-  ornaments: "Ornamente",
-  logos: "Logos",
-  shapes: "Formen",
-  strokes: "Striche",
-};
 
 function AssetSlider({
   label,
@@ -113,6 +104,13 @@ export function AssetPanel({
   const isMaskSel = selectedAsset ? isMaskAsset(selectedAsset.category) : false;
   const tintPalette = isShape ? SHAPE_COLORS : CHALK_COLORS;
 
+  const { t } = useT();
+  const CAT: Record<string, string> = {
+    all: t.all, portraits: t.portraits, buildings: t.buildings,
+    icons: t.icons, ornaments: t.ornaments, logos: "Logos",
+    shapes: "Shapes", strokes: "Strokes",
+  };
+
   const [filter, setFilter] = useState<AssetCategory | "all">("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState<{ id: string; src: string; startX: number; startY: number; curX: number; curY: number; started: boolean } | null>(null);
@@ -130,11 +128,9 @@ export function AssetPanel({
           value={filter}
           onChange={(e) => setFilter(e.target.value as AssetCategory | "all")}
         >
-          <option value="all">{CATEGORY_LABELS.all}</option>
+          <option value="all">{CAT.all}</option>
           {availableCats.map((c) => (
-            <option key={c} value={c}>
-              {CATEGORY_LABELS[c] ?? c.charAt(0).toUpperCase() + c.slice(1)}
-            </option>
+            <option key={c} value={c}>{CAT[c] ?? c.charAt(0).toUpperCase() + c.slice(1)}</option>
           ))}
         </select>
       )}
@@ -182,10 +178,8 @@ export function AssetPanel({
           <img src={drag.src} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
         </div>
       )}
-      {shown.length === 0 && (
-        <p className={styles.hint}>Keine Illustrationen in dieser Kategorie.</p>
-      )}
-      <p className={styles.hint}>Klick oder auf Poster ziehen</p>
+      {shown.length === 0 && <p className={styles.hint}>{t.noItems}</p>}
+      <p className={styles.hint}>{t.assetHint}</p>
 
       <input
         ref={fileInputRef}
@@ -202,22 +196,22 @@ export function AssetPanel({
         className={styles.regenButton}
         onClick={() => fileInputRef.current?.click()}
       >
-        ⬆ SVG/PNG hochladen
+        {t.upload}
       </button>
 
       {selected && (
         <div className={styles.assetControls}>
           <span className={styles.label}>
-            Ausgewählt: {selectedAsset?.name ?? "Element"}
+            {t.selected} {selectedAsset?.name ?? ""}
           </span>
           {isPhoto && (
             <>
               <div className={styles.field}>
-                <span className={styles.label}>Kreide-Filter</span>
+                <span className={styles.label}>{t.chalkFilter}</span>
                 <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
                   {[
-                    { label: "Kreide", on: true },
-                    { label: "Original", on: false },
+                    { label: t.chalk, on: true },
+                    { label: t.original, on: false },
                   ].map((o) => {
                     const active = (chalk?.enabled ?? false) === o.on;
                     return (
@@ -250,7 +244,7 @@ export function AssetPanel({
               {chalk?.enabled && (
                 <>
                   <AssetSlider
-                    label="Kontrast"
+                    label={t.contrast}
                     value={chalk.contrast}
                     min={0.5}
                     max={2.5}
@@ -261,7 +255,7 @@ export function AssetPanel({
                     }
                   />
                   <AssetSlider
-                    label="Helligkeit"
+                    label={t.brightness}
                     value={chalk.brightness}
                     min={-0.3}
                     max={0.3}
@@ -272,7 +266,7 @@ export function AssetPanel({
                     }
                   />
                   <AssetSlider
-                    label="Schwelle"
+                    label={t.threshold}
                     value={chalk.threshold}
                     min={0}
                     max={0.9}
@@ -287,7 +281,7 @@ export function AssetPanel({
             </>
           )}
           <AssetSlider
-            label={isStroke ? "Länge" : "Größe"}
+            label={isStroke ? t.assetLength : t.assetSize}
             value={selected.scale}
             min={0.05}
             max={2}
@@ -298,7 +292,7 @@ export function AssetPanel({
           {isMaskSel && (
             <>
               <AssetSlider
-                label={isStroke ? "Stärke" : "Höhe"}
+                label={isStroke ? t.assetStrength : t.assetHeight}
                 value={selected.scaleY ?? 1}
                 min={0.2}
                 max={4}
@@ -308,7 +302,7 @@ export function AssetPanel({
               />
               <div className={styles.field}>
                 <span className={styles.label}>
-                  {isStroke ? "Kreide-Farbe" : "Farbe"}
+                  {isStroke ? t.chalkColor : t.color}
                 </span>
                 <div
                   style={{
@@ -351,7 +345,7 @@ export function AssetPanel({
             </>
           )}
           <AssetSlider
-            label="Drehung"
+            label={t.rotation}
             value={selected.rotation}
             min={0}
             max={360}
@@ -360,7 +354,7 @@ export function AssetPanel({
             onChange={(v) => onUpdateSelected({ rotation: v })}
           />
           <AssetSlider
-            label="Deckkraft"
+            label={t.assetOpacity}
             value={Math.round(selected.opacity * 100)}
             min={10}
             max={100}
@@ -373,29 +367,29 @@ export function AssetPanel({
               className={styles.smallButton}
               onClick={() => onUpdateSelected({ flipX: !selected.flipX })}
             >
-              ⇋ Spiegeln
+              {t.mirror}
             </button>
             {isMaskSel && (
               <button
                 className={styles.smallButton}
                 onClick={() => onUpdateSelected({ flipY: !selected.flipY })}
               >
-                ⇅ V-Spiegeln
+                {t.mirrorV}
               </button>
             )}
             <button
               className={`${styles.smallButton} ${styles.danger}`}
               onClick={onDeleteSelected}
             >
-              🗑 Löschen
+              {t.deleteBtn}
             </button>
           </div>
           <div className={styles.assetButtonRow}>
             <button className={styles.smallButton} onClick={() => onLayer(1)}>
-              ↑ Ebene
+              {t.layerUp}
             </button>
             <button className={styles.smallButton} onClick={() => onLayer(-1)}>
-              ↓ Ebene
+              {t.layerDown}
             </button>
           </div>
         </div>

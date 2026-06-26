@@ -36,10 +36,13 @@ export type ToolMode = "move" | "draw";
 /** SVG-based freehand chalk stroke (drawn by the user). */
 export interface ChalkStroke {
   id: string;
-  svgPath: string;     // SVG path `d` attribute from createBrushStroke
+  svgPath: string;
+  points: Array<{ x: number; y: number }>; // original points for re-rendering
+  brushName: string;
+  strokeWidth: number;
   color: string;
-  opacity: number;     // 0–1
-  offsetX: number;     // % offset from drag
+  opacity: number;
+  offsetX: number;
   offsetY: number;
   zIndex: number;
   isGenerated: boolean;

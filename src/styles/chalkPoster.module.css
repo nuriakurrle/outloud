@@ -362,7 +362,7 @@
   white-space: pre-wrap;
   max-width: 90%;
   line-height: 1.15;
-  text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+  text-shadow: none;
   border: 1px solid transparent;
   padding: 2px 4px;
   touch-action: none;

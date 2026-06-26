@@ -7,6 +7,7 @@ import {
 } from "react";
 import { Link } from "react-router";
 import { X } from "lucide-react";
+import { useT } from "../i18n";
 import {
   renderChalkFrame,
   DEFAULT_CHALK_ENGINE_CONFIG,
@@ -43,6 +44,7 @@ export default function Interactive() {
   const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
   const [showUI, setShowUI] = useState(true);
   const [size, setSize] = useState({ w: 640, h: 480 });
+  const { t } = useT();
 
   const setCfg = useCallback(
     (patch: Partial<ChalkEngineConfig>) => setConfig((c) => ({ ...c, ...patch })),
@@ -180,7 +182,7 @@ export default function Interactive() {
       <div ref={areaRef} style={S.canvasArea}>
         <canvas ref={canvasRef} style={S.canvas} />
         {!uploadedImage && (
-          <div style={S.placeholder}>Bild wählen</div>
+          <div style={S.placeholder}>{t.pickImage}</div>
         )}
       </div>
 
@@ -195,7 +197,7 @@ export default function Interactive() {
             </div>
           ) : (
             <label style={S.fileLabel} data-chalk>
-              Bild wählen
+              {t.pickImage}
               <input
                 type="file"
                 accept="image/*"
@@ -228,11 +230,11 @@ export default function Interactive() {
           <div style={S.divider} />
 
           <button style={S.saveBtn} onClick={savePNG}>
-            SAVE PNG
+            {t.savePng}
           </button>
 
           <Link to="/poster-maker" style={S.editorLink} data-chalk>
-            ← Zurück zum Editor
+            {t.backToEditor}
           </Link>
         </aside>
       )}

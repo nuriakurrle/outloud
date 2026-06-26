@@ -9,7 +9,7 @@ import type {
   Position,
   ToolMode,
 } from "../../types/poster";
-import { generatePatternStrokes, makeFreehandStroke, getAllBrushes, createLivePath } from "../../lib/brushStrokes";
+import { generatePatternStrokes, makeFreehandStroke, rerenderStroke, getAllBrushes, createLivePath } from "../../lib/brushStrokes";
 import { DrawingToolbar } from "./DrawingToolbar";
 import { smartPlace } from "../../lib/smartPlace";
 import { ASSET_REGISTRY, LOGO_REGISTRY } from "../../assetRegistry";
@@ -41,9 +41,10 @@ import {
   POSTER_BG,
 } from "./constants";
 import { useUndoRedo } from "./useUndoRedo";
+import { useT } from "../../i18n";
 
 export function ChalkPosterGenerator() {
-  // Poster-Größe
+  const { t } = useT();
   const [posterSizeIndex, setPosterSizeIndex] = useState(0);
   const size = POSTER_SIZES[posterSizeIndex];
 
@@ -58,7 +59,7 @@ export function ChalkPosterGenerator() {
     patternType: "lines",
     count: 5,
     brushName: "Figma Verite",
-    strokeWidth: 1.0,
+    strokeWidth: 0.3,
     opacity: 100,
     color: "white",
     seed: Math.floor(Math.random() * 999999),
@@ -88,7 +89,6 @@ export function ChalkPosterGenerator() {
   const [brushWidth, setBrushWidth] = useState(0.3);
   const [brushOpacity, setBrushOpacity] = useState(1.0);
   const [chalkColor, setChalkColor] = useState("#FFFFFF");
-  const [isErasing, setIsErasing] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const drawPointsRef = useRef<{ x: number; y: number }[]>([]);
   const [liveStrokePath, setLiveStrokePath] = useState<string | undefined>();
@@ -704,6 +704,35 @@ export function ChalkPosterGenerator() {
     setSelectedStrokeId(null);
   }, [selectedStrokeId, commit]);
 
+  const updateSelectedStroke = useCallback(
+    (patch: Partial<{ color: string; opacity: number; brushName: string; strokeWidth: number }>) => {
+      if (!selectedStrokeId) return;
+      setStrokes((prev) => prev.map((s) => {
+        if (s.id !== selectedStrokeId) return s;
+        const next = { ...s, ...patch };
+        if (patch.brushName !== undefined || patch.strokeWidth !== undefined)
+          next.svgPath = rerenderStroke(next, next.brushName, next.strokeWidth);
+        return next;
+      }));
+    },
+    [selectedStrokeId]
+  );
+
+  const deleteText = useCallback(() => {
+    if (!selectedTextId) return;
+    commit();
+    if ((POS_KEYS as readonly string[]).includes(selectedTextId)) {
+      // Named text: clear content
+      const setters: Record<string, (v: string) => void> = {
+        header: setHeaderText, sub: setSubText, body: setBodyText, detail: setDetailText,
+      };
+      setters[selectedTextId]?.("");
+    } else {
+      setExtraTexts((prev) => prev.filter((t) => t.id !== selectedTextId));
+    }
+    setSelectedTextId(null);
+  }, [selectedTextId, commit]);
+
   const deleteSelectedPattern = useCallback(() => {
     if (!selectedPatternId) return;
     commit();
@@ -748,16 +777,12 @@ export function ChalkPosterGenerator() {
         drawPointsRef.current = [...pts, pos];
         if (drawPointsRef.current.length >= 2) {
           setLiveStrokePath(
-            createLivePath(
-              drawPointsRef.current,
-              isErasing ? "Figma Verite" : brushName,
-              isErasing ? brushWidth * 2 : brushWidth
-            )
+            createLivePath(drawPointsRef.current, brushName, brushWidth)
           );
         }
       }
     },
-    [mode, isDrawing, getPointerPercent, brushName, brushWidth, isErasing]
+    [mode, isDrawing, getPointerPercent, brushName, brushWidth]
   );
 
   const handleDrawEnd = useCallback(() => {
@@ -768,13 +793,8 @@ export function ChalkPosterGenerator() {
     setLiveStrokePath(undefined);
     if (pts.length < 2) return;
     commit();
-    const color = isErasing ? bgColor : chalkColor;
-    const opacity = isErasing ? 1 : brushOpacity;
-    setStrokes((prev) => [
-      ...prev,
-      makeFreehandStroke(pts, isErasing ? "Figma Verite" : brushName, isErasing ? brushWidth * 2 : brushWidth, color, opacity, prev.length),
-    ]);
-  }, [isDrawing, commit, brushName, brushWidth, brushOpacity, chalkColor, isErasing, bgColor]);
+    setStrokes((prev) => [...prev, makeFreehandStroke(pts, brushName, brushWidth, chalkColor, brushOpacity, prev.length)]);
+  }, [isDrawing, commit, brushName, brushWidth, brushOpacity, chalkColor]);
 
   // Delete-Taste, Undo/Redo
   useEffect(() => {
@@ -1045,6 +1065,56 @@ export function ChalkPosterGenerator() {
             onChalkChange={updateAssetChalk}
           />
         }
+        strokePanel={(() => {
+          if (!selectedStrokeId) return undefined;
+          const s = strokes.find((st) => st.id === selectedStrokeId);
+          if (!s) return undefined;
+          const btnStyle = (active: boolean): React.CSSProperties => ({
+            flex: 1, padding: "5px 0", borderRadius: 5, cursor: "pointer",
+            background: active ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.05)",
+            border: active ? "1px solid rgba(255,255,255,0.55)" : "1px solid rgba(255,255,255,0.12)",
+            color: "#f5f2ed", fontSize: 14,
+          });
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, color: "#666", textTransform: "uppercase", letterSpacing: "0.06em" }}>{t.strokeTitle}</span>
+                <button onClick={() => setSelectedStrokeId(null)} style={{ background: "none", border: "none", color: "#888", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+              </div>
+              {/* Color */}
+              <div style={{ display: "flex", gap: 5 }}>
+                {[{ label: "Weiß", hex: "#FFFFFF" }, { label: "Schwarz", hex: "#000000" }].map((c) => (
+                  <button key={c.hex} onClick={() => updateSelectedStroke({ color: c.hex })} style={btnStyle(s.color.toUpperCase() === c.hex)}>{c.label}</button>
+                ))}
+              </div>
+              {/* Opacity */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: "#888", fontSize: 13, minWidth: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{Math.round(s.opacity * 100)}%</span>
+                <input type="range" min={10} max={100} value={Math.round(s.opacity * 100)}
+                  onChange={(e) => updateSelectedStroke({ opacity: Number(e.target.value) / 100 })}
+                  style={{ flex: 1, accentColor: "#fff", cursor: "pointer" }} />
+              </div>
+              {/* Width */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: "#888", fontSize: 13, minWidth: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{Math.round(s.strokeWidth * 100)}%</span>
+                <input type="range" min={1} max={100} value={Math.round(s.strokeWidth * 100)}
+                  onChange={(e) => updateSelectedStroke({ strokeWidth: Number(e.target.value) / 100 })}
+                  style={{ flex: 1, accentColor: "#fff", cursor: "pointer" }} />
+              </div>
+              {/* Brush */}
+              <select value={s.brushName}
+                onChange={(e) => updateSelectedStroke({ brushName: e.target.value })}
+                style={{ background: "#252525", border: "1px solid #3a3a3a", color: "#ddd", borderRadius: 5, padding: "8px 9px", fontSize: 15, fontFamily: "inherit", width: "100%", boxSizing: "border-box" as const }}>
+                {getAllBrushes().map((b) => <option key={b.name} value={b.name}>{b.name.replace("Figma ", "")}</option>)}
+              </select>
+              {/* Delete */}
+              <button onClick={() => deleteSelectedStroke()}
+                style={{ padding: "7px 0", borderRadius: 6, background: "rgba(240,100,100,0.12)", border: "1px solid rgba(240,100,100,0.35)", color: "#f08080", fontSize: 14, cursor: "pointer" }}>
+                {t.deleteLabel}
+              </button>
+            </div>
+          );
+        })()}
         textPanel={(() => {
           if (!selectedTextId) return undefined;
           const namedFields: Record<PosKey, TextFieldState> = { header: headerField, sub: subField, body: bodyField, detail: detailField };
@@ -1105,8 +1175,8 @@ export function ChalkPosterGenerator() {
             setSelectedPatternId(null);
           }}
           liveStrokePath={liveStrokePath}
-          liveStrokeColor={isErasing ? bgColor : chalkColor}
-          liveStrokeOpacity={isErasing ? 1 : brushOpacity}
+          liveStrokeColor={chalkColor}
+          liveStrokeOpacity={brushOpacity}
           selectedStrokeId={selectedStrokeId}
           onStrokePointerDown={mode === "move" ? handleStrokePointerDown : undefined}
           selectedPatternId={selectedPatternId}
@@ -1233,28 +1303,21 @@ export function ChalkPosterGenerator() {
               );
             })()}
 
-          {/* Trash bin — top-right corner of the poster */}
-          {selectedAsset && (
+          {/* Trash bin — top-right corner, shown for any selected element */}
+          {(selectedAsset || selectedStrokeId || selectedTextId) && (
             <button
               data-no-chalk
-              onClick={() => { commit(); deleteSelected(); }}
+              onClick={() => {
+                if (selectedAsset) { commit(); deleteSelected(); }
+                else if (selectedStrokeId) deleteSelectedStroke();
+                else if (selectedTextId) deleteText();
+              }}
               style={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                zIndex: 200,
-                background: "rgba(20,20,20,0.85)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: 6,
-                color: "#f08080",
-                width: 28,
-                height: 28,
-                cursor: "pointer",
-                fontSize: 14,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                pointerEvents: "auto",
+                position: "absolute", top: 8, right: 8, zIndex: 200,
+                background: "rgba(20,20,20,0.85)", border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 6, color: "#f08080", width: 28, height: 28,
+                cursor: "pointer", fontSize: 14, display: "flex",
+                alignItems: "center", justifyContent: "center", pointerEvents: "auto",
               }}
               title="Löschen"
             >
@@ -1306,8 +1369,8 @@ export function ChalkPosterGenerator() {
               top: cursorPos.y,
               width: brushWidth * 20 * scale,
               height: brushWidth * 20 * scale,
-              borderColor: isErasing ? "rgba(255,255,255,0.7)" : `${chalkColor}88`,
-              borderStyle: isErasing ? "dashed" : "solid",
+              borderColor: `${chalkColor}88`,
+              borderStyle: "solid",
             }}
           />
         )}
@@ -1324,8 +1387,6 @@ export function ChalkPosterGenerator() {
           setBrushWidth={setBrushWidth}
           brushOpacity={brushOpacity}
           setBrushOpacity={setBrushOpacity}
-          isErasing={isErasing}
-          setIsErasing={setIsErasing}
           onUndo={undo}
           canUndo={canUndo}
           onRedo={redo}
@@ -1334,8 +1395,8 @@ export function ChalkPosterGenerator() {
 
         <p className={styles.previewHint}>
           {mode === "draw"
-            ? "Zeichnen aktiv · ziehen zum Malen · Zeichnen ausschalten zum Bewegen"
-            : "Alles direkt verschieben: Striche, Texte, Linien & Logos anklicken & ziehen · Entf zum Löschen · Strg+Z für Rükgängig"}
+            ? t.hintDraw
+            : t.hintMove}
         </p>
       </div>
 

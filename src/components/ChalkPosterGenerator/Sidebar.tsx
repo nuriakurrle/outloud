@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../../i18n";
 import type { PatternConfig, PosterSize } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";export interface TextFieldState {
   text: string;
@@ -36,6 +37,7 @@ interface SidebarProps {
   logoSection: React.ReactNode;
   illustrationSection: React.ReactNode;
   textPanel?: React.ReactNode;
+  strokePanel?: React.ReactNode;
   onAddText?: () => void;
 
   onRandomize: () => void;
@@ -74,6 +76,7 @@ function Slider({
   max,
   step = 1,
   suffix = "",
+  format,
   onChange,
 }: {
   label: string;
@@ -82,9 +85,10 @@ function Slider({
   max: number;
   step?: number;
   suffix?: string;
+  format?: (v: number) => string;
   onChange: (v: number) => void;
 }) {
-  const display = step < 1 ? value.toFixed(2) : `${Math.round(value)}`;
+  const display = format ? format(value) : step < 1 ? value.toFixed(2) : `${Math.round(value)}`;
   return (
     <div className={styles.field}>
       <div className={styles.sliderRow}>
@@ -139,6 +143,7 @@ function Select({
 export function Sidebar(props: SidebarProps) {
   const [open, setOpen] = useState<string>("layout");
   const toggle = (key: string) => setOpen((o) => (o === key ? "" : key));
+  const { t } = useT();
 
   return (
     <aside className={styles.sidebar}>
@@ -148,10 +153,10 @@ export function Sidebar(props: SidebarProps) {
         style={{
           margin: "0 12px 6px",
           padding: "10px 12px",
-          background: props.inverted ? "#ffffff" : "rgba(255,255,255,0.08)",
+          background: props.inverted ? "#ffffff" : "#000",
           border: "1px solid rgba(255,255,255,0.3)",
           borderRadius: 8,
-          color: props.inverted ? "#111111" : "#f5f2ed",
+          color: props.inverted ? "#000" : "#FFF",
           fontSize: 15,
           fontWeight: 600,
           cursor: "pointer",
@@ -159,117 +164,60 @@ export function Sidebar(props: SidebarProps) {
           width: "calc(100% - 24px)",
         }}
       >
-        {props.inverted ? "Schwarz auf Weiß" : "Weiß auf Schwarz"}
-      </button>
-
-      <button
-        onClick={props.onRandomize}
-        title="Komplett neues Design: Layout, Schriften & Hintergrund-Muster (Text-Inhalte & platzierte Illustrationen bleiben erhalten)"
-        style={{
-          margin: "0 12px 8px",
-          padding: "10px 12px",
-          background:
-            "linear-gradient(135deg, rgba(245,230,163,0.18), rgba(140,184,212,0.18))",
-          border: "1px solid rgba(255,255,255,0.18)",
-          borderRadius: 8,
-          color: "#f5f2ed",
-          fontSize: 15,
-          fontWeight: 600,
-          cursor: "pointer",
-          letterSpacing: "0.02em",
-        }}
-      >
-        Alles neu generieren
+        {props.inverted ? t.invertLight : t.invertDark}
       </button>
 
       <div className={styles.sidebarScroll}>
-        {props.textPanel && (
+        {(props.textPanel || props.strokePanel) && (
           <div style={{ padding: "12px 16px 16px", borderBottom: "1px solid #2a2a2a" }}>
-            {props.textPanel}
+            {props.textPanel ?? props.strokePanel}
           </div>
         )}
         {props.onAddText && (
           <div style={{ padding: "8px 12px 0" }}>
-            <button
-              onClick={props.onAddText}
-              style={{
-                width: "100%",
-                padding: "8px 12px",
-                background: "rgba(255,255,255,0.06)",
-                border: "1px dashed rgba(255,255,255,0.25)",
-                borderRadius: 7,
-                color: "#ccc",
-                fontSize: 14,
-                cursor: "pointer",
-                letterSpacing: "0.02em",
-              }}
-            >
-              + Text hinzufügen
+            <button onClick={props.onAddText}
+              style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.06)",
+                border: "1px dashed rgba(255,255,255,0.25)", borderRadius: 7,
+                color: "#ccc", fontSize: 14, cursor: "pointer", letterSpacing: "0.02em" }}>
+              {t.addText}
             </button>
           </div>
         )}
-        <Section
-          title="Größe"
-          isOpen={open === "size"}
-          onToggle={() => toggle("size")}
-        >
-          <Select
-            label="Format"
-            value={String(props.posterSizeIndex)}
-            options={props.sizes.map((s, i) => ({
-              label: `${s.label} (${s.w}×${s.h})`,
-              value: String(i),
-            }))}
-            onChange={(v) => props.setPosterSizeIndex(Number(v))}
-          />
+
+        <Section title={t.sectionSize} isOpen={open === "size"} onToggle={() => toggle("size")}>
+          <Select label={t.format} value={String(props.posterSizeIndex)}
+            options={props.sizes.map((s, i) => ({ label: `${s.label} (${s.w}×${s.h})`, value: String(i) }))}
+            onChange={(v) => props.setPosterSizeIndex(Number(v))} />
         </Section>
 
-        <Section
-          title="Layout"
-          isOpen={open === "layout"}
-          onToggle={() => toggle("layout")}
-        >
+        <Section title={t.sectionLayout} isOpen={open === "layout"} onToggle={() => toggle("layout")}>
           {props.layoutSection}
         </Section>
 
-        <Section
-          title="Kreide-Muster (Hintergrund)"
-          isOpen={open === "pattern"}
-          onToggle={() => toggle("pattern")}
-        >
-          {/* Pattern type */}
-          <Select
-            label="Muster"
-            value={props.pattern.patternType}
+        <Section title={t.sectionPattern} isOpen={open === "pattern"} onToggle={() => toggle("pattern")}>
+          <Select label={t.patternType} value={props.pattern.patternType}
             options={[
-              { label: "Linien", value: "lines" },
-              { label: "Wellenlinien", value: "wavy" },
-              { label: "Raster", value: "grid" },
+              { label: t.patternLines, value: "lines" },
+              { label: t.patternWavy, value: "wavy" },
+              { label: t.patternGrid, value: "grid" },
             ]}
-            onChange={(v) => props.setPattern({ patternType: v as "lines" | "wavy" | "grid" })}
-          />
-          {/* Brush selector */}
+            onChange={(v) => props.setPattern({ patternType: v as "lines" | "wavy" | "grid" })} />
           <div className={styles.field}>
-            <span className={styles.label}>Pinsel</span>
-            <select
-              className={styles.select}
-              value={props.pattern.brushName}
-              onChange={(e) => props.setPattern({ brushName: e.target.value })}
-            >
-              {props.brushNames.map((n) => (
-                <option key={n} value={n}>{n.replace("Figma ", "")}</option>
-              ))}
+            <span className={styles.label}>{t.brush}</span>
+            <select className={styles.select} value={props.pattern.brushName}
+              onChange={(e) => props.setPattern({ brushName: e.target.value })}>
+              {props.brushNames.map((n) => <option key={n} value={n}>{n.replace("Figma ", "")}</option>)}
             </select>
           </div>
-          <Slider label="Striche" value={props.pattern.count} min={1} max={20}
+          <Slider label={t.strokes} value={props.pattern.count} min={1} max={20}
             onChange={(v) => props.setPattern({ count: v })} />
-          <Slider label="Stärke" value={props.pattern.strokeWidth} min={0.3} max={4} step={0.1}
+          <Slider label={t.strength} value={props.pattern.strokeWidth} min={0.01} max={1} step={0.01}
+            format={(v) => `${Math.round(v * 100)}%`}
             onChange={(v) => props.setPattern({ strokeWidth: v })} />
-          <Slider label="Deckkraft" value={props.pattern.opacity} min={10} max={100} suffix="%"
+          <Slider label={t.opacity} value={props.pattern.opacity} min={10} max={100} suffix="%"
             onChange={(v) => props.setPattern({ opacity: v })} />
-          {/* Color toggle */}
           <div className={styles.field}>
-            <span className={styles.label}>Farbe</span>
+            <span className={styles.label}>{t.color}</span>
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
               {(["white", "black"] as const).map((val) => {
                 const active = props.pattern.color === val;
@@ -278,40 +226,27 @@ export function Sidebar(props: SidebarProps) {
                     style={{ flex: 1, padding: "5px 8px", borderRadius: 6, cursor: "pointer",
                       background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.04)",
                       border: active ? "1px solid rgba(255,255,255,0.5)" : "1px solid rgba(255,255,255,0.15)",
-                      color: "#f5f2ed", fontSize: 13,
-                    }}>
-                    {val === "white" ? "Weiß" : "Schwarz"}
+                      color: "#f5f2ed", fontSize: 13 }}>
+                    {val === "white" ? t.colorWhite : t.colorBlack}
                   </button>
                 );
               })}
             </div>
           </div>
-          <button className={styles.regenButton} onClick={props.onRegenerate}>
-            Neu generieren
-          </button>
+          <button className={styles.regenButton} onClick={props.onRegenerate}>{t.regenerate}</button>
         </Section>
 
-        <Section
-          title="Logos"
-          isOpen={open === "logos"}
-          onToggle={() => toggle("logos")}
-        >
+        <Section title={t.sectionLogos} isOpen={open === "logos"} onToggle={() => toggle("logos")}>
           {props.logoSection}
         </Section>
 
-        <Section
-          title="Illustrationen"
-          isOpen={open === "illustrations"}
-          onToggle={() => toggle("illustrations")}
-        >
+        <Section title={t.sectionIllustrations} isOpen={open === "illustrations"} onToggle={() => toggle("illustrations")}>
           {props.illustrationSection}
         </Section>
       </div>
 
       <div className={styles.sidebarFooter}>
-        <button className={styles.exportButton} onClick={props.onExport}>
-          Export PNG
-        </button>
+        <button className={styles.exportButton} onClick={props.onExport}>{t.exportPng}</button>
       </div>
     </aside>
   );
