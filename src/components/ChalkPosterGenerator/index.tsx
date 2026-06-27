@@ -167,7 +167,12 @@ export function ChalkPosterGenerator() {
   // beim Laden des Bildes erfasst.
   const imgRatios = useRef<Map<string, number>>(new Map());
   // Vom Nutzer hochgeladene Illustrationen (zusätzlich zum Registry)
-  const [customAssets, setCustomAssets] = useState<AssetItem[]>([]);
+  const [customAssets, setCustomAssets] = useState<AssetItem[]>(() => {
+    try { return JSON.parse(localStorage.getItem("vholos-poster-uploads") ?? "[]"); } catch { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("vholos-poster-uploads", JSON.stringify(customAssets)); } catch { /* quota */ }
+  }, [customAssets]);
   const logoAssets = useMemo(
     () => [...LOGO_REGISTRY, ...customAssets.filter((a) => a.category === "logos")],
     [customAssets]

@@ -22,6 +22,7 @@ export interface PosterCanvasProps {
   selectedPatternId?: string | null;
   onPatternPointerDown?: (id: string, e: React.PointerEvent) => void;
   drawMode?: boolean;
+  printZoneClip?: boolean;
 }
 
 export interface PosterCanvasHandle {
@@ -40,6 +41,7 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
       selectedStrokeId, onStrokePointerDown,
       selectedPatternId, onPatternPointerDown,
       drawMode,
+      printZoneClip,
     },
     ref
   ) {
@@ -73,6 +75,14 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
             style={{ cursor: "default" }}
           />
 
+            {printZoneClip && (
+            <defs>
+              <clipPath id="pzc">
+                <rect x="20" y="18" width="60" height="52" />
+              </clipPath>
+            </defs>
+          )}
+
           {patternStrokes.map((ps) => (
             <g key={ps.id}
               opacity={ps.opacity}
@@ -88,30 +98,31 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
             </g>
           ))}
 
-          {ordered.map((s) => (
-            <g key={s.id}
-              opacity={s.opacity}
-              transform={`translate(${s.offsetX} ${s.offsetY})`}
-              style={{ cursor: onStrokePointerDown ? "grab" : "default" }}
-              onPointerDown={onStrokePointerDown ? (e) => { e.stopPropagation(); onStrokePointerDown(s.id, e); } : undefined}
-            >
-              <path d={s.svgPath} fill={s.color} />
-              {selectedStrokeId === s.id && (
-                <path d={s.svgPath} fill="none" stroke="rgba(255,255,255,0.5)"
-                  strokeWidth={0.5} strokeDasharray="2 1.5" />
-              )}
-            </g>
-          ))}
-
-          {liveStrokePath && (
-            <path d={liveStrokePath} fill={liveStrokeColor} opacity={liveStrokeOpacity} />
-          )}
+          <g clipPath={printZoneClip ? "url(#pzc)" : undefined}>
+            {ordered.map((s) => (
+              <g key={s.id}
+                opacity={s.opacity}
+                transform={`translate(${s.offsetX} ${s.offsetY})`}
+                style={{ cursor: onStrokePointerDown ? "grab" : "default" }}
+                onPointerDown={onStrokePointerDown ? (e) => { e.stopPropagation(); onStrokePointerDown(s.id, e); } : undefined}
+              >
+                <path d={s.svgPath} fill={s.color} />
+                {selectedStrokeId === s.id && (
+                  <path d={s.svgPath} fill="none" stroke="rgba(255,255,255,0.5)"
+                    strokeWidth={0.5} strokeDasharray="2 1.5" />
+                )}
+              </g>
+            ))}
+            {liveStrokePath && (
+              <path d={liveStrokePath} fill={liveStrokeColor} opacity={liveStrokeOpacity} />
+            )}
+          </g>
         </svg>
 
         {/* Interactive overlay: text, assets, handles, draw capture */}
         <div
           className={styles.overlayLayer}
-          style={{ zIndex: 2, pointerEvents: "none" }}
+          style={{ zIndex: 2, pointerEvents: "none", ...(printZoneClip ? { clipPath: "inset(18% 20% 30% 20%)" } : {}) }}
         >
           {children}
         </div>

@@ -84,9 +84,16 @@ export function MerchDesigner() {
   useEffect(() => { extraTextsRef.current = extraTexts; }, [extraTexts]);
 
   // ── Assets ──────────────────────────────────────────────
-  const [placedAssets, setPlacedAssets] = useState<PlacedAsset[]>([]);
+  const [placedAssets, setPlacedAssets] = useState<PlacedAsset[]>([
+    { id: "default-letter", assetId: "logos/Letter.svg", x: 50, y: 44, scale: 0.25, rotation: 0, opacity: 1, flipX: false, zIndex: 1 },
+  ]);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
-  const [customAssets, setCustomAssets] = useState<AssetItem[]>([]);
+  const [customAssets, setCustomAssets] = useState<AssetItem[]>(() => {
+    try { return JSON.parse(localStorage.getItem("vholos-merch-uploads") ?? "[]"); } catch { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("vholos-merch-uploads", JSON.stringify(customAssets)); } catch { /* quota */ }
+  }, [customAssets]);
   const imgRatios = useRef<Map<string, number>>(new Map());
 
   const logoAssets = useMemo(() => [...LOGO_REGISTRY, ...customAssets.filter(a => a.category === "logos")], [customAssets]);
@@ -319,7 +326,10 @@ export function MerchDesigner() {
   const getPointerPercent = useCallback((e: React.PointerEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return { x: 50, y: 50 };
-    return { x: ((e.clientX - rect.left) / rect.width) * 100, y: ((e.clientY - rect.top) / rect.height) * 100 };
+    return {
+      x: Math.max(20, Math.min(80, ((e.clientX - rect.left) / rect.width) * 100)),
+      y: Math.max(18, Math.min(70, ((e.clientY - rect.top) / rect.height) * 100)),
+    };
   }, []);
 
   const handleDrawStart = useCallback((e: React.PointerEvent) => {

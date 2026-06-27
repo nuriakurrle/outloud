@@ -20,6 +20,7 @@ export const TshirtCanvas = forwardRef<PosterCanvasHandle, TshirtCanvasProps>(
         bg={shirtColor === "white" ? "#f0f0f0" : "#111"}
         pattern={EMPTY_PATTERN}
         patternStrokes={[]}
+        printZoneClip
         backdrop={
           <img
             src={side === "front" ? frontImg : backImg}

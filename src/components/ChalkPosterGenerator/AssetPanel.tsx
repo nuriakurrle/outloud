@@ -211,7 +211,12 @@ export function AssetPanel({
           e.target.value = "";
           if (!file) return;
           const isSvg = /svg/i.test(file.type) || /\.svg$/i.test(file.name);
-          if (isSvg) { onUpload(file); return; }
+          if (isSvg) {
+            const reader = new FileReader();
+            reader.onload = (ev) => onUploadStencil(ev.target!.result as string, file.name.replace(/\.svg$/i, ""));
+            reader.readAsDataURL(file);
+            return;
+          }
           const url = URL.createObjectURL(file);
           const img = new Image();
           img.onload = () => {
