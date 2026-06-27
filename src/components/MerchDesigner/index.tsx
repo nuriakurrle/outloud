@@ -36,6 +36,9 @@ export function MerchDesigner() {
   const [shirtColor, setShirtColor] = useState<"black" | "white">("black");
   const textColor = shirtColor === "white" ? "#000000" : "#FFFFFF";
 
+  // Inactive side's design — swapped in/out when switching front↔back.
+  const [otherSnap, setOtherSnap] = useState<Snapshot>({ strokes: [], placedAssets: [], positions: DEFAULT_POSITIONS, extraTexts: [] });
+
   // ── Freehand strokes ────────────────────────────────────
   const [strokes, setStrokes] = useState<ChalkStroke[]>([]);
   const [selectedStrokeId, setSelectedStrokeId] = useState<string | null>(null);
@@ -98,6 +101,15 @@ export function MerchDesigner() {
     setStrokes(s.strokes); setPlacedAssets(s.placedAssets); setPositions(s.positions); setExtraTexts(s.extraTexts);
   }, []);
   const { commit, undo, redo, canUndo, canRedo } = useUndoRedo(liveSnapshot, applySnapshot);
+
+  const switchSide = useCallback((newSide: "front" | "back") => {
+    if (newSide === side) return;
+    setOtherSnap({ strokes, placedAssets, positions, extraTexts });
+    setStrokes(otherSnap.strokes); setPlacedAssets(otherSnap.placedAssets);
+    setPositions(otherSnap.positions); setExtraTexts(otherSnap.extraTexts);
+    setSide(newSide);
+    setSelectedAssetId(null); setSelectedStrokeId(null); setSelectedTextId(null);
+  }, [side, strokes, placedAssets, positions, extraTexts, otherSnap]);
 
   // ── Drag ────────────────────────────────────────────────
   const [dragging, setDragging] = useState<string | null>(null);
@@ -367,35 +379,64 @@ export function MerchDesigner() {
     ...extraTexts.map(et => ({ key: et.id, text: et.text, font: et.font, size: et.size, weight: et.weight, color: textColor, align: et.align, outline: et.outline, position: et.position })),
   ];
 
-  const buildScene = useCallback((): PosterScene => ({
-    w: MERCH_SIZE.w, h: MERCH_SIZE.h, bg: "rgba(0,0,0,0)",
-    pattern: EMPTY_PATTERN, patternStrokes: [], strokes,
-    texts: textItems.map(t => ({ key: t.key, text: t.text, font: t.font, size: t.size, weight: t.weight, color: t.color, align: t.align, outline: t.outline, x: t.position.x, y: t.position.y })),
-    assets: placedAssets.map((a): SceneAsset => { const item = allAssets.find(x => x.id === a.assetId); return { ...a, src: item?.src ?? getAssetSrc(a.assetId), category: item?.category ?? "logos", naturalWidth: item?.naturalWidth, naturalHeight: item?.naturalHeight }; }),
-  }), [strokes, textItems, placedAssets, allAssets, getAssetSrc]);
+  const buildSceneFrom = useCallback((snap: Snapshot): PosterScene => {
+    const snapTexts = [
+      { key: "header" as PosKey, text: headerText, font: headerFont, size: headerSize, weight: headerWeight, color: textColor, align: textAligns.header, outline: headerOutline, position: snap.positions.header },
+      { key: "sub" as PosKey, text: subText, font: subFont, size: subSize, weight: "600", color: textColor, align: textAligns.sub, outline: subOutline, position: snap.positions.sub },
+      { key: "body" as PosKey, text: bodyText, font: bodyFont, size: bodySize, weight: "400", color: textColor, align: textAligns.body, outline: bodyOutline, position: snap.positions.body },
+      { key: "detail" as PosKey, text: detailText, font: detailFont, size: detailSize, weight: "400", color: textColor, align: textAligns.detail, outline: detailOutline, position: snap.positions.detail },
+      ...snap.extraTexts.map(et => ({ key: et.id, text: et.text, font: et.font, size: et.size, weight: et.weight, color: textColor, align: et.align, outline: et.outline, position: et.position })),
+    ];
+    return {
+      w: MERCH_SIZE.w, h: MERCH_SIZE.h, bg: "rgba(0,0,0,0)",
+      pattern: EMPTY_PATTERN, patternStrokes: [], strokes: snap.strokes,
+      texts: snapTexts.map(t => ({ key: t.key, text: t.text, font: t.font, size: t.size, weight: t.weight, color: t.color, align: t.align, outline: t.outline, x: t.position.x, y: t.position.y })),
+      assets: snap.placedAssets.map((a): SceneAsset => { const item = allAssets.find(x => x.id === a.assetId); return { ...a, src: item?.src ?? getAssetSrc(a.assetId), category: item?.category ?? "logos", naturalWidth: item?.naturalWidth, naturalHeight: item?.naturalHeight }; }),
+    };
+  }, [headerText, headerFont, headerSize, headerWeight, textColor, textAligns, headerOutline, subText, subFont, subSize, subOutline, bodyText, bodyFont, bodySize, bodyOutline, detailText, detailFont, detailSize, detailOutline, allAssets, getAssetSrc]);
+
+  const buildScene = useCallback(() => buildSceneFrom({ strokes, placedAssets, positions, extraTexts }), [buildSceneFrom, strokes, placedAssets, positions, extraTexts]);
 
   const handleOrder = useCallback(async () => {
-    const scale = 3;
+    const SCALE = 3;
     const { w, h } = MERCH_SIZE;
-    const canvas = document.createElement("canvas");
-    canvas.width = w * scale; canvas.height = h * scale;
-    const ctx = canvas.getContext("2d")!;
-    // 1. Draw t-shirt
-    const shirtSrc = side === "front" ? FRONT_IMG : BACK_IMG;
-    const shirtImg = await loadImage(shirtSrc);
-    ctx.drawImage(shirtImg, 0, 0, w * scale, h * scale);
-    if (shirtColor === "white") {
-      const d = ctx.getImageData(0, 0, w * scale, h * scale);
-      for (let i = 0; i < d.data.length; i += 4) { d.data[i] = 255 - d.data[i]; d.data[i + 1] = 255 - d.data[i + 1]; d.data[i + 2] = 255 - d.data[i + 2]; }
-      ctx.putImageData(d, 0, 0);
+    const liveSnap: Snapshot = { strokes, placedAssets, positions, extraTexts };
+    const frontSnap = side === "front" ? liveSnap : otherSnap;
+    const backSnap  = side === "back"  ? liveSnap : otherSnap;
+
+    async function renderSide(snap: Snapshot, shirtSrc: string): Promise<HTMLCanvasElement> {
+      const c = document.createElement("canvas");
+      c.width = w * SCALE; c.height = h * SCALE;
+      const cx = c.getContext("2d")!;
+      const img = await loadImage(shirtSrc);
+      cx.drawImage(img, 0, 0, w * SCALE, h * SCALE);
+      if (shirtColor === "white") {
+        const d = cx.getImageData(0, 0, w * SCALE, h * SCALE);
+        for (let i = 0; i < d.data.length; i += 4) { d.data[i] = 255 - d.data[i]; d.data[i + 1] = 255 - d.data[i + 1]; d.data[i + 2] = 255 - d.data[i + 2]; }
+        cx.putImageData(d, 0, 0);
+      }
+      const scene = buildSceneFrom(snap);
+      const images = await loadSceneImages(scene);
+      cx.scale(SCALE, SCALE);
+      await renderPosterScene(cx, scene, images);
+      return c;
     }
-    // 2. Overlay design (transparent bg = no-op fill)
-    const scene = buildScene();
-    const images = await loadSceneImages(scene);
-    ctx.scale(scale, scale);
-    await renderPosterScene(ctx, scene, images);
-    canvas.toBlob(blob => downloadBlob(blob!, `merch-${side}.png`), "image/png");
-  }, [side, shirtColor, buildScene]);
+
+    const [frontCanvas, backCanvas] = await Promise.all([
+      renderSide(frontSnap, FRONT_IMG),
+      renderSide(backSnap, BACK_IMG),
+    ]);
+
+    const combined = document.createElement("canvas");
+    combined.width = frontCanvas.width * 2;
+    combined.height = frontCanvas.height;
+    const ctx = combined.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, combined.width, combined.height);
+    ctx.drawImage(frontCanvas, 0, 0);
+    ctx.drawImage(backCanvas, frontCanvas.width, 0);
+    combined.toBlob(blob => downloadBlob(blob!, "merch-order.png"), "image/png");
+  }, [side, shirtColor, strokes, placedAssets, positions, extraTexts, otherSnap, buildSceneFrom]);
 
   // ── Sidebar panels ─────────────────────────────────────────
   const headerField: TextFieldState = { text: headerText, setText: setHeaderText, font: headerFont, setFont: setHeaderFont, size: headerSize, setSize: setHeaderSize, sizeMin: 18, sizeMax: 80, weight: headerWeight, setWeight: setHeaderWeight, outline: headerOutline, setOutline: setHeaderOutline };
@@ -473,7 +514,7 @@ export function MerchDesigner() {
       {/* View strip: front / back */}
       <div style={{ width: 44, flexShrink: 0, background: "#141414", borderRight: "1px solid #2a2a2a", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 4 }}>
         {TSHIRT_VIEWS.map(v => (
-          <button key={v.id} onClick={() => setSide(v.id)} title={v.label}
+          <button key={v.id} onClick={() => switchSide(v.id)} title={v.label}
             style={{ width: 34, height: 34, borderRadius: 6, border: "none", cursor: "pointer", fontSize: 9, fontWeight: 700, letterSpacing: "0.04em", fontFamily: "'Inria Sans', system-ui, sans-serif", textTransform: "uppercase",
               background: side === v.id ? "rgba(255,255,255,0.15)" : "transparent",
               color: side === v.id ? "#fff" : "rgba(255,255,255,0.35)",
