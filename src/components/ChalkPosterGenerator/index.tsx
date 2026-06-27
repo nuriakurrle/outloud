@@ -213,6 +213,10 @@ export function ChalkPosterGenerator() {
       });
   }, []);
 
+  const handleUploadStencil = useCallback((dataUrl: string, name: string, category: AssetCategory = "icons") => {
+    setCustomAssets((prev) => [...prev, { id: `custom/${makeId()}`, name, category, src: dataUrl, defaultScale: 0.25, anchor: "center" } as AssetItem]);
+  }, []);
+
   // Kreide-Filter eines hochgeladenen Fotos anpassen (oder aus-/einschalten):
   // mit den neuen Parametern neu verarbeiten und `src` aktualisieren.
   const updateAssetChalk = useCallback(
@@ -1045,6 +1049,7 @@ export function ChalkPosterGenerator() {
             onPlace={handlePlace}
             onDragPlace={handleDragPlace}
             onUpload={(file) => handleUpload(file, "logos")}
+            onUploadStencil={(dataUrl, name) => handleUploadStencil(dataUrl, name, "logos")}
             selected={allAssets.find((a) => a.id === selectedAsset?.assetId)?.category === "logos" ? selectedAsset : null}
             onUpdateSelected={updateSelected}
             onDeleteSelected={deleteSelected}
@@ -1058,6 +1063,7 @@ export function ChalkPosterGenerator() {
             onPlace={handlePlace}
             onDragPlace={handleDragPlace}
             onUpload={(file) => handleUpload(file, "icons")}
+            onUploadStencil={(dataUrl, name) => handleUploadStencil(dataUrl, name, "icons")}
             selected={allAssets.find((a) => a.id === selectedAsset?.assetId)?.category !== "logos" ? selectedAsset : null}
             onUpdateSelected={updateSelected}
             onDeleteSelected={deleteSelected}

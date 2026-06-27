@@ -7,6 +7,7 @@ import type {
 import styles from "../../styles/chalkPoster.module.css";
 import { CHALK_COLORS } from "./DrawingToolbar";
 import { useT } from "../../i18n";
+import { stencilize } from "../../lib/stencilize";
 const isMaskAsset = (cat: string) => cat === "strokes" || cat === "shapes";
 
 // Formen sollen laut Vorgabe nur Weiß oder Schwarz sein.
@@ -34,6 +35,7 @@ interface AssetPanelProps {
       threshold: number;
     }>
   ) => void;
+  onUploadStencil: (dataUrl: string, name: string) => void;
 }
 
 
@@ -88,6 +90,7 @@ export function AssetPanel({
   onDeleteSelected,
   onLayer,
   onChalkChange,
+  onUploadStencil,
 }: AssetPanelProps) {
   const selectedAsset = selected
     ? assets.find((a) => a.id === selected.assetId)
@@ -114,6 +117,23 @@ export function AssetPanel({
   const [filter, setFilter] = useState<AssetCategory | "all">("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState<{ id: string; src: string; startX: number; startY: number; curX: number; curY: number; started: boolean } | null>(null);
+  const [pending, setPending] = useState<{ img: HTMLImageElement; originalUrl: string; previewUrl: string; name: string; blockSize: number; c: number } | null>(null);
+
+  const applyStencil = (blockSize: number, c: number) => {
+    if (!pending) return;
+    setPending(prev => prev ? { ...prev, previewUrl: stencilize(prev.img, blockSize, c) } : null);
+  };
+
+  const confirmStencil = () => {
+    if (!pending) return;
+    onUploadStencil(pending.previewUrl, pending.name);
+    URL.revokeObjectURL(pending.originalUrl);
+    setPending(null);
+  };
+
+  const cancelStencil = () => {
+    if (pending) { URL.revokeObjectURL(pending.originalUrl); setPending(null); }
+  };
 
   const availableCats = Array.from(new Set(assets.map((a) => a.category)));
   const shown =
@@ -188,8 +208,17 @@ export function AssetPanel({
         style={{ display: "none" }}
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) onUpload(file);
           e.target.value = "";
+          if (!file) return;
+          const isSvg = /svg/i.test(file.type) || /\.svg$/i.test(file.name);
+          if (isSvg) { onUpload(file); return; }
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            const previewUrl = stencilize(img, 300, 0);
+            setPending({ img, originalUrl: url, previewUrl, name: file.name.replace(/\.(png|jpe?g|bmp)$/i, ""), blockSize: 300, c: 0 });
+          };
+          img.src = url;
         }}
       />
       <button
@@ -198,6 +227,45 @@ export function AssetPanel({
       >
         {t.upload}
       </button>
+
+      {pending && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,0.9)", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "#0a0a0a", overflow: "hidden" }}>
+              <img src={pending.previewUrl} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} alt="preview" />
+            </div>
+            <div style={{ width: 220, background: "#111", borderLeft: "1px solid #1a1a1a", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, letterSpacing: "0.06em" }}>Variables</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label style={{ fontSize: 12, color: "#666" }}>Blocksize</label>
+                <input
+                  type="number" value={pending.blockSize} min={3} max={800} step={1}
+                  onChange={e => setPending(prev => prev ? { ...prev, blockSize: Number(e.target.value) } : null)}
+                  style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "6px 8px", borderRadius: 4, fontSize: 13, width: "100%" }}
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label style={{ fontSize: 12, color: "#666" }}>Stroke</label>
+                <input
+                  type="number" value={pending.c} min={-50} max={50} step={1}
+                  onChange={e => setPending(prev => prev ? { ...prev, c: Number(e.target.value) } : null)}
+                  style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "6px 8px", borderRadius: 4, fontSize: 13, width: "100%" }}
+                />
+              </div>
+              <button
+                onClick={() => applyStencil(pending.blockSize, pending.c)}
+                style={{ padding: "9px 0", background: "#fff", color: "#111", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+          <div style={{ padding: "12px 24px", background: "#111", borderTop: "1px solid #1a1a1a", display: "flex", justifyContent: "flex-end", gap: 12 }}>
+            <button onClick={cancelStencil} style={{ padding: "9px 20px", background: "none", border: "1px solid #333", color: "#aaa", borderRadius: 4, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+            <button onClick={confirmStencil} style={{ padding: "9px 20px", background: "#fff", color: "#111", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Upload</button>
+          </div>
+        </div>
+      )}
 
       {selected && (
         <div className={styles.assetControls}>

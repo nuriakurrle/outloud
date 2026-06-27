@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adaptive Thresholding</title>
+  <style>
+    #app {
+      padding-right: 150px;
+    }
+
+    .imageContainer {
+      overflow: auto;
+      max-width: 360px;
+    }
+
+    .imageContainer img{
+      width: 100%;
+    }
+
+    #imageHidden {
+      display: none;
+    }
+  </style>
+</head>
+<html>
+<body>
+  <div id="app">
+    <h2>Adaptive Thresholding</h2>
+    <a style="position: absolute; right: 0px; top: 0px;" href="https://github.com/tony-xlh/adaptive-thresholding-javascript"><img class="fork" width="149" height="149" src="https://github.blog/wp-content/uploads/2008/12/forkme_right_darkblue_121621.png?resize=149%2C149" alt="Fork me on GitHub" data-recalc-dims="1"></a>
+    <button id="loadFileButton">Load a File</button>
+    <input style="display:none;" type="file" id="file" onchange="loadImageFromFile();" accept=".jpg,.jpeg,.png,.bmp" />
+    <label>
+      Block size:
+      <input type="text" id="blocksize" placeholder="Block size" value="31" />
+    </label>
+    <label>
+      Constant C:
+      <input type="text" id="constant" placeholder="Constant" value="10" />
+    </label>
+    <label>
+      Method:
+      <select id="methodSelect">
+        <option value="canvas">Canvas</option>
+        <option value="canvas-integral" selected>Canvas (integral image)</option>
+        <option value="Dynamsoft">Dynamsoft Barcode Reader</option>
+      </select>
+    </label>
+    <button id="processButton">Process</button>
+    <div id="status"></div>
+    <div class="imageContainer">
+      <img id="image"/>
+      <img id="imageHidden"/>
+    </div>
+    <pre id="barcodeResult"></pre>
+  </div>
+  <script>
+    let router;
+    const cvs = document.createElement("canvas");
+    document.getElementById("methodSelect").addEventListener("change",function(){
+      if(this.value === "Dynamsoft"){
+        if (!router) {
+          initDynamsoft();
+        }
+      }
+    })
+
+    async function initDynamsoft() {
+      updateStatus("Initializing Dynamsoft Barcode Reader...");
+      await loadLibrary("https://cdn.jsdelivr.net/npm/dynamsoft-barcode-reader-bundle@10.4.3100/dist/dbr.bundle.js","text/javascript");
+      Dynamsoft.License.LicenseManager.initLicense("DLS2eyJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSJ9");
+      Dynamsoft.Core.CoreModule.loadWasm(["dbr"]);
+      router = await Dynamsoft.CVR.CaptureVisionRouter.createInstance();
+      const intermediateResultReceiver = new Dynamsoft.CVR.IntermediateResultReceiver();
+      intermediateResultReceiver.onBinaryImageUnitReceived = (result, info) => {
+        displayBinarizedImage(result)
+      };
+      const intermediateResultManager = router.getIntermediateResultManager();
+      intermediateResultManager.addResultReceiver(intermediateResultReceiver);
+      updateStatus("Dynamsoft Barcode Reader initialized");
+    }
+
+    function loadLibrary(src,type,id,data){
+      return new Promise(function (resolve, reject) {
+        let scriptEle = document.createElement("script");
+        scriptEle.setAttribute("type", type);
+        scriptEle.setAttribute("src", src);
+        if (id) {
+          scriptEle.id = id;
+        }
+        if (data) {
+          for (let key in data) {
+            scriptEle.setAttribute(key, data[key]);
+          }
+        }
+        document.body.appendChild(scriptEle);
+        scriptEle.addEventListener("load", () => {
+          console.log(src+" loaded")
+          resolve(true);
+        });
+        scriptEle.addEventListener("error", (ev) => {
+          console.log("Error on loading "+src, ev);
+          reject(ev);
+        });
+      });
+    }
+
+    function updateStatus(info){
+      document.getElementById("status").innerText = info;
+    }
+
+    document.getElementById("loadFileButton").addEventListener("click",function(){
+      document.getElementById("file").click();
+    })
+
+    document.getElementById("processButton").addEventListener("click",function(){
+      process();
+    })
+
+    async function process(){
+      const blockSize = parseInt(document.getElementById("blocksize").value);
+      const C = parseInt(document.getElementById("constant").value);
+      updateStatus("Processing...");
+      await sleep(200);
+      const image = document.getElementById("imageHidden");
+      const startTime = performance.now();
+      let methodSelect = document.getElementById("methodSelect");
+      if(methodSelect.value.indexOf("canvas") != -1){
+        cvs.width = image.naturalWidth;
+        cvs.height = image.naturalHeight;
+        const ctx = cvs.getContext("2d");
+        ctx.drawImage(image, 0, 0);
+        let newImageData;
+        if (methodSelect.value === "canvas") {
+          newImageData = adaptiveThreshold(ctx.getImageData(0,0,cvs.width,cvs.height),blockSize,C);
+        }else{
+          newImageData = adaptiveThresholdWithIntegralImage(ctx.getImageData(0,0,cvs.width,cvs.height),blockSize,C);
+        }
+        ctx.putImageData(newImageData,0,0);
+        document.getElementById("image").src = cvs.toDataURL("image/jpeg");
+      }else{
+        await readBarcodeAndShowBinaryImage();
+      }
+      const endTime = performance.now();
+      updateStatus("Done in " + (endTime - startTime) + "ms");
+    }
+
+
+    function computeIntegralImage(data, width, height) {
+      const integral = new Uint32Array(width * height);
+
+      for (let y = 0; y < height; y++) {
+        let sum = 0;
+        for (let x = 0; x < width; x++) {
+          const idx = (y * width + x) * 4;
+          sum += data[idx];
+          integral[y * width + x] = (y > 0 ? integral[(y - 1) * width + x] : 0) + sum;
+        }
+      }
+
+      return integral;
+    }
+
+    function getAreaSum(integral, width, x1, y1, x2, y2) {
+      const a = x1 > 0 && y1 > 0 ? integral[(y1 - 1) * width + (x1 - 1)] : 0;
+      const b = y1 > 0 ? integral[(y1 - 1) * width + x2] : 0;
+      const c = x1 > 0 ? integral[y2 * width + (x1 - 1)] : 0;
+      const d = integral[y2 * width + x2];
+      return d - b - c + a;
+    }
+
+    async function readBarcodeAndShowBinaryImage(){
+      await updateRuntimeSettingsForDBR();
+      const image = document.getElementById("imageHidden");
+      const result = await router.capture(image,"ReadSingleBarcode");
+      console.log(result);
+      if (result.barcodeResultItems) {
+        document.getElementById("barcodeResult").innerText = result.barcodeResultItems[0].text;
+      }
+    }
+
+    function displayBinarizedImage(result){
+      const canvas = document.createElement("canvas");
+      canvas.width = result.imageData.width;
+      canvas.height = result.imageData.height;
+      const context = canvas.getContext("2d");
+      context.fillStyle = "white";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const pixels = imageData.data;
+      let index = 0;
+      for (var i = 0; i < pixels.length; i += 4) {
+        const value = result.imageData.bytes[index];
+        pixels[i] = 255 - value;
+        pixels[i + 1] = 255 - value;
+        pixels[i + 2] = 255 - value;
+        index = index + 1;
+      }
+      context.putImageData(imageData, 0, 0);
+      document.getElementById("image").src = canvas.toDataURL();
+    }
+
+    function sleep(time){
+      return new Promise(function(resolve){
+        setTimeout(resolve, time);
+      });
+    }
+
+    function adaptiveThresholdWithIntegralImage(imageData, blockSize, C) {
+      const width = imageData.width;
+      const height = imageData.height;
+      convertToGrayScale(imageData);
+      const data = imageData.data;
+      const output = new ImageData(width, height);
+      const outputData = output.data;
+
+      const integral = computeIntegralImage(data, width, height);
+
+      const halfBlock = Math.floor(blockSize / 2);
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const x1 = Math.max(x - halfBlock, 0);
+          const y1 = Math.max(y - halfBlock, 0);
+          const x2 = Math.min(x + halfBlock, width - 1);
+          const y2 = Math.min(y + halfBlock, height - 1);
+
+          const area = (x2 - x1 + 1) * (y2 - y1 + 1);
+          const sum = getAreaSum(integral, width, x1, y1, x2, y2);
+          const threshold = (sum / area) - C;
+
+          const idx = (y * width + x) * 4;
+          const pixelValue = data[idx];
+          outputData[idx] = outputData[idx + 1] = outputData[idx + 2] = pixelValue > threshold ? 255 : 0;
+          outputData[idx + 3] = 255; // Alpha channel
+        }
+      }
+      return output;
+    }
+
+    function adaptiveThreshold(imageData, blockSize, C) {
+      const width = imageData.width;
+      const height = imageData.height;
+      convertToGrayScale(imageData);
+      const data = imageData.data;
+      const output = new ImageData(width, height);
+      const outputData = output.data;
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          let sum = 0;
+          let count = 0;
+
+          //local mean
+          for (let dy = -blockSize; dy <= blockSize; dy++) {
+            for (let dx = -blockSize; dx <= blockSize; dx++) {
+              const nx = x + dx;
+              const ny = y + dy;
+              if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const idx = (ny * width + nx) * 4;
+                sum += data[idx];
+                count++;
+              }
+            }
+          }
+
+          const threshold = (sum / count) - C;
+          const idx = (y * width + x) * 4;
+          const pixelValue = data[idx];
+
+          // binarize
+          outputData[idx] = outputData[idx + 1] = outputData[idx + 2] = pixelValue > threshold ? 255 : 0;
+          outputData[idx + 3] = 255; // Alpha channel
+        }
+      }
+      return output;
+    }
+
+    function convertToGrayScale(imageData){
+      const pixels = imageData.data; //[r,g,b,a,...]
+      for (var i = 0; i < pixels.length; i += 4) {
+        const red = pixels[i];
+        const green = pixels[i + 1];
+        const blue = pixels[i + 2];
+        const grayscale = RGBToGrayScale(red, green, blue)
+        pixels[i] = grayscale;
+        pixels[i + 1] = grayscale;
+        pixels[i + 2] = grayscale;
+      }
+    }
+
+    //https://github.com/image-js/image-js/blob/9ab86a86f6c13a9a7d14c62566c1396c3c6f54f4/src/image/transform/greyAlgorithms.js
+    function RGBToGrayScale(red,green,blue){
+      //return red * 0.2126 + green * 0.7152 + blue * 0.0722;
+      return (red * 6966 + green * 23436 + blue * 2366) >> 15;
+    }
+
+
+    function loadImageFromFile(){
+      let fileInput = document.getElementById("file");
+      let files = fileInput.files;
+      if (files.length == 0) {
+        return;
+      }
+      let file = files[0];
+      fileReader = new FileReader();
+      fileReader.onload = function(e){
+        document.getElementById("image").src = e.target.result;
+        document.getElementById("imageHidden").src = e.target.result;
+      };
+      fileReader.onerror = function () {
+        console.warn('oops, something went wrong.');
+      };
+      fileReader.readAsDataURL(file);
+    }
+
+    async function updateRuntimeSettingsForDBR(){
+      let template = `{
+    "BarcodeFormatSpecificationOptions": [
+        {
+            "AllModuleDeviation": 0,
+            "AustralianPostEncodingTable": "C",
+            "BarcodeAngleRangeArray": null,
+            "BarcodeBytesLengthRangeArray": null,
+            "BarcodeComplementModes": null,
+            "BarcodeFormatIds": [
+                "BF_PDF417",
+                "BF_QR_CODE",
+                "BF_DATAMATRIX",
+                "BF_AZTEC",
+                "BF_MICRO_QR",
+                "BF_MICRO_PDF417",
+                "BF_DOTCODE"
+            ],
+            "BarcodeHeightRangeArray": null,
+            "BarcodeTextLengthRangeArray": null,
+            "BarcodeTextRegExPattern": "",
+            "BarcodeWidthRangeArray": null,
+            "BarcodeZoneBarCountRangeArray": null,
+            "BarcodeZoneMinDistanceToImageBorders": 0,
+            "BaseBarcodeFormatSpecification": "bfs1",
+            "Code128Subset": "",
+            "DeformationResistingModes": null,
+            "EnableAddOnCode": 0,
+            "EnableDataMatrixECC000-140": 0,
+            "EnableQRCodeModel1": 0,
+            "FindUnevenModuleBarcode": 1,
+            "HeadModuleRatio": "",
+            "MSICodeCheckDigitCalculation": "MSICCDC_MOD_10",
+            "MinQuietZoneWidth": 4,
+            "MinRatioOfBarcodeZoneWidthToHeight": 0,
+            "MinResultConfidence": 30,
+            "MirrorMode": "MM_BOTH",
+            "ModuleSizeRangeArray": null,
+            "Name": "bfs1-single-barcode",
+            "PartitionModes": [
+                "PM_WHOLE_BARCODE",
+                "PM_ALIGNMENT_PARTITION"
+            ],
+            "PatchCodeSearchingMargins": {
+                "Bottom": 20,
+                "Left": 20,
+                "MeasuredByPercentage": 1,
+                "Right": 20,
+                "Top": 20
+            },
+            "RequireStartStopChars": 1,
+            "ReturnPartialBarcodeValue": 1,
+            "StandardFormat": "",
+            "TailModuleRatio": "",
+            "VerifyCheckDigit": 0
+        },
+        {
+            "AllModuleDeviation": 0,
+            "AustralianPostEncodingTable": "C",
+            "BarcodeAngleRangeArray": null,
+            "BarcodeBytesLengthRangeArray": null,
+            "BarcodeComplementModes": null,
+            "BarcodeFormatIds": [
+                "BF_ALL"
+            ],
+            "BarcodeHeightRangeArray": null,
+            "BarcodeTextLengthRangeArray": null,
+            "BarcodeTextRegExPattern": "",
+            "BarcodeWidthRangeArray": null,
+            "BarcodeZoneBarCountRangeArray": null,
+            "BarcodeZoneMinDistanceToImageBorders": 0,
+            "BaseBarcodeFormatSpecification": "bfs2",
+            "Code128Subset": "",
+            "DeformationResistingModes": null,
+            "EnableAddOnCode": 0,
+            "EnableDataMatrixECC000-140": 0,
+            "EnableQRCodeModel1": 0,
+            "FindUnevenModuleBarcode": 1,
+            "HeadModuleRatio": "",
+            "MSICodeCheckDigitCalculation": "MSICCDC_MOD_10",
+            "MinQuietZoneWidth": 4,
+            "MinRatioOfBarcodeZoneWidthToHeight": 0,
+            "MinResultConfidence": 30,
+            "MirrorMode": "MM_NORMAL",
+            "ModuleSizeRangeArray": null,
+            "Name": "bfs2-single-barcode",
+            "PartitionModes": [
+                "PM_WHOLE_BARCODE",
+                "PM_ALIGNMENT_PARTITION"
+            ],
+            "PatchCodeSearchingMargins": {
+                "Bottom": 20,
+                "Left": 20,
+                "MeasuredByPercentage": 1,
+                "Right": 20,
+                "Top": 20
+            },
+            "RequireStartStopChars": 1,
+            "ReturnPartialBarcodeValue": 1,
+            "StandardFormat": "",
+            "TailModuleRatio": "",
+            "VerifyCheckDigit": 0
+        },
+        {
+            "AllModuleDeviation": 0,
+            "AustralianPostEncodingTable": "C",
+            "BarcodeAngleRangeArray": null,
+            "BarcodeBytesLengthRangeArray": null,
+            "BarcodeComplementModes": null,
+            "BarcodeFormatIds": [
+                "BF_PDF417",
+                "BF_QR_CODE",
+                "BF_DATAMATRIX",
+                "BF_AZTEC",
+                "BF_MICRO_QR",
+                "BF_MICRO_PDF417",
+                "BF_DOTCODE"
+            ],
+            "BarcodeHeightRangeArray": null,
+            "BarcodeTextLengthRangeArray": null,
+            "BarcodeTextRegExPattern": "",
+            "BarcodeWidthRangeArray": null,
+            "BarcodeZoneBarCountRangeArray": null,
+            "BarcodeZoneMinDistanceToImageBorders": 0,
+            "BaseBarcodeFormatSpecification": "",
+            "Code128Subset": "",
+            "DeformationResistingModes": null,
+            "EnableAddOnCode": 0,
+            "EnableDataMatrixECC000-140": 0,
+            "EnableQRCodeModel1": 0,
+            "FindUnevenModuleBarcode": 1,
+            "HeadModuleRatio": "",
+            "MSICodeCheckDigitCalculation": "MSICCDC_MOD_10",
+            "MinQuietZoneWidth": 4,
+            "MinRatioOfBarcodeZoneWidthToHeight": 0,
+            "MinResultConfidence": 30,
+            "MirrorMode": "MM_BOTH",
+            "ModuleSizeRangeArray": null,
+            "Name": "bfs1",
+            "PartitionModes": [
+                "PM_WHOLE_BARCODE",
+                "PM_ALIGNMENT_PARTITION"
+            ],
+            "PatchCodeSearchingMargins": {
+                "Bottom": 20,
+                "Left": 20,
+                "MeasuredByPercentage": 1,
+                "Right": 20,
+                "Top": 20
+            },
+            "RequireStartStopChars": 1,
+            "ReturnPartialBarcodeValue": 1,
+            "StandardFormat": "",
+            "TailModuleRatio": "",
+            "VerifyCheckDigit": 0
+        },
+        {
+            "AllModuleDeviation": 0,
+            "AustralianPostEncodingTable": "C",
+            "BarcodeAngleRangeArray": null,
+            "BarcodeBytesLengthRangeArray": null,
+            "BarcodeComplementModes": null,
+            "BarcodeFormatIds": [
+                "BF_ALL"
+            ],
+            "BarcodeHeightRangeArray": null,
+            "BarcodeTextLengthRangeArray": null,
+            "BarcodeTextRegExPattern": "",
+            "BarcodeWidthRangeArray": null,
+            "BarcodeZoneBarCountRangeArray": null,
+            "BarcodeZoneMinDistanceToImageBorders": 0,
+            "BaseBarcodeFormatSpecification": "",
+            "Code128Subset": "",
+            "DeformationResistingModes": null,
+            "EnableAddOnCode": 0,
+            "EnableDataMatrixECC000-140": 0,
+            "EnableQRCodeModel1": 0,
+            "FindUnevenModuleBarcode": 1,
+            "HeadModuleRatio": "",
+            "MSICodeCheckDigitCalculation": "MSICCDC_MOD_10",
+            "MinQuietZoneWidth": 4,
+            "MinRatioOfBarcodeZoneWidthToHeight": 0,
+            "MinResultConfidence": 30,
+            "MirrorMode": "MM_NORMAL",
+            "ModuleSizeRangeArray": null,
+            "Name": "bfs2",
+            "PartitionModes": [
+                "PM_WHOLE_BARCODE",
+                "PM_ALIGNMENT_PARTITION"
+            ],
+            "PatchCodeSearchingMargins": {
+                "Bottom": 20,
+                "Left": 20,
+                "MeasuredByPercentage": 1,
+                "Right": 20,
+                "Top": 20
+            },
+            "RequireStartStopChars": 1,
+            "ReturnPartialBarcodeValue": 1,
+            "StandardFormat": "",
+            "TailModuleRatio": "",
+            "VerifyCheckDigit": 0
+        }
+    ],
+    "BarcodeReaderTaskSettingOptions": [
+        {
+            "BarcodeColourModes": null,
+            "BarcodeComplementModes": [
+                {
+                    "Mode": "BCM_SKIP"
+                }
+            ],
+            "BarcodeFormatIds": [
+                "BF_DEFAULT"
+            ],
+            "BarcodeFormatSpecificationNameArray": [
+                "bfs1-single-barcode",
+                "bfs2-single-barcode"
+            ],
+            "BaseBarcodeReaderTaskSettingName": "",
+            "DPMCodeReadingModes": [
+                {
+                    "BarcodeFormat": "BF_DATAMATRIX",
+                    "Mode": "DPMCRM_SKIP"
+                }
+            ],
+            "DeblurModes": [
+                {
+                    "Mode": "DM_BASED_ON_LOC_BIN"
+                },
+                {
+                    "Mode": "DM_THRESHOLD_BINARIZATION"
+                },
+                {
+                    "Mode": "DM_DEEP_ANALYSIS"
+                }
+            ],
+            "DeformationResistingModes": [
+                {
+                    "BinarizationMode": {
+                        "BinarizationThreshold": -1,
+                        "BlockSizeX": 0,
+                        "BlockSizeY": 0,
+                        "EnableFillBinaryVacancy": 1,
+                        "GrayscaleEnhancementModesIndex": -1,
+                        "Mode": "BM_LOCAL_BLOCK",
+                        "MorphOperation": "Close",
+                        "MorphOperationKernelSizeX": -1,
+                        "MorphOperationKernelSizeY": -1,
+                        "MorphShape": "Rectangle",
+                        "ThresholdCompensation": 10
+                    },
+                    "GrayscaleEnhancementMode": {
+                        "Mode": "GEM_AUTO",
+                        "Sensitivity": -1,
+                        "SharpenBlockSizeX": -1,
+                        "SharpenBlockSizeY": -1,
+                        "SmoothBlockSizeX": -1,
+                        "SmoothBlockSizeY": -1
+                    },
+                    "Level": 5,
+                    "Mode": "DRM_SKIP"
+                }
+            ],
+            "ExpectedBarcodesCount": 1,
+            "LineAssemblyMode": {
+                "Mode": "LAM_GENERAL",
+                "Sensitivity": 3
+            },
+            "LocalizationModes": [
+                {
+                    "ConfidenceThreshold": 60,
+                    "IsOneDStacked": 0,
+                    "Mode": "LM_SCAN_DIRECTLY",
+                    "ModuleSize": 0,
+                    "ScanDirection": 2,
+                    "ScanStride": 0
+                },
+                {
+                    "ConfidenceThreshold": 60,
+                    "IsOneDStacked": 0,
+                    "Mode": "LM_CONNECTED_BLOCKS",
+                    "ModuleSize": 0,
+                    "ScanDirection": 0,
+                    "ScanStride": 0
+                }
+            ],
+            "MaxThreadsInOneTask": 4,
+            "Name": "task-read-single-barcode",
+            "ReturnBarcodeZoneClarity": 0,
+            "SectionImageParameterArray": [
+                {
+                    "ContinueWhenPartialResultsGenerated": 1,
+                    "ImageParameterName": "ip-read-single-barcode",
+                    "Section": "ST_REGION_PREDETECTION"
+                },
+                {
+                    "ContinueWhenPartialResultsGenerated": 1,
+                    "ImageParameterName": "ip-read-single-barcode",
+                    "Section": "ST_BARCODE_LOCALIZATION"
+                },
+                {
+                    "ContinueWhenPartialResultsGenerated": 1,
+                    "ImageParameterName": "ip-read-single-barcode",
+                    "Section": "ST_BARCODE_DECODING"
+                }
+            ],
+            "ShortlineDetectionMode": {
+                "Mode": "SDM_GENERAL",
+                "Sensitivity": 3
+            },
+            "StartSection": "ST_REGION_PREDETECTION",
+            "TerminateSetting": {
+                "Section": "ST_NULL",
+                "Stage": "IRUT_NULL"
+            },
+            "TextResultOrderModes": [
+                {
+                    "Mode": "TROM_CONFIDENCE"
+                },
+                {
+                    "Mode": "TROM_POSITION"
+                },
+                {
+                    "Mode": "TROM_FORMAT"
+                }
+            ]
+        }
+    ],
+    "CaptureVisionTemplates": [
+        {
+            "ImageROIProcessingNameArray": [
+                "roi-read-single-barcode"
+            ],
+            "ImageSource": "",
+            "MaxParallelTasks": 4,
+            "MinImageCaptureInterval": 0,
+            "Name": "ReadSingleBarcode",
+            "OutputOriginalImage": 0,
+            "SemanticProcessingNameArray": null,
+            "Timeout": 10000
+        }
+    ],
+    "GlobalParameter": {
+        "MaxTotalImageDimension": 0
+    },
+    "ImageParameterOptions": [
+        {
+            "BaseImageParameterName": "",
+            "BinarizationModes": [
+                {
+                    "BinarizationThreshold": -1,
+                    "BlockSizeX": 27,
+                    "BlockSizeY": 27,
+                    "EnableFillBinaryVacancy": 0,
+                    "GrayscaleEnhancementModesIndex": -1,
+                    "Mode": "BM_LOCAL_BLOCK",
+                    "MorphOperation": "Close",
+                    "MorphOperationKernelSizeX": -1,
+                    "MorphOperationKernelSizeY": -1,
+                    "MorphShape": "Rectangle",
+                    "ThresholdCompensation": 10
+                }
+            ],
+            "ColourConversionModes": [
+                {
+                    "BlueChannelWeight": -1,
+                    "GreenChannelWeight": -1,
+                    "Mode": "CICM_GENERAL",
+                    "RedChannelWeight": -1,
+                    "ReferChannel": "H_CHANNEL"
+                }
+            ],
+            "GrayscaleEnhancementModes": [
+                {
+                    "Mode": "GEM_GENERAL",
+                    "Sensitivity": -1,
+                    "SharpenBlockSizeX": -1,
+                    "SharpenBlockSizeY": -1,
+                    "SmoothBlockSizeX": -1,
+                    "SmoothBlockSizeY": -1
+                }
+            ],
+            "GrayscaleTransformationModes": [
+                {
+                    "Mode": "GTM_ORIGINAL"
+                }
+            ],
+            "IfEraseTextZone": 1,
+            "Name": "ip-read-single-barcode",
+            "RegionPredetectionModes": [
+                {
+                    "AspectRatioRange": "[]",
+                    "FindAccurateBoundary": 0,
+                    "ForeAndBackgroundColours": "[]",
+                    "HeightRange": "[]",
+                    "ImageParameterName": "",
+                    "MeasuredByPercentage": 1,
+                    "MinImageDimension": 262144,
+                    "Mode": "RPM_GENERAL",
+                    "RelativeRegions": "[]",
+                    "Sensitivity": 1,
+                    "SpatialIndexBlockSize": 5,
+                    "WidthRange": "[]"
+                }
+            ],
+            "ScaleDownThreshold": 2300,
+            "ScaleUpModes": [
+                {
+                    "AcuteAngleWithXThreshold": -1,
+                    "LetterHeightThreshold": 0,
+                    "Mode": "SUM_AUTO",
+                    "ModuleSizeThreshold": 0,
+                    "TargetLetterHeight": 0,
+                    "TargetModuleSize": 0
+                }
+            ],
+            "TextDetectionMode": {
+                "CharHeightRange": [
+                    1,
+                    1000,
+                    1
+                ],
+                "Direction": "UNKNOWN",
+                "MaxSpacingInALine": -1,
+                "Mode": "TTDM_LINE",
+                "Sensitivity": 3,
+                "StringLengthRange": null
+            },
+            "TextureDetectionModes": [
+                {
+                    "Mode": "TDM_GENERAL_WIDTH_CONCENTRATION",
+                    "Sensitivity": 5
+                }
+            ]
+        }
+    ],
+    "TargetROIDefOptions": [
+        {
+            "BaseTargetROIDefName": "",
+            "Location": {
+                "Offset": {
+                    "FirstPoint": [
+                        0,
+                        0,
+                        1,
+                        1
+                    ],
+                    "FourthPoint": [
+                        0,
+                        100,
+                        1,
+                        1
+                    ],
+                    "MeasuredByPercentage": 1,
+                    "ReferenceObjectOriginIndex": 0,
+                    "ReferenceObjectType": "ROT_ATOMIC_OBJECT",
+                    "ReferenceXAxis": {
+                        "AxisType": "AT_MIDPOINT_EDGE",
+                        "EdgeIndex": 0,
+                        "LengthReference": "LR_X",
+                        "RotationAngle": 90
+                    },
+                    "ReferenceYAxis": {
+                        "AxisType": "AT_MIDPOINT_EDGE",
+                        "EdgeIndex": 1,
+                        "LengthReference": "LR_Y",
+                        "RotationAngle": 90
+                    },
+                    "SecondPoint": [
+                        100,
+                        0,
+                        1,
+                        1
+                    ],
+                    "ThirdPoint": [
+                        100,
+                        100,
+                        1,
+                        1
+                    ]
+                }
+            },
+            "Name": "roi-read-single-barcode",
+            "PauseFlag": 0,
+            "TaskSettingNameArray": [
+                "task-read-single-barcode"
+            ]
+        }
+    ]
+}`;
+      let runtimeSettings = JSON.parse(template);
+      runtimeSettings["ImageParameterOptions"][0]["BinarizationModes"][0]["BlockSizeX"] = parseInt(document.getElementById("blocksize").value);
+      runtimeSettings["ImageParameterOptions"][0]["BinarizationModes"][0]["BlockSizeY"] = parseInt(document.getElementById("blocksize").value);
+      runtimeSettings["ImageParameterOptions"][0]["BinarizationModes"][0]["ThresholdCompensation"] = parseInt(document.getElementById("constant").value);
+      await router.initSettings(runtimeSettings);
+    }
+  </script>
+</body>
+</html>

@@ -212,6 +212,10 @@ export function MerchDesigner() {
     chalkifyImage(url, DEFAULT_CHALKIFY).then(dataUrl => setCustomAssets(prev => prev.map(a => a.id === id ? { ...a, src: dataUrl } : a))).catch(() => {});
   }, []);
 
+  const handleUploadStencil = useCallback((dataUrl: string, name: string, category: AssetCategory = "icons") => {
+    setCustomAssets(prev => [...prev, { id: `custom/${makeId()}`, name, category, src: dataUrl, defaultScale: 0.25, anchor: "center" } as AssetItem]);
+  }, []);
+
   const updateAssetChalk = useCallback((assetId: string, patch: Partial<ChalkifyOptions & { enabled: boolean }>) => {
     setCustomAssets(prev => {
       const target = prev.find(a => a.id === assetId);
@@ -453,11 +457,13 @@ export function MerchDesigner() {
         onAddText={addText}
         logoSection={
           <AssetPanel assets={logoAssets} onPlace={handlePlace} onDragPlace={handleDragPlace} onUpload={file => handleUpload(file, "logos")}
+            onUploadStencil={(dataUrl, name) => handleUploadStencil(dataUrl, name, "logos")}
             selected={allAssets.find(a => a.id === selectedAsset?.assetId)?.category === "logos" ? selectedAsset : null}
             onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onLayer={handleLayer} onChalkChange={updateAssetChalk} />
         }
         illustrationSection={
           <AssetPanel assets={illustrationAssets} onPlace={handlePlace} onDragPlace={handleDragPlace} onUpload={file => handleUpload(file, "icons")}
+            onUploadStencil={(dataUrl, name) => handleUploadStencil(dataUrl, name, "icons")}
             selected={allAssets.find(a => a.id === selectedAsset?.assetId)?.category !== "logos" ? selectedAsset : null}
             onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onLayer={handleLayer} onChalkChange={updateAssetChalk} />
         }
