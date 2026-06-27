@@ -9,10 +9,16 @@ import { Link } from "react-router";
 import { X } from "lucide-react";
 import { useT } from "../i18n";
 import {
+  startBodySegmentation,
+  type SegmentationHandle,
+} from "../lib/bodySegmentation";
+import {
   renderChalkFrame,
   DEFAULT_CHALK_ENGINE_CONFIG,
   type ChalkEngineConfig,
 } from "../lib/chalkEngine";
+
+type SourceMode = "upload" | "live";
 
 interface UploadedImage {
   url: string;
@@ -37,14 +43,26 @@ function brightnessFromImageData(data: Uint8ClampedArray, n: number): Float32Arr
 export default function Interactive() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const areaRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const segRef = useRef<SegmentationHandle | null>(null);
+  const frameCounter = useRef(0);
+  const brightnessBuf = useRef<Float32Array | null>(null);
 
+  const [source, setSource] = useState<SourceMode>("upload");
   const [config, setConfig] = useState<ChalkEngineConfig>({
     ...DEFAULT_CHALK_ENGINE_CONFIG,
   });
   const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
+  const [isLiveRunning, setIsLiveRunning] = useState(false);
   const [showUI, setShowUI] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [size, setSize] = useState({ w: 640, h: 480 });
   const { t } = useT();
+
+  const configRef = useRef(config);
+  useEffect(() => {
+    configRef.current = config;
+  }, [config]);
 
   const setCfg = useCallback(
     (patch: Partial<ChalkEngineConfig>) => setConfig((c) => ({ ...c, ...patch })),
@@ -90,7 +108,7 @@ export default function Interactive() {
   }, [size]);
 
   useEffect(() => {
-    if (!uploadedImage) return;
+    if (source !== "upload" || !uploadedImage) return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!ctx) return;
@@ -108,7 +126,9 @@ export default function Interactive() {
       false
     );
     ctx.restore();
-  }, [config, uploadedImage, size]);
+  }, [config, uploadedImage, source, size]);
+
+  useEffect(() => () => segRef.current?.stop(), []);
 
   const handleImageUpload = useCallback(async (file: File) => {
     const url = URL.createObjectURL(file);
@@ -149,6 +169,72 @@ export default function Interactive() {
     }
   }, [size]);
 
+  const handleStopLive = useCallback(() => {
+    segRef.current?.stop();
+    segRef.current = null;
+    setIsLiveRunning(false);
+  }, []);
+
+  const startLive = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || segRef.current) return;
+    setError(null);
+    frameCounter.current = 0;
+    setIsLiveRunning(true);
+    segRef.current = startBodySegmentation(
+      video,
+      (result) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas?.getContext("2d");
+        if (!ctx || !canvas) return;
+        const cw = canvas.width / DPR;
+        const ch = canvas.height / DPR;
+        const n = result.width * result.height;
+        let brightness = brightnessBuf.current;
+        if (!brightness || brightness.length !== n) {
+          brightness = new Float32Array(n);
+          brightnessBuf.current = brightness;
+        }
+        const d = result.videoFrame.data;
+        const mask = result.mask.data;
+        for (let i = 0; i < n; i++) {
+          brightness[i] =
+            mask[i * 4] < 128
+              ? 0
+              : (0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]) /
+                255;
+        }
+        ctx.save();
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        renderChalkFrame(
+          ctx,
+          brightness,
+          result.width,
+          result.height,
+          cw,
+          ch,
+          configRef.current,
+          frameCounter.current++,
+          true
+        );
+        ctx.restore();
+      },
+      (err) => {
+        console.error("Kamera-Fehler:", err);
+        setError("Kamera konnte nicht gestartet werden. Zugriff erlauben und neu laden.");
+        handleStopLive();
+      }
+    );
+  }, [handleStopLive]);
+
+  const switchSource = useCallback(
+    (next: SourceMode) => {
+      handleStopLive();
+      setSource(next);
+    },
+    [handleStopLive]
+  );
+
   const savePNG = useCallback(() => {
     canvasRef.current?.toBlob((blob) => {
       if (!blob) return;
@@ -171,44 +257,83 @@ export default function Interactive() {
         setShowUI((u) => !u);
       } else if (e.key === "s" || e.key === "S") {
         savePNG();
+      } else if (e.key === " " && source === "live") {
+        e.preventDefault();
+        if (isLiveRunning) handleStopLive();
+        else startLive();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [savePNG]);
+  }, [source, isLiveRunning, savePNG, startLive, handleStopLive]);
+
+  const liveDisabled = source !== "live";
 
   return (
     <div className="chalk-ui" style={S.root}>
       <div ref={areaRef} style={S.canvasArea}>
         <canvas ref={canvasRef} style={S.canvas} />
-        {!uploadedImage && (
+        {source === "upload" && !uploadedImage && (
           <div style={S.placeholder}>{t.pickImage}</div>
         )}
       </div>
 
+      <video ref={videoRef} style={{ display: "none" }} playsInline muted />
+
       {showUI && (
         <aside style={S.sidebar}>
-          {uploadedImage ? (
-            <div style={S.thumbRow}>
-              <img src={uploadedImage.url} style={S.thumb} alt="" />
-              <button onClick={clearUpload} style={S.thumbX}>
-                <X size={14} />
+          {/* Source toggle */}
+          <div>
+            <div style={S.sectionLabel}>Quelle</div>
+            <div style={S.toggle}>
+              <button
+                onClick={() => switchSource("live")}
+                style={S.toggleBtn(source === "live")}
+              >
+                📷 Live
+              </button>
+              <button
+                onClick={() => switchSource("upload")}
+                style={S.toggleBtn(source === "upload")}
+              >
+                🖼 Upload
               </button>
             </div>
-          ) : (
-            <label style={S.fileLabel} data-chalk>
-              {t.pickImage}
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleImageUpload(f);
-                }}
-              />
-            </label>
+          </div>
+
+          {source === "upload" &&
+            (uploadedImage ? (
+              <div style={S.thumbRow}>
+                <img src={uploadedImage.url} style={S.thumb} alt="" />
+                <button onClick={clearUpload} style={S.thumbX}>
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <label style={S.fileLabel} data-chalk>
+                {t.pickImage}
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleImageUpload(f);
+                  }}
+                />
+              </label>
+            ))}
+
+          {source === "live" && (
+            <button
+              onClick={isLiveRunning ? handleStopLive : startLive}
+              style={S.liveBtn(isLiveRunning)}
+            >
+              {isLiveRunning ? "⏹ Kamera stoppen" : "📷 Kamera starten"}
+            </button>
           )}
+
+          {error && <div style={S.error}>{error}</div>}
 
           <div style={S.divider} />
 
@@ -226,6 +351,10 @@ export default function Interactive() {
             onChange={(v) => setCfg({ direction: v })} fmt={(v) => `${v}°`} />
           <Slider label="Strichstärke" value={config.strokeWeight} min={1} max={8} step={0.5}
             onChange={(v) => setCfg({ strokeWeight: v })} fmt={(v) => v.toFixed(1)} />
+          <Slider label="Trail" value={config.trail} min={0} max={1} step={0.02}
+            onChange={(v) => setCfg({ trail: v })} fmt={(v) => v.toFixed(2)} disabled={liveDisabled} />
+          <Slider label="Lebendigkeit" value={config.shimmer} min={0} max={1} step={0.05}
+            onChange={(v) => setCfg({ shimmer: v })} fmt={(v) => v.toFixed(2)} disabled={liveDisabled} />
 
           <div style={S.divider} />
 
@@ -250,6 +379,7 @@ function Slider({
   step,
   onChange,
   fmt,
+  disabled = false,
 }: {
   label: string;
   value: number;
@@ -258,9 +388,10 @@ function Slider({
   step: number;
   onChange: (v: number) => void;
   fmt: (v: number) => string;
+  disabled?: boolean;
 }) {
   return (
-    <div style={S.sliderRow}>
+    <div style={{ ...S.sliderRow, opacity: disabled ? 0.4 : 1 }}>
       <div style={S.sliderLabel}>
         <span>{label}</span>
         <span style={S.sliderValue}>{fmt(value)}</span>
@@ -271,6 +402,7 @@ function Slider({
         max={max}
         step={step}
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(parseFloat(e.target.value))}
         style={S.range}
       />
@@ -315,6 +447,29 @@ const S = {
     gap: 16,
     overflowY: "auto",
   } as React.CSSProperties,
+  sectionLabel: {
+    fontSize: 11,
+    color: "#666",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    marginBottom: 6,
+  } as React.CSSProperties,
+  toggle: {
+    display: "flex",
+    borderRadius: 6,
+    overflow: "hidden",
+    border: "1px solid #2a2a2a",
+  } as React.CSSProperties,
+  toggleBtn: (active: boolean): React.CSSProperties => ({
+    flex: 1,
+    padding: "8px 0",
+    background: active ? "#e0e0e0" : "#1a1a1a",
+    color: active ? "#111" : "#777",
+    border: "none",
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+  }),
   fileLabel: {
     display: "block",
     padding: 14,
@@ -347,6 +502,22 @@ const S = {
     color: "#666",
     cursor: "pointer",
     fontSize: 14,
+  } as React.CSSProperties,
+  liveBtn: (running: boolean): React.CSSProperties => ({
+    width: "100%",
+    padding: 10,
+    background: running ? "#333" : "#e0e0e0",
+    color: running ? "#aaa" : "#111",
+    border: "none",
+    borderRadius: 4,
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+  }),
+  error: {
+    fontSize: 12,
+    color: "rgba(235,160,160,0.9)",
+    lineHeight: 1.4,
   } as React.CSSProperties,
   divider: { height: 1, background: "#1a1a1a" } as React.CSSProperties,
   sliderRow: {
