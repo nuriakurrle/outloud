@@ -229,7 +229,7 @@ export default function Interactive() {
       },
       (err) => {
         console.error("Kamera-Fehler:", err);
-        setError("Kamera konnte nicht gestartet werden. Zugriff erlauben und neu laden.");
+        setError(t.cameraError);
         handleStopLive();
       }
     );
@@ -290,7 +290,7 @@ export default function Interactive() {
         <aside style={S.sidebar}>
           {/* Source toggle */}
           <div>
-            <div style={S.sectionLabel}>Quelle</div>
+            <div style={S.sectionLabel}>{t.source}</div>
             <div style={S.toggle}>
               <button onClick={() => switchSource("live")} style={S.toggleBtn(source === "live")}>📷 Live</button>
               <button onClick={() => switchSource("upload")} style={S.toggleBtn(source === "upload")}>🖼 Upload</button>
@@ -299,10 +299,10 @@ export default function Interactive() {
 
           {/* Render mode toggle */}
           <div>
-            <div style={S.sectionLabel}>Mode</div>
+            <div style={S.sectionLabel}>{t.mode}</div>
             <div style={S.toggle}>
-              <button onClick={() => setRenderMode("chalk")} style={S.toggleBtn(!isStencil)}>✏ Chalk</button>
-              <button onClick={() => setRenderMode("stencil")} style={S.toggleBtn(isStencil)}>◼ Stencil</button>
+              <button onClick={() => setRenderMode("chalk")} style={S.toggleBtn(!isStencil)}>✏ {t.chalk}</button>
+              <button onClick={() => setRenderMode("stencil")} style={S.toggleBtn(isStencil)}>◼ {t.stencil}</button>
             </div>
           </div>
 
@@ -324,7 +324,7 @@ export default function Interactive() {
 
           {source === "live" && (
             <button onClick={isLiveRunning ? handleStopLive : startLive} style={S.liveBtn(isLiveRunning)}>
-              {isLiveRunning ? "⏹ Kamera stoppen" : "📷 Kamera starten"}
+              {isLiveRunning ? t.cameraStop : t.cameraStart}
             </button>
           )}
 
@@ -341,23 +341,23 @@ export default function Interactive() {
             </>
           ) : (
             <>
-              <Slider label="Scale" value={config.scale} min={0.1} max={1} step={0.05}
+              <Slider label={t.scale} value={config.scale} min={0.1} max={1} step={0.05}
                 onChange={(v) => setCfg({ scale: v })} fmt={(v) => v.toFixed(2)} />
-              <Slider label="Resolution" value={config.resolution} min={2} max={20} step={1}
+              <Slider label={t.resolution} value={config.resolution} min={2} max={20} step={1}
                 onChange={(v) => setCfg({ resolution: v })} fmt={(v) => String(v)} />
-              <Slider label="Chalk-Dichte" value={config.density} min={0.1} max={1} step={0.05}
+              <Slider label={t.chalkDensity} value={config.density} min={0.1} max={1} step={0.05}
                 onChange={(v) => setCfg({ density: v })} fmt={(v) => v.toFixed(2)} />
-              <Slider label="Threshold" value={config.threshold} min={0} max={1} step={0.02}
+              <Slider label={t.threshold} value={config.threshold} min={0} max={1} step={0.02}
                 onChange={(v) => setCfg({ threshold: v })} fmt={(v) => v.toFixed(2)} />
-              <Slider label="Noise" value={config.noise} min={0} max={1} step={0.02}
+              <Slider label={t.noise} value={config.noise} min={0} max={1} step={0.02}
                 onChange={(v) => setCfg({ noise: v })} fmt={(v) => v.toFixed(2)} />
-              <Slider label="Strichrichtung" value={config.direction} min={0} max={360} step={1}
+              <Slider label={t.strokeDir} value={config.direction} min={0} max={360} step={1}
                 onChange={(v) => setCfg({ direction: v })} fmt={(v) => `${v}°`} />
-              <Slider label="Strichstärke" value={config.strokeWeight} min={1} max={8} step={0.5}
+              <Slider label={t.strokeWeight} value={config.strokeWeight} min={1} max={8} step={0.5}
                 onChange={(v) => setCfg({ strokeWeight: v })} fmt={(v) => v.toFixed(1)} />
-              <Slider label="Trail" value={config.trail} min={0} max={1} step={0.02}
+              <Slider label={t.trail} value={config.trail} min={0} max={1} step={0.02}
                 onChange={(v) => setCfg({ trail: v })} fmt={(v) => v.toFixed(2)} disabled={liveDisabled} />
-              <Slider label="Lebendigkeit" value={config.shimmer} min={0} max={1} step={0.05}
+              <Slider label={t.shimmer} value={config.shimmer} min={0} max={1} step={0.05}
                 onChange={(v) => setCfg({ shimmer: v })} fmt={(v) => v.toFixed(2)} disabled={liveDisabled} />
             </>
           )}
@@ -397,12 +397,12 @@ const S = {
   root: { display: "flex", height: "100%", background: "#0a0a0a", overflow: "hidden" } as React.CSSProperties,
   canvasArea: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minWidth: 0 } as React.CSSProperties,
   canvas: { boxShadow: "0 4px 30px rgba(0,0,0,0.5)", background: "#0a0a0a", display: "block" } as React.CSSProperties,
-  placeholder: { position: "absolute", color: "rgba(255,255,255,0.25)", fontSize: 13, pointerEvents: "none" } as React.CSSProperties,
+  placeholder: { position: "absolute", color: "rgba(255, 255, 255, 0.25)", fontSize: 13, pointerEvents: "none" } as React.CSSProperties,
   sidebar: { width: 260, flexShrink: 0, background: "#111", borderLeft: "1px solid #1a1a1a", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" } as React.CSSProperties,
-  sectionLabel: { fontSize: 11, color: "#666", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 } as React.CSSProperties,
+  sectionLabel: { fontSize: 16, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 } as React.CSSProperties,
   toggle: { display: "flex", borderRadius: 6, overflow: "hidden", border: "1px solid #2a2a2a" } as React.CSSProperties,
   toggleBtn: (active: boolean): React.CSSProperties => ({ flex: 1, padding: "8px 0", background: active ? "#e0e0e0" : "#1a1a1a", color: active ? "#111" : "#777", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer" }),
-  fileLabel: { display: "block", padding: 14, textAlign: "center", background: "#1a1a1a", border: "1px dashed #333", borderRadius: 4, cursor: "pointer", fontSize: 12, color: "#777" } as React.CSSProperties,
+  fileLabel: { display: "block", padding: 14, textAlign: "center", background: "#1a1a1a", border: "1px dashed #333", borderRadius: 4, cursor: "pointer", fontSize: 14, color: "#777" } as React.CSSProperties,
   thumbRow: { display: "flex", alignItems: "center", gap: 8, padding: 8, background: "#1a1a1a", borderRadius: 4 } as React.CSSProperties,
   thumb: { width: 48, height: 48, objectFit: "cover", borderRadius: 3 } as React.CSSProperties,
   thumbX: { marginLeft: "auto", background: "none", border: "none", color: "#666", cursor: "pointer", fontSize: 14 } as React.CSSProperties,
@@ -410,9 +410,9 @@ const S = {
   error: { fontSize: 12, color: "rgba(235,160,160,0.9)", lineHeight: 1.4 } as React.CSSProperties,
   divider: { height: 1, background: "#1a1a1a" } as React.CSSProperties,
   sliderRow: { display: "flex", flexDirection: "column", gap: 3 } as React.CSSProperties,
-  sliderLabel: { display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666" } as React.CSSProperties,
+  sliderLabel: { display: "flex", justifyContent: "space-between", fontSize: 14, color: "#d9d9d9" } as React.CSSProperties,
   sliderValue: { color: "#999", fontWeight: 600, fontVariantNumeric: "tabular-nums" } as React.CSSProperties,
-  range: { width: "100%", accentColor: "#e0e0e0", height: 2 } as React.CSSProperties,
-  saveBtn: { width: "100%", padding: 11, background: "#e0e0e0", color: "#111", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
+  range: { width: "100%", accentColor: "#ffffff", height: 2 } as React.CSSProperties,
+  saveBtn: { width: "100%", padding: 11, background: "#ffffff", color: "#111", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
   editorLink: { display: "block", textAlign: "center", padding: "10px 12px", marginTop: 4, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 6, color: "#f5f2ed", fontSize: 13, fontWeight: 600, textDecoration: "none", letterSpacing: "0.02em" } as React.CSSProperties,
 };

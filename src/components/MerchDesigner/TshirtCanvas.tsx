@@ -20,7 +20,6 @@ export const TshirtCanvas = forwardRef<PosterCanvasHandle, TshirtCanvasProps>(
         bg={shirtColor === "white" ? "#f0f0f0" : "#111"}
         pattern={EMPTY_PATTERN}
         patternStrokes={[]}
-        printZoneClip
         backdrop={
           <img
             src={side === "front" ? frontImg : backImg}
@@ -34,8 +33,8 @@ export const TshirtCanvas = forwardRef<PosterCanvasHandle, TshirtCanvasProps>(
       >
         {/* Print-zone guide — sits in overlay above SVG strokes, below interactive elements */}
         <div style={{
-          position: "absolute", left: "20%", top: "18%", width: "60%", height: "52%",
-          border: "1px dashed rgba(255,255,255,0.3)", pointerEvents: "none", zIndex: 1,
+          position: "absolute", left: "25%", top: "24%", width: "50%", height: "52%",
+          border: "2px dashed rgba(255, 255, 255, 0.77)", pointerEvents: "none", zIndex: 1,
         }} />
         {children}
       </PosterCanvas>

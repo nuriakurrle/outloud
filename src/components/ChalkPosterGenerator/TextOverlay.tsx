@@ -71,6 +71,7 @@ export function TextOverlay({
         pointerEvents: "auto",
         ...outlineStyle,
       }}
+      data-design-id={id}
       onPointerDown={(e) => onPointerDown(id, e)}
     >
       {text}

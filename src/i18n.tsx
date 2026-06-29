@@ -12,7 +12,7 @@ const T = {
     randomize: "Alles neu generieren", addText: "+ Text hinzufügen", exportPng: "Export PNG",
 
     sectionSize: "Größe", sectionLayout: "Layout",
-    sectionPattern: "Kreide-Muster", sectionLogos: "Logos", sectionIllustrations: "Illustrationen",
+    sectionPattern: "Kreide", sectionLogos: "Logos", sectionIllustrations: "Illustrationen",
 
     format: "Format",
     patternType: "Muster", patternLines: "Linien", patternWavy: "Wellenlinien", patternGrid: "Raster",
@@ -46,6 +46,11 @@ const T = {
     hintMove: "Alles verschieben: Striche, Texte, Linien & Logos · Entf zum Löschen · Strg+Z Rückgängig",
 
     pickImage: "Bild wählen", savePng: "SAVE PNG", backToEditor: "← Zurück zum Editor",
+    scale: "Skalierung", resolution: "Auflösung", chalkDensity: "Chalk-Dichte",
+    noise: "Rauschen", strokeDir: "Strichrichtung", strokeWeight: "Strichstärke",
+    trail: "Trail", shimmer: "Lebendigkeit",
+    source: "Quelle", mode: "Modus", cameraStart: "Kamera starten", cameraStop: "Kamera stoppen",
+    stencil: "Schablone", cameraError: "Kamera konnte nicht gestartet werden. Zugriff erlauben und neu laden.",
   },
   en: {
     order: "Order",
@@ -55,7 +60,7 @@ const T = {
     randomize: "Randomize all", addText: "+ Add text", exportPng: "Export PNG",
 
     sectionSize: "Size", sectionLayout: "Layout",
-    sectionPattern: "Chalk Pattern", sectionLogos: "Logos", sectionIllustrations: "Illustrations",
+    sectionPattern: "Chalk", sectionLogos: "Logos", sectionIllustrations: "Illustrations",
 
     format: "Format",
     patternType: "Pattern", patternLines: "Lines", patternWavy: "Wavy lines", patternGrid: "Grid",
@@ -89,6 +94,11 @@ const T = {
     hintMove: "Move anything: strokes, texts, lines & logos · Del to delete · Ctrl+Z to undo",
 
     pickImage: "Choose image", savePng: "SAVE PNG", backToEditor: "← Back to editor",
+    scale: "Scale", resolution: "Resolution", chalkDensity: "Chalk density",
+    noise: "Noise", strokeDir: "Stroke direction", strokeWeight: "Stroke weight",
+    trail: "Trail", shimmer: "Shimmer",
+    source: "Source", mode: "Mode", cameraStart: "Start camera", cameraStop: "Stop camera",
+    stencil: "Stencil", cameraError: "Could not start camera. Allow access and reload.",
   },
   uk: {
     order: "Замовити",
@@ -97,15 +107,15 @@ const T = {
     invertDark: "Білий на чорному", invertLight: "Чорний на білому",
     randomize: "Перегенерувати все", addText: "+ Додати текст", exportPng: "Експорт PNG",
 
-    sectionSize: "Розмір", sectionLayout: "Розміщення",
-    sectionPattern: "Крейдяний візерунок", sectionLogos: "Логотипи", sectionIllustrations: "Ілюстрації",
+    sectionSize: "Форматік", sectionLayout: "Лейаут",
+    sectionPattern: "Крейда", sectionLogos: "Лого", sectionIllustrations: "Картіночки",
 
     format: "Формат",
     patternType: "Тип", patternLines: "Лінії", patternWavy: "Хвилясті лінії", patternGrid: "Сітка",
     brush: "Пензель", strokes: "Штрихи", strength: "Товщина", opacity: "Прозорість",
     color: "Колір", colorWhite: "Білий", colorBlack: "Чорний", regenerate: "Перегенерувати",
 
-    drawOn: "Малювання увімк", drawOff: "Малювати", eraser: "Гумка",
+    drawOn: "Мишка", drawOff: "Малювалка", eraser: "Гумка",
 
     editText: "Редагувати текст", filled: "Заповнений", outline: "Контур",
     fontLabel: "Шрифт", sizeLabel: "Розмір", weightLabel: "Товщина",
@@ -129,13 +139,18 @@ const T = {
     strokeTitle: "Крейдова лінія", deleteLabel: "Видалити",
 
     hintDraw: "Малювання активне · тягни для нанесення · вимкни для переміщення",
-    hintMove: "Пересувай все: штрихи, тексти, лінії й логотипи · Del для видалення · Ctrl+Z скасувати",
+    hintMove: "Пересувай штрихи, тексти, лінії й логотипи · Del для видалення · Ctrl+Z скасувати",
 
-    pickImage: "Вибрати зображення", savePng: "ЗБЕРЕГТИ PNG", backToEditor: "← До редактора",
+    pickImage: "Вибрати зображення", savePng: "Зберегти PNG", backToEditor: "← До редактора",
+    scale: "Масштаб", resolution: "Роздільність", chalkDensity: "Щільність крейди",
+    noise: "Шум", strokeDir: "Напрям", strokeWeight: "Товщина",
+    trail: "Слід", shimmer: "Жвавість",
+    source: "Джерело", mode: "Режим", cameraStart: "Увімкнути камеру", cameraStop: "Вимкнути камеру",
+    stencil: "Трафарет", cameraError: "Не вдалося запустити камеру. Дозвольте доступ і перезавантажте.",
   },
 } as const;
 
-export type Translations = typeof T.de;
+export type Translations = { [K in keyof typeof T.de]: string };
 
 const Ctx = createContext<{ lang: Lang; setLang: (l: Lang) => void; t: Translations }>({
   lang: "uk", setLang: () => {}, t: T.uk,
