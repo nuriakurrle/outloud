@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { ToolMode } from "../../types/poster";
 import { getAllBrushes, brushPreviewPath } from "../../lib/brushStrokes";
 import { useT } from "../../i18n";
+import styles from "../../styles/chalkPoster.module.css";
 
 export const CHALK_COLORS = [
   { label: "Weiß", hex: "#FFFFFF" },
@@ -100,7 +101,7 @@ export function DrawingToolbar({
 
       {isDraw && <div style={DIVIDER} />}
       {isDraw && (
-        <div style={{ display: "flex", gap: 5, alignItems: "center", overflowX: "auto", maxWidth: 420 }}>
+        <div className={styles.brushScroll} style={{ display: "flex", gap: 5, alignItems: "center", overflowX: "auto", maxWidth: 420 }}>
           {previews.map((b) => {
             const active = brushName === b.name;
             return (

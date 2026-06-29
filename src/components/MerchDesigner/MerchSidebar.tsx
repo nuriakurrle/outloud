@@ -1,10 +1,12 @@
 import { useState } from "react";
 import styles from "../../styles/chalkPoster.module.css";
 import { useT } from "../../i18n";
-import { MERCH_ITEMS } from "./constants";
+import { MERCH_ITEMS, type MerchProduct } from "./constants";
 import { MarginPanel } from "../DesignerBase/MarginPanel";
 
 interface MerchSidebarProps {
+  product: MerchProduct;
+  onProductChange: (p: MerchProduct) => void;
   shirtColor: "black" | "white";
   onColorChange: (c: "black" | "white") => void;
   textPanel?: React.ReactNode;
@@ -47,15 +49,19 @@ export function MerchSidebar(props: MerchSidebarProps) {
         {/* Merch item selector */}
         <Section title="Merch" isOpen={open === "merch"} onToggle={() => toggle("merch")}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {MERCH_ITEMS.map(item => (
-              <button key={item.id} style={{
-                flex: 1, padding: "10px 8px", borderRadius: 8, cursor: "pointer",
-                background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.4)",
-                color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "inherit",
-              }}>
-                {item.label}
-              </button>
-            ))}
+            {MERCH_ITEMS.map(item => {
+              const active = props.product === item.id;
+              return (
+                <button key={item.id} onClick={() => props.onProductChange(item.id)} style={{
+                  flex: 1, padding: "10px 8px", borderRadius: 8, cursor: "pointer",
+                  background: active ? "#fff" : "rgba(255,255,255,0.12)",
+                  border: active ? "1px solid #fff" : "1px solid rgba(255,255,255,0.4)",
+                  color: active ? "#111" : "#fff", fontSize: 13, fontWeight: 600, fontFamily: "inherit",
+                }}>
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
         </Section>
 

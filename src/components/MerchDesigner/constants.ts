@@ -7,7 +7,12 @@ export const EMPTY_PATTERN: PatternConfig = {
   strokeWidth: 0, opacity: 0, color: "white", seed: 0,
 };
 
-export const MERCH_ITEMS = [{ id: "tshirt", label: "T-Shirt" }] as const;
+export const MERCH_ITEMS = [
+  { id: "tshirt", label: "T-Shirt" },
+  { id: "cap", label: "Cap" },
+] as const;
+
+export type MerchProduct = (typeof MERCH_ITEMS)[number]["id"];
 
 export const TSHIRT_VIEWS = [
   { id: "front" as const, label: "Front" },

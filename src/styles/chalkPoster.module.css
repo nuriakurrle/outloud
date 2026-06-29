@@ -326,7 +326,9 @@
   justify-content: center;
   gap: 14px;
   overflow: hidden;
-  padding: 20px;
+  /* Unten reservierter Streifen für Toolbar + Hinweis, damit sie nicht über
+     der Leinwand schweben. Die Skalierung der Editoren rechnet ihn ein. */
+  padding: 20px 20px 132px;
   box-sizing: border-box;
 }
 
@@ -347,10 +349,27 @@
 }
 
 .previewHint {
-  font-size: 14px;
+  position: absolute;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  text-align: center;
+  font-size: 13px;
   color: var(--text-muted);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  pointer-events: none;
 }
+
+/* Dunkle, schlanke Scrollbar für die Pinsel-Leiste in der DrawingToolbar */
+.brushScroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+.brushScroll::-webkit-scrollbar { height: 6px; }
+.brushScroll::-webkit-scrollbar-track { background: transparent; }
+.brushScroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.22); border-radius: 3px; }
+.brushScroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.35); }
 
 /* ── Draggable overlays ──────────────────────────────── */
 .textEl {

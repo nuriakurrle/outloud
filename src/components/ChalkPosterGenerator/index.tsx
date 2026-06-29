@@ -83,7 +83,7 @@ function ChalkPosterGeneratorInner({
     mode, brushOpacity, liveStrokePath, chalkColor,
     commit, deleteSelectedStroke, updateSelectedStroke,
     handlePlace, handleDragPlace, handleUpload, handleUploadStencil,
-    updateAssetChalk, updateSelected, deleteSelected, handleLayer,
+    updateAssetChalk, updateSelected, deleteSelected,
     handleStrokePointerDown, addText,
     logoAssets, illustrationAssets,
     containerRef, beginDeltaDrag,
@@ -101,7 +101,7 @@ function ChalkPosterGeneratorInner({
   useEffect(() => {
     const compute = () => setScale(Math.min(
       (window.innerWidth - 344) / size.w,
-      (window.innerHeight - 40) / size.h,
+      (window.innerHeight - 172) / size.h, // -172: Navbar + unterer Toolbar/Hinweis-Streifen
       1.4
     ));
     compute();
@@ -248,14 +248,14 @@ function ChalkPosterGeneratorInner({
             onUpload={file => handleUpload(file, "logos")}
             onUploadStencil={(dataUrl, name) => handleUploadStencil(dataUrl, name, "logos")}
             selected={allAssets.find(a => a.id === selectedAsset?.assetId)?.category === "logos" ? selectedAsset : null}
-            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onLayer={handleLayer} onChalkChange={updateAssetChalk} />
+            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onChalkChange={updateAssetChalk} />
         }
         illustrationSection={
           <AssetPanel assets={illustrationAssets} onPlace={handlePlace} onDragPlace={handleDragPlace}
             onUpload={file => handleUpload(file, "icons")}
             onUploadStencil={(dataUrl, name) => handleUploadStencil(dataUrl, name, "icons")}
             selected={allAssets.find(a => a.id === selectedAsset?.assetId)?.category !== "logos" ? selectedAsset : null}
-            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onLayer={handleLayer} onChalkChange={updateAssetChalk} />
+            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onChalkChange={updateAssetChalk} />
         }
         strokePanel={strokePanel}
         textPanel={textPanel}
@@ -325,7 +325,13 @@ export function ChalkPosterGenerator() {
   const skipRegenRef = useRef(false);
   useEffect(() => {
     if (skipRegenRef.current) { skipRegenRef.current = false; return; }
-    setPatternStrokes(generatePatternStrokes(patternConfig, size.w, size.h));
+    // Neue Linien generieren, aber die manuell gezogene Platzierung (offsetX/Y)
+    // je Linie beibehalten – sonst springen verschobene Linien zurück.
+    setPatternStrokes(prev =>
+      generatePatternStrokes(patternConfig, size.w, size.h).map((s, i) =>
+        prev[i] ? { ...s, offsetX: prev[i].offsetX, offsetY: prev[i].offsetY } : s
+      )
+    );
   }, [patternConfig, size.w, size.h]);
 
   const onClearNamedText = useCallback((key: string) => {

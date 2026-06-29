@@ -33,7 +33,8 @@ const T = {
     assetStrength: "Stärke", chalkColor: "Kreide-Farbe",
     rotation: "Drehung", assetOpacity: "Deckkraft",
     mirror: "⇋ Spiegeln", mirrorV: "⇅ V-Spiegeln", deleteBtn: "🗑 Löschen",
-    layerUp: "↑ Ebene", layerDown: "↓ Ebene",
+    layerUp: "↑ Ebene", layerDown: "↓ Ebene", layerHint: "↑ / ↓ Ebene",
+    capLoading: "Lädt 3D-Modell…", capLoadFailed: "Cap-Modell konnte nicht geladen werden.",
     assetHint: "Klick oder auf Poster ziehen", noItems: "Keine Elemente in dieser Kategorie.",
     upload: "⬆ SVG/PNG hochladen",
 
@@ -81,7 +82,8 @@ const T = {
     assetStrength: "Width", chalkColor: "Chalk color",
     rotation: "Rotation", assetOpacity: "Opacity",
     mirror: "⇋ Mirror", mirrorV: "⇅ V-Mirror", deleteBtn: "🗑 Delete",
-    layerUp: "↑ Layer", layerDown: "↓ Layer",
+    layerUp: "↑ Layer", layerDown: "↓ Layer", layerHint: "↑ / ↓ Layer",
+    capLoading: "Loading 3D model…", capLoadFailed: "Cap model could not be loaded.",
     assetHint: "Click or drag to poster", noItems: "No items in this category.",
     upload: "⬆ Upload SVG/PNG",
 
@@ -129,7 +131,8 @@ const T = {
     assetStrength: "Товщина", chalkColor: "Колір крейди",
     rotation: "Обертання", assetOpacity: "Прозорість",
     mirror: "⇋ Дзеркало", mirrorV: "⇅ В-дзеркало", deleteBtn: "🗑 Видалити",
-    layerUp: "↑ Шар", layerDown: "↓ Шар",
+    layerUp: "↑ Шар", layerDown: "↓ Шар", layerHint: "↑ / ↓ Шар",
+    capLoading: "Завантаження 3D-моделі…", capLoadFailed: "Не вдалося завантажити модель кепки.",
     assetHint: "Клік або перетягни на постер", noItems: "Немає елементів у цій категорії.",
     upload: "⬆ Завантажити SVG/PNG",
 
