@@ -44,6 +44,7 @@ export interface PosterScene {
   bg: string;
   pattern: PatternConfig; // hält den Seed (Tafel-Grain); Striche s.u.
   patternStrokes: PatternStroke[]; // generierte Hintergrund-Striche
+  patternFront?: boolean; // generierte Linien über Text & Illustrationen
   strokes: ChalkStroke[];
   texts: SceneText[];
   assets: SceneAsset[];
@@ -86,18 +87,24 @@ export async function loadSceneImages(
  * Auflösung skaliert sein (z.B. `ctx.scale(3,3)` für 3x-Export); gezeichnet
  * wird in Poster-Koordinaten (scene.w × scene.h).
  */
-/** Renders all SVG-based strokes (patterns + freehand) onto the canvas via SVG blob. */
+/**
+ * Renders a SVG-based stroke layer onto the canvas via SVG blob.
+ * `strokeList` are the freehand strokes to draw; `includePatterns` adds the
+ * decorative background pattern strokes (only on the back layer).
+ */
 async function renderSvgStrokes(
   ctx: CanvasRenderingContext2D,
   scene: PosterScene,
   w: number,
-  h: number
+  h: number,
+  strokeList: ChalkStroke[],
+  includePatterns: boolean
 ): Promise<void> {
   const fillColor = scene.pattern.color === "white" ? "#e8e5e0" : "#222222";
-  const ordered = [...scene.strokes].sort((a, b) => a.zIndex - b.zIndex);
+  const ordered = [...strokeList].sort((a, b) => a.zIndex - b.zIndex);
 
   const pathsHtml = [
-    ...scene.patternStrokes.map(
+    ...(includePatterns ? scene.patternStrokes : []).map(
       (ps) => `<g opacity="${ps.opacity}" transform="translate(${ps.offsetX ?? 0} ${ps.offsetY ?? 0})"><path d="${ps.svgPath}" fill="${fillColor}"/></g>`
     ),
     ...ordered.map(
@@ -120,6 +127,24 @@ async function renderSvgStrokes(
   }
 }
 
+// Bricht Text wie die Live-Vorschau um (CSS `white-space: pre-wrap; max-width`):
+// explizite Zeilenumbrüche bleiben erhalten, lange Zeilen werden am Wortrand
+// umgebrochen. Ohne das liefe ein langer Titel im Export über den Rand hinaus
+// und würde abgeschnitten. `ctx.font` muss vorher gesetzt sein.
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  return text.split("\n").flatMap((para) => {
+    const lines: string[] = [];
+    let line = "";
+    for (const word of para.split(" ")) {
+      const test = line ? `${line} ${word}` : word;
+      if (line && ctx.measureText(test).width > maxWidth) { lines.push(line); line = word; }
+      else line = test;
+    }
+    lines.push(line);
+    return lines;
+  });
+}
+
 export async function renderPosterScene(
   ctx: CanvasRenderingContext2D,
   scene: PosterScene,
@@ -131,25 +156,30 @@ export async function renderPosterScene(
   ctx.fillStyle = scene.bg;
   ctx.fillRect(0, 0, w, h);
 
-  // 2. SVG strokes (patterns + freehand)
-  await renderSvgStrokes(ctx, scene, w, h);
+  // 2. SVG strokes auf der Hinter-Text-Ebene (Muster nur, wenn nicht „vorne")
+  await renderSvgStrokes(ctx, scene, w, h, scene.strokes.filter((s) => !s.front), !scene.patternFront);
 
   // 5. Text
   ctx.textBaseline = "middle";
+  const maxWidth = w * 0.9; // wie .textEl { max-width: 90% }
   for (const item of scene.texts) {
-    const text = item.text;
     const align = item.align ?? "center";
     ctx.textAlign = align;
     ctx.font = `${item.weight} ${item.size}px "${item.font}", sans-serif`;
+    const lines = wrapText(ctx, item.text, maxWidth);
+    // Shrink-to-fit: passt ein Wort trotz Umbruch nicht in 90 %, Schrift
+    // proportional verkleinern – so wird kein Titel je abgeschnitten.
+    const widest = Math.max(0, ...lines.map((l) => ctx.measureText(l).width));
+    const size = widest > maxWidth ? item.size * (maxWidth / widest) : item.size;
+    if (size !== item.size) ctx.font = `${item.weight} ${size}px "${item.font}", sans-serif`;
     const cx = (item.x / 100) * w;
     const cy = (item.y / 100) * h;
-    const lines = text.split("\n");
-    const lh = item.size * 1.15;
+    const lh = size * 1.15;
     const startY = cy - (lh * (lines.length - 1)) / 2;
     if (item.outline) {
       // Umriss-Stil: hohle Buchstaben, nur Kontur in der Schriftfarbe.
       ctx.strokeStyle = item.color;
-      ctx.lineWidth = Math.max(1, item.size * 0.045);
+      ctx.lineWidth = Math.max(1, size * 0.045);
       ctx.lineJoin = "round";
       lines.forEach((line, i) => ctx.strokeText(line, cx, startY + i * lh));
     } else {
@@ -181,4 +211,7 @@ export async function renderPosterScene(
     ctx.restore();
   }
   ctx.globalAlpha = 1;
+
+  // 7. „Über-Inhalt"-Ebene – Über-Text-Striche und (optional) generierte Linien.
+  await renderSvgStrokes(ctx, scene, w, h, scene.strokes.filter((s) => s.front), !!scene.patternFront);
 }

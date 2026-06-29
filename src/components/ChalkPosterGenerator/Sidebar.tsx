@@ -29,6 +29,8 @@ interface SidebarProps {
 
   pattern: PatternConfig;
   setPattern: (patch: Partial<PatternConfig>) => void;
+  patternFront: boolean;
+  setPatternFront: (v: boolean) => void;
   onRegenerate: () => void;
   brushNames: string[];
 
@@ -217,17 +219,17 @@ export function Sidebar(props: SidebarProps) {
           <Slider label={t.opacity} value={props.pattern.opacity} min={10} max={100} suffix="%"
             onChange={(v) => props.setPattern({ opacity: v })} />
           <div className={styles.field}>
-            <span className={styles.label}>{t.color}</span>
+            <span className={styles.label}>{t.layerTitle}</span>
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-              {(["white", "black"] as const).map((val) => {
-                const active = props.pattern.color === val;
+              {[{ front: false, label: t.patternBehind }, { front: true, label: t.patternFront }].map((o) => {
+                const active = props.patternFront === o.front;
                 return (
-                  <button key={val} onClick={() => props.setPattern({ color: val })}
+                  <button key={o.label} onClick={() => props.setPatternFront(o.front)}
                     style={{ flex: 1, padding: "5px 8px", borderRadius: 6, cursor: "pointer",
                       background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.04)",
                       border: active ? "1px solid rgba(255,255,255,0.5)" : "1px solid rgba(255,255,255,0.15)",
                       color: "#f5f2ed", fontSize: 13 }}>
-                    {val === "white" ? t.colorWhite : t.colorBlack}
+                    {o.label}
                   </button>
                 );
               })}

@@ -23,5 +23,12 @@ export const POSTER_SIZES: PosterSize[] = [
   { label: "Instagram", w: 400, h: 400 },
 ];
 
+// Referenz-Format (A3), gegen das Default-Schriftgrößen und Layouts gestaltet
+// sind. Typografie skaliert mit der knapperen Achse – min(w/REF_W, h/REF_H) –
+// damit der Text in jedes Format passt, ohne bei kurzen (quadratischen)
+// Formaten zu überlappen oder bei schmalen über den Rand zu laufen.
+export const REFERENCE_W = 420;
+export const REFERENCE_H = 594;
+
 export const CHALK = "#FFFFFF";
 export const POSTER_BG = "#000000";

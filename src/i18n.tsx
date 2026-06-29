@@ -33,7 +33,6 @@ const T = {
     assetStrength: "Stärke", chalkColor: "Kreide-Farbe",
     rotation: "Drehung", assetOpacity: "Deckkraft",
     mirror: "⇋ Spiegeln", mirrorV: "⇅ V-Spiegeln", deleteBtn: "🗑 Löschen",
-    layerUp: "↑ Ebene", layerDown: "↓ Ebene",
     assetHint: "Klick oder auf Poster ziehen", noItems: "Keine Elemente in dieser Kategorie.",
     upload: "⬆ SVG/PNG hochladen",
 
@@ -41,6 +40,9 @@ const T = {
     layoutHintNoLogos: "Layout ordnet Texte an · Logos im Logo-Bereich hinzufügen",
 
     strokeTitle: "Kreidelinie", deleteLabel: "Löschen",
+    layerTitle: "Ebene", layerHint: "↑ / ↓ Ebene",
+    patternBehind: "Hinter Inhalt", patternFront: "Über Inhalt",
+    capLoading: "Lädt 3D-Modell…", capLoadFailed: "Cap-Modell konnte nicht geladen werden.",
 
     hintDraw: "Zeichnen aktiv · ziehen zum Malen · Zeichnen ausschalten zum Bewegen",
     hintMove: "Alles verschieben: Striche, Texte, Linien & Logos · Entf zum Löschen · Strg+Z Rückgängig",
@@ -76,7 +78,6 @@ const T = {
     assetStrength: "Width", chalkColor: "Chalk color",
     rotation: "Rotation", assetOpacity: "Opacity",
     mirror: "⇋ Mirror", mirrorV: "⇅ V-Mirror", deleteBtn: "🗑 Delete",
-    layerUp: "↑ Layer", layerDown: "↓ Layer",
     assetHint: "Click or drag to poster", noItems: "No items in this category.",
     upload: "⬆ Upload SVG/PNG",
 
@@ -84,6 +85,9 @@ const T = {
     layoutHintNoLogos: "Layout arranges texts · Add logos in the logos section",
 
     strokeTitle: "Chalk line", deleteLabel: "Delete",
+    layerTitle: "Layer", layerHint: "↑ / ↓ Layer",
+    patternBehind: "Behind", patternFront: "In front",
+    capLoading: "Loading 3D model…", capLoadFailed: "Cap model could not be loaded.",
 
     hintDraw: "Drawing active · drag to paint · turn off drawing to move",
     hintMove: "Move anything: strokes, texts, lines & logos · Del to delete · Ctrl+Z to undo",
@@ -119,7 +123,6 @@ const T = {
     assetStrength: "Товщина", chalkColor: "Колір крейди",
     rotation: "Обертання", assetOpacity: "Прозорість",
     mirror: "⇋ Дзеркало", mirrorV: "⇅ В-дзеркало", deleteBtn: "🗑 Видалити",
-    layerUp: "↑ Шар", layerDown: "↓ Шар",
     assetHint: "Клік або перетягни на постер", noItems: "Немає елементів у цій категорії.",
     upload: "⬆ Завантажити SVG/PNG",
 
@@ -127,6 +130,9 @@ const T = {
     layoutHintNoLogos: "Макет розставляє тексти · Логотипи — у розділі логотипів",
 
     strokeTitle: "Крейдова лінія", deleteLabel: "Видалити",
+    layerTitle: "Шар", layerHint: "↑ / ↓ Шар",
+    patternBehind: "За змістом", patternFront: "Над змістом",
+    capLoading: "Завантаження 3D-моделі…", capLoadFailed: "Не вдалося завантажити модель кепки.",
 
     hintDraw: "Малювання активне · тягни для нанесення · вимкни для переміщення",
     hintMove: "Пересувай все: штрихи, тексти, лінії й логотипи · Del для видалення · Ctrl+Z скасувати",

@@ -347,9 +347,16 @@
 }
 
 .previewHint {
+  position: absolute;
+  bottom: 92px; /* über der DrawingToolbar (bottom:16, bis ~63px hoch im Zeichnen-Modus) */
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 90%;
+  text-align: center;
   font-size: 14px;
   color: #666;
   letter-spacing: 0.5px;
+  pointer-events: none;
 }
 
 /* ── Draggable overlays ──────────────────────────────── */

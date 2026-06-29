@@ -22,6 +22,7 @@ export interface PosterCanvasProps {
   selectedPatternId?: string | null;
   onPatternPointerDown?: (id: string, e: React.PointerEvent) => void;
   drawMode?: boolean;
+  patternFront?: boolean; // generierte Linien über Text & Illustrationen
 }
 
 export interface PosterCanvasHandle {
@@ -39,7 +40,7 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
       liveStrokePath, liveStrokeColor = "#ffffff", liveStrokeOpacity = 0.8,
       selectedStrokeId, onStrokePointerDown,
       selectedPatternId, onPatternPointerDown,
-      drawMode,
+      drawMode, patternFront,
     },
     ref
   ) {
@@ -49,6 +50,40 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
     const displayH = size.h * scale;
     const fillColor = patternFill(pattern.color);
     const ordered = [...strokes].sort((a, b) => a.zIndex - b.zIndex);
+    const backStrokes = ordered.filter((s) => !s.front);
+    const frontStrokes = ordered.filter((s) => s.front);
+
+    // Ein einzelner Strich (interaktiv) – für Hinter- wie Über-Text-Ebene.
+    const renderStroke = (s: ChalkStroke) => (
+      <g key={s.id}
+        opacity={s.opacity}
+        transform={`translate(${s.offsetX} ${s.offsetY})`}
+        style={{ cursor: onStrokePointerDown ? "grab" : "default", pointerEvents: onStrokePointerDown ? "auto" : "none" }}
+        onPointerDown={onStrokePointerDown ? (e) => { e.stopPropagation(); onStrokePointerDown(s.id, e); } : undefined}
+      >
+        <path d={s.svgPath} fill={s.color} />
+        {selectedStrokeId === s.id && (
+          <path d={s.svgPath} fill="none" stroke="rgba(255,255,255,0.5)"
+            strokeWidth={0.5} strokeDasharray="2 1.5" />
+        )}
+      </g>
+    );
+
+    // Eine generierte Hintergrund-Linie (interaktiv) – Hinter- oder Über-Inhalt.
+    const renderPattern = (ps: PatternStroke) => (
+      <g key={ps.id}
+        opacity={ps.opacity}
+        transform={`translate(${ps.offsetX ?? 0} ${ps.offsetY ?? 0})`}
+        style={{ cursor: onPatternPointerDown ? "grab" : "default", pointerEvents: onPatternPointerDown ? "auto" : "none" }}
+        onPointerDown={onPatternPointerDown ? (e) => { e.stopPropagation(); onPatternPointerDown(ps.id, e); } : undefined}
+      >
+        <path d={ps.svgPath} fill={fillColor} />
+        {selectedPatternId === ps.id && (
+          <path d={ps.svgPath} fill="none" stroke="rgba(255,255,255,0.5)"
+            strokeWidth={0.5} strokeDasharray="2 1.5" />
+        )}
+      </g>
+    );
 
     return (
       <div
@@ -73,35 +108,9 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
             style={{ cursor: "default" }}
           />
 
-          {patternStrokes.map((ps) => (
-            <g key={ps.id}
-              opacity={ps.opacity}
-              transform={`translate(${ps.offsetX ?? 0} ${ps.offsetY ?? 0})`}
-              style={{ cursor: onPatternPointerDown ? "grab" : "default" }}
-              onPointerDown={onPatternPointerDown ? (e) => { e.stopPropagation(); onPatternPointerDown(ps.id, e); } : undefined}
-            >
-              <path d={ps.svgPath} fill={fillColor} />
-              {selectedPatternId === ps.id && (
-                <path d={ps.svgPath} fill="none" stroke="rgba(255,255,255,0.5)"
-                  strokeWidth={0.5} strokeDasharray="2 1.5" />
-              )}
-            </g>
-          ))}
+          {!patternFront && patternStrokes.map(renderPattern)}
 
-          {ordered.map((s) => (
-            <g key={s.id}
-              opacity={s.opacity}
-              transform={`translate(${s.offsetX} ${s.offsetY})`}
-              style={{ cursor: onStrokePointerDown ? "grab" : "default" }}
-              onPointerDown={onStrokePointerDown ? (e) => { e.stopPropagation(); onStrokePointerDown(s.id, e); } : undefined}
-            >
-              <path d={s.svgPath} fill={s.color} />
-              {selectedStrokeId === s.id && (
-                <path d={s.svgPath} fill="none" stroke="rgba(255,255,255,0.5)"
-                  strokeWidth={0.5} strokeDasharray="2 1.5" />
-              )}
-            </g>
-          ))}
+          {backStrokes.map(renderStroke)}
 
           {liveStrokePath && (
             <path d={liveStrokePath} fill={liveStrokeColor} opacity={liveStrokeOpacity} />
@@ -114,6 +123,23 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
           style={{ zIndex: 2, pointerEvents: "none" }}
         >
           {children}
+
+          {/* „Über-Inhalt"-Ebene – über Text & Illustrationen, aber unter den
+              Bearbeitungs-Griffen. Leere Flächen lassen Klicks durch. Enthält
+              die Über-Text-Striche und (optional) die generierten Linien. */}
+          {(frontStrokes.length > 0 || (patternFront && patternStrokes.length > 0)) && (
+            <svg
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              style={{
+                position: "absolute", inset: 0, width: "100%", height: "100%",
+                overflow: "visible", zIndex: 50, pointerEvents: "none",
+              }}
+            >
+              {patternFront && patternStrokes.map(renderPattern)}
+              {frontStrokes.map(renderStroke)}
+            </svg>
+          )}
         </div>
       </div>
     );

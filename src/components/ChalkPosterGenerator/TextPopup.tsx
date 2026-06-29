@@ -10,6 +10,7 @@ interface TextPopupProps {
   fonts: { label: string; value: string }[];
   onClose: () => void;
   onDelete?: () => void;
+  showLayerHint?: boolean; // Ebene per ↑/↓-Tastatur (nur wo Text-Layering gilt)
 }
 
 const btnStyle = (active: boolean): React.CSSProperties => ({
@@ -19,7 +20,7 @@ const btnStyle = (active: boolean): React.CSSProperties => ({
   color: "#f5f2ed", fontSize: 14,
 });
 
-export function TextPopup({ field, align, onAlignChange, fonts, onClose, onDelete }: TextPopupProps) {
+export function TextPopup({ field, align, onAlignChange, fonts, onClose, onDelete, showLayerHint }: TextPopupProps) {
   const { t } = useT();
   return (
     <div data-no-chalk style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -76,6 +77,10 @@ export function TextPopup({ field, align, onAlignChange, fonts, onClose, onDelet
             </button>
           ))}
         </div>
+      )}
+
+      {showLayerHint && (
+        <div style={{ fontSize: 12, color: "#666", textAlign: "center", letterSpacing: "0.04em" }}>{t.layerHint}</div>
       )}
     </div>
   );

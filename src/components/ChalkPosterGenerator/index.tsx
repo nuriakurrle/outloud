@@ -39,6 +39,8 @@ import {
   FONTS,
   POSTER_SIZES,
   POSTER_BG,
+  REFERENCE_W,
+  REFERENCE_H,
 } from "./constants";
 import { useUndoRedo } from "./useUndoRedo";
 import { useT } from "../../i18n";
@@ -47,6 +49,9 @@ export function ChalkPosterGenerator() {
   const { t } = useT();
   const [posterSizeIndex, setPosterSizeIndex] = useState(0);
   const size = POSTER_SIZES[posterSizeIndex];
+  // Typografie skaliert mit der knapperen Achse, damit Text in jedes Format
+  // passt (schmaler Flyer ↔ quadratischer Insta-Post).
+  const fontScale = Math.min(size.w / REFERENCE_W, size.h / REFERENCE_H);
 
   // Invert: white-on-black (false) vs black-on-white (true)
   const [inverted, setInverted] = useState(false);
@@ -66,6 +71,8 @@ export function ChalkPosterGenerator() {
   });
   const [patternStrokes, setPatternStrokes] = useState<PatternStroke[]>([]);
   const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
+  // Generierte Linien über Text & Illustrationen rendern (Standard: dahinter).
+  const [patternFront, setPatternFront] = useState(false);
   const updatePattern = useCallback(
     (patch: Partial<PatternConfig>) =>
       setPatternConfig((c) => ({ ...c, ...patch })),
@@ -74,7 +81,13 @@ export function ChalkPosterGenerator() {
   const skipRegenRef = useRef(false);
   useEffect(() => {
     if (skipRegenRef.current) { skipRegenRef.current = false; return; }
-    setPatternStrokes(generatePatternStrokes(patternConfig, size.w, size.h));
+    // Neue Linien generieren, aber die manuell gezogene Platzierung (offsetX/Y)
+    // je Linie beibehalten – sonst springen verschobene Linien zurück.
+    setPatternStrokes((prev) =>
+      generatePatternStrokes(patternConfig, size.w, size.h).map((s, i) =>
+        prev[i] ? { ...s, offsetX: prev[i].offsetX, offsetY: prev[i].offsetY } : s
+      )
+    );
   }, [patternConfig, size.w, size.h]);
 
   const effectivePatternConfig = { ...patternConfig, color: inverted ? "black" as const : "white" as const };
@@ -154,6 +167,8 @@ export function ChalkPosterGenerator() {
   );
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  // Stapel-Reihenfolge der Texte untereinander (textId → z, Standard 0).
+  const [textZ, setTextZ] = useState<Record<string, number>>({});
 
   // Dynamisch hinzugefügte Textelemente (zusätzlich zu den 4 benannten)
   interface ExtraText {
@@ -645,6 +660,19 @@ export function ChalkPosterGenerator() {
     [selectedAssetId]
   );
 
+  // Text gegenüber den anderen Texten nach vorne/hinten schieben.
+  const handleTextLayer = useCallback(
+    (dir: 1 | -1) => {
+      if (!selectedTextId) return;
+      setTextZ((prev) => {
+        const vals = Object.values(prev);
+        const target = dir === 1 ? Math.max(0, ...vals) + 1 : Math.min(0, ...vals) - 1;
+        return { ...prev, [selectedTextId]: target };
+      });
+    },
+    [selectedTextId]
+  );
+
   // Alles neu generieren — komplett neue Komposition im Brand-Rahmen:
   // zufälliges Layout (Positionen + Ausrichtung + Logo-Plätze) und ein neues
   // Hintergrund-Muster. Schriften, Text-Inhalte und platzierte Illustrationen
@@ -705,7 +733,7 @@ export function ChalkPosterGenerator() {
   }, [selectedStrokeId, commit]);
 
   const updateSelectedStroke = useCallback(
-    (patch: Partial<{ color: string; opacity: number; brushName: string; strokeWidth: number }>) => {
+    (patch: Partial<{ color: string; opacity: number; brushName: string; strokeWidth: number; front: boolean }>) => {
       if (!selectedStrokeId) return;
       setStrokes((prev) => prev.map((s) => {
         if (s.id !== selectedStrokeId) return s;
@@ -822,6 +850,17 @@ export function ChalkPosterGenerator() {
         else if (selectedPatternId) deleteSelectedPattern();
         return;
       }
+      // Ebene der Auswahl: ↑ nach vorne, ↓ nach hinten – einheitlich für
+      // Logos/Illustrationen, Texte und Striche/Pinsel (statt eigener Buttons).
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        const dir = e.key === "ArrowUp" ? 1 : -1;
+        if (selectedAssetId) handleLayer(dir);
+        else if (selectedTextId) handleTextLayer(dir);
+        else if (selectedStrokeId) updateSelectedStroke({ front: dir === 1 });
+        else return;
+        e.preventDefault();
+        return;
+      }
       // Modus + Pinselgröße
       if (e.key === "d" || e.key === "D") setMode("draw");
       else if (e.key === "v" || e.key === "V" || e.key === "Escape")
@@ -838,6 +877,10 @@ export function ChalkPosterGenerator() {
     deleteSelectedStroke,
     selectedPatternId,
     deleteSelectedPattern,
+    selectedTextId,
+    handleLayer,
+    handleTextLayer,
+    updateSelectedStroke,
     undo,
     redo,
   ]);
@@ -904,6 +947,12 @@ export function ChalkPosterGenerator() {
     })),
   ];
 
+  // Stapel-Reihenfolge anwenden: höheres z → später gezeichnet → oben.
+  // Stabile Sortierung erhält die Default-Reihenfolge bei gleichem z.
+  const orderedTextItems = [...textItems].sort(
+    (a, b) => (textZ[a.key] ?? 0) - (textZ[b.key] ?? 0)
+  );
+
   // ── Szene bauen (Single Source of Truth für Render + Export) ──
   const buildScene = useCallback((): PosterScene => {
     return {
@@ -912,12 +961,13 @@ export function ChalkPosterGenerator() {
       bg: bgColor,
       pattern: effectivePatternConfig,
       patternStrokes,
+      patternFront,
       strokes,
-      texts: textItems.map((t) => ({
+      texts: orderedTextItems.map((t) => ({
         key: t.key,
         text: t.text,
         font: t.font,
-        size: t.size,
+        size: t.size * fontScale,
         weight: t.weight,
         color: t.color,
         align: t.align,
@@ -938,12 +988,15 @@ export function ChalkPosterGenerator() {
     };
   }, [
     size,
+    fontScale,
     bgColor,
     effectivePatternConfig,
     patternStrokes,
+    patternFront,
     positions,
     strokes,
     textItems,
+    textZ,
     placedAssets,
     allAssets,
     getAssetSrc,
@@ -1029,6 +1082,8 @@ export function ChalkPosterGenerator() {
         onInvert={() => setInverted((i) => !i)}
         pattern={patternConfig}
         setPattern={updatePattern}
+        patternFront={patternFront}
+        setPatternFront={setPatternFront}
         onRegenerate={regeneratePattern}
         brushNames={getAllBrushes().map((b) => b.name)}
         layoutSection={
@@ -1048,7 +1103,6 @@ export function ChalkPosterGenerator() {
             selected={allAssets.find((a) => a.id === selectedAsset?.assetId)?.category === "logos" ? selectedAsset : null}
             onUpdateSelected={updateSelected}
             onDeleteSelected={deleteSelected}
-            onLayer={handleLayer}
             onChalkChange={updateAssetChalk}
           />
         }
@@ -1061,7 +1115,6 @@ export function ChalkPosterGenerator() {
             selected={allAssets.find((a) => a.id === selectedAsset?.assetId)?.category !== "logos" ? selectedAsset : null}
             onUpdateSelected={updateSelected}
             onDeleteSelected={deleteSelected}
-            onLayer={handleLayer}
             onChalkChange={updateAssetChalk}
           />
         }
@@ -1107,6 +1160,8 @@ export function ChalkPosterGenerator() {
                 style={{ background: "#252525", border: "1px solid #3a3a3a", color: "#ddd", borderRadius: 5, padding: "8px 9px", fontSize: 15, fontFamily: "inherit", width: "100%", boxSizing: "border-box" as const }}>
                 {getAllBrushes().map((b) => <option key={b.name} value={b.name}>{b.name.replace("Figma ", "")}</option>)}
               </select>
+              {/* Ebene über ↑/↓ statt Buttons */}
+              <div style={{ fontSize: 12, color: "#666", textAlign: "center", letterSpacing: "0.04em" }}>{t.layerHint}</div>
               {/* Delete */}
               <button onClick={() => deleteSelectedStroke()}
                 style={{ padding: "7px 0", borderRadius: 6, background: "rgba(240,100,100,0.12)", border: "1px solid rgba(240,100,100,0.35)", color: "#f08080", fontSize: 14, cursor: "pointer" }}>
@@ -1127,6 +1182,7 @@ export function ChalkPosterGenerator() {
                 onAlignChange={(a) => setTextAligns((prev) => ({ ...prev, [k]: a }))}
                 fonts={FONTS}
                 onClose={() => setSelectedTextId(null)}
+                showLayerHint
               />
             );
           }
@@ -1150,6 +1206,7 @@ export function ChalkPosterGenerator() {
               fonts={FONTS}
               onClose={() => setSelectedTextId(null)}
               onDelete={() => { setExtraTexts((prev) => prev.filter((t) => t.id !== selectedTextId)); setSelectedTextId(null); }}
+              showLayerHint
             />
           );
         })()}
@@ -1182,6 +1239,7 @@ export function ChalkPosterGenerator() {
           selectedPatternId={selectedPatternId}
           onPatternPointerDown={mode === "move" ? handlePatternPointerDown : undefined}
           drawMode={mode === "draw"}
+          patternFront={patternFront}
         >
           {/* Snap lines */}
           {snapLines.length > 0 && (
@@ -1325,13 +1383,13 @@ export function ChalkPosterGenerator() {
             </button>
           )}
 
-          {textItems.map((item) => (
+          {orderedTextItems.map((item) => (
             <TextOverlay
               key={item.key}
               id={item.key}
               text={item.text}
               font={item.font}
-              size={item.size}
+              size={item.size * fontScale}
               weight={item.weight}
               color={item.color}
               align={item.align}

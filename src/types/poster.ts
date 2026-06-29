@@ -46,6 +46,7 @@ export interface ChalkStroke {
   offsetY: number;
   zIndex: number;
   isGenerated: boolean;
+  front?: boolean; // true = über dem Text rendern (Standard: dahinter)
 }
 
 export type AssetCategory =

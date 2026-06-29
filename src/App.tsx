@@ -1,10 +1,13 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { Navbar } from "./components/Navbar";
-import { ChalkPosterGenerator } from "./components/ChalkPosterGenerator";
-import Interactive from "./pages/Interactive";
 import Home from "./pages/Home";
-import Merch from "./pages/Merch";
 import "./styles/chalkUi.css";
+
+// Schwere Editor-Seiten (Poster, Mediapipe, Merch+three.js) erst bei Navigation laden.
+const ChalkPosterGenerator = lazy(() => import("./components/ChalkPosterGenerator").then(m => ({ default: m.ChalkPosterGenerator })));
+const Interactive = lazy(() => import("./pages/Interactive"));
+const Merch = lazy(() => import("./pages/Merch"));
 
 export default function App() {
   return (
@@ -38,12 +41,14 @@ export default function App() {
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <Navbar />
         <div style={{ flex: 1, overflow: "hidden", minHeight: 0 }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/interactive" element={<Interactive />} />
-            <Route path="/poster-maker" element={<ChalkPosterGenerator />} />
-            <Route path="/merch" element={<Merch />} />
-          </Routes>
+          <Suspense fallback={<div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inria Sans', system-ui, sans-serif", color: "#000" }}>…</div>}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/interactive" element={<Interactive />} />
+              <Route path="/poster-maker" element={<ChalkPosterGenerator />} />
+              <Route path="/merch" element={<Merch />} />
+            </Routes>
+          </Suspense>
         </div>
       </div>
     </BrowserRouter>

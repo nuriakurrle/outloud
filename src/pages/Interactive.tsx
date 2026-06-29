@@ -133,15 +133,29 @@ export default function Interactive() {
   const handleImageUpload = useCallback(async (file: File) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
+    // Handler VOR `src` setzen, sonst kann onload feuern bevor wir lauschen.
+    // onerror auflösen, damit ein nicht dekodierbares Bild (z.B. HEIC) eine
+    // Meldung zeigt statt still zu hängen → „es kommt nichts raus".
+    const loaded = new Promise<boolean>((res) => {
+      img.onload = () => res(true);
+      img.onerror = () => res(false);
+    });
     img.src = url;
+    let ok = true;
     try {
       await img.decode();
     } catch {
-      await new Promise((res) => (img.onload = res));
+      ok = await loaded;
     }
-    const s = Math.min(1, MAX_UPLOAD_DIM / Math.max(img.width, img.height));
-    const w = Math.max(1, Math.floor(img.width * s));
-    const h = Math.max(1, Math.floor(img.height * s));
+    if (!ok || !img.naturalWidth) {
+      URL.revokeObjectURL(url);
+      setError("Bild konnte nicht geladen werden. Bitte JPG oder PNG verwenden.");
+      return;
+    }
+    setError(null);
+    const s = Math.min(1, MAX_UPLOAD_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.floor(img.naturalWidth * s));
+    const h = Math.max(1, Math.floor(img.naturalHeight * s));
     const c = document.createElement("canvas");
     c.width = w;
     c.height = h;
@@ -274,7 +288,18 @@ export default function Interactive() {
       <div ref={areaRef} style={S.canvasArea}>
         <canvas ref={canvasRef} style={S.canvas} />
         {source === "upload" && !uploadedImage && (
-          <div style={S.placeholder}>{t.pickImage}</div>
+          <label style={S.placeholder} data-chalk>
+            {t.pickImage}
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleImageUpload(f);
+              }}
+            />
+          </label>
         )}
       </div>
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AssetCategory, AssetItem, ChalkStroke, PlacedAsset, Position, ToolMode } from "../../types/poster";
 import type { Align } from "../../types/poster";
 import { makeFreehandStroke, rerenderStroke, getAllBrushes, createLivePath } from "../../lib/brushStrokes";
@@ -19,7 +19,10 @@ import { makeId, POS_KEYS, type PosKey, FONTS } from "../ChalkPosterGenerator/co
 import { useT } from "../../i18n";
 import { MerchSidebar } from "./MerchSidebar";
 import { TshirtCanvas, type PosterCanvasHandle, FRONT_IMG, BACK_IMG } from "./TshirtCanvas";
-import { MERCH_SIZE, TSHIRT_VIEWS, EMPTY_PATTERN } from "./constants";
+// three.js ist schwer – nur laden, wenn die 3D-Cap-Ansicht geöffnet wird.
+import type { CapViewerHandle } from "./CapViewer";
+const CapViewer = lazy(() => import("./CapViewer").then(m => ({ default: m.CapViewer })));
+import { MERCH_SIZE, TSHIRT_VIEWS, EMPTY_PATTERN, MERCH_ITEMS, type MerchProduct } from "./constants";
 
 const isMaskAsset = (cat: string) => cat === "strokes" || cat === "shapes";
 const isDefaultWhite = (c: string) => c.toLowerCase() === "#ffffff";
@@ -31,7 +34,13 @@ const DEFAULT_POSITIONS: Record<PosKey, Position> = {
 export function MerchDesigner() {
   const { t } = useT();
 
-  // ── Shirt state ────────────────────────────────────────
+  // ── Produkt-/Shirt state ───────────────────────────────
+  const [product, setProduct] = useState<MerchProduct>("tshirt");
+  // Cap: "edit" = Design auf flacher Druckfläche bearbeiten, "view" = 3D-Cap
+  const [capMode, setCapMode] = useState<"edit" | "view">("edit");
+  const [designCanvas, setDesignCanvas] = useState<HTMLCanvasElement | null>(null);
+  const [capReady, setCapReady] = useState(false);
+  const capViewerRef = useRef<CapViewerHandle>(null);
   const [side, setSide] = useState<"front" | "back">("front");
   const [shirtColor, setShirtColor] = useState<"black" | "white">("black");
   const textColor = shirtColor === "white" ? "#000000" : "#FFFFFF";
@@ -343,6 +352,7 @@ export function MerchDesigner() {
       if (mod && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
       if (mod) return;
       if (e.key === "Delete" || e.key === "Backspace") { if (selectedStrokeId) deleteSelectedStroke(); else if (selectedAssetId) deleteSelected(); return; }
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") { if (selectedAssetId) { e.preventDefault(); handleLayer(e.key === "ArrowUp" ? 1 : -1); } return; }
       if (e.key === "d" || e.key === "D") setMode("draw");
       else if (e.key === "v" || e.key === "V" || e.key === "Escape") setMode("move");
       else if (e.key === "[") setBrushWidth(w => Math.max(0.01, Math.round((w - 0.02) * 100) / 100));
@@ -350,18 +360,20 @@ export function MerchDesigner() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedAssetId, deleteSelected, selectedStrokeId, deleteSelectedStroke, undo, redo]);
+  }, [selectedAssetId, deleteSelected, selectedStrokeId, deleteSelectedStroke, handleLayer, undo, redo]);
 
   // ── Scene / Export ─────────────────────────────────────────
   const selectedAsset = placedAssets.find(a => a.id === selectedAssetId) ?? null;
 
-  const textItems = [
+  // Stabil halten: sonst neue Referenz pro Render → buildScene/renderDesign neu
+  // → der 3D-View-Effekt feuert endlos (Freeze beim Öffnen der 3D-Ansicht).
+  const textItems = useMemo(() => [
     { key: "header" as PosKey, text: headerText, font: headerFont, size: headerSize, weight: headerWeight, color: textColor, align: textAligns.header, outline: headerOutline, position: positions.header },
     { key: "sub" as PosKey, text: subText, font: subFont, size: subSize, weight: "600", color: textColor, align: textAligns.sub, outline: subOutline, position: positions.sub },
     { key: "body" as PosKey, text: bodyText, font: bodyFont, size: bodySize, weight: "400", color: textColor, align: textAligns.body, outline: bodyOutline, position: positions.body },
     { key: "detail" as PosKey, text: detailText, font: detailFont, size: detailSize, weight: "400", color: textColor, align: textAligns.detail, outline: detailOutline, position: positions.detail },
     ...extraTexts.map(et => ({ key: et.id, text: et.text, font: et.font, size: et.size, weight: et.weight, color: textColor, align: et.align, outline: et.outline, position: et.position })),
-  ];
+  ], [headerText, headerFont, headerSize, headerWeight, headerOutline, subText, subFont, subSize, subOutline, bodyText, bodyFont, bodySize, bodyOutline, detailText, detailFont, detailSize, detailOutline, textColor, textAligns, positions, extraTexts]);
 
   const buildScene = useCallback((): PosterScene => ({
     w: MERCH_SIZE.w, h: MERCH_SIZE.h, bg: "rgba(0,0,0,0)",
@@ -370,28 +382,56 @@ export function MerchDesigner() {
     assets: placedAssets.map((a): SceneAsset => { const item = allAssets.find(x => x.id === a.assetId); return { ...a, src: item?.src ?? getAssetSrc(a.assetId), category: item?.category ?? "logos", naturalWidth: item?.naturalWidth, naturalHeight: item?.naturalHeight }; }),
   }), [strokes, textItems, placedAssets, allAssets, getAssetSrc]);
 
+  // Design (Text/Logos/Striche) auf transparentes Canvas rendern – als Textur
+  // fürs 3D-Cap. Gleicher Szenen-Pfad wie der Export, nur ohne Kleidungsstück.
+  const renderDesign = useCallback(async () => {
+    const scene = buildScene();
+    const images = await loadSceneImages(scene);
+    const texScale = 2;
+    const c = document.createElement("canvas");
+    c.width = MERCH_SIZE.w * texScale; c.height = MERCH_SIZE.h * texScale;
+    const ctx = c.getContext("2d")!;
+    ctx.scale(texScale, texScale);
+    await renderPosterScene(ctx, scene, images);
+    setDesignCanvas(c);
+  }, [buildScene]);
+
+  // Beim Wechsel in die 3D-Ansicht (und bei Design-Änderungen) Textur aktualisieren.
+  useEffect(() => {
+    if (product === "cap" && capMode === "view") { setCapReady(false); renderDesign(); }
+  }, [product, capMode, renderDesign]);
+
+  // Cap: Snapshot der 3D-Ansicht als PNG herunterladen.
+  const handleCapDownload = useCallback(async () => {
+    const blob = await capViewerRef.current?.capture();
+    if (blob) downloadBlob(blob, "cap.png");
+  }, []);
+
   const handleOrder = useCallback(async () => {
+    // Cap wird aus der 3D-Ansicht heraus „bestellt" → dorthin wechseln.
+    if (product === "cap") { setCapMode("view"); return; }
+
     const scale = 3;
     const { w, h } = MERCH_SIZE;
+    const scene = buildScene();
+    const images = await loadSceneImages(scene);
     const canvas = document.createElement("canvas");
     canvas.width = w * scale; canvas.height = h * scale;
     const ctx = canvas.getContext("2d")!;
-    // 1. Draw t-shirt
-    const shirtSrc = side === "front" ? FRONT_IMG : BACK_IMG;
-    const shirtImg = await loadImage(shirtSrc);
+
+    // T-Shirt: 1. Kleidungsstück zeichnen
+    const shirtImg = await loadImage(side === "front" ? FRONT_IMG : BACK_IMG);
     ctx.drawImage(shirtImg, 0, 0, w * scale, h * scale);
     if (shirtColor === "white") {
       const d = ctx.getImageData(0, 0, w * scale, h * scale);
       for (let i = 0; i < d.data.length; i += 4) { d.data[i] = 255 - d.data[i]; d.data[i + 1] = 255 - d.data[i + 1]; d.data[i + 2] = 255 - d.data[i + 2]; }
       ctx.putImageData(d, 0, 0);
     }
-    // 2. Overlay design (transparent bg = no-op fill)
-    const scene = buildScene();
-    const images = await loadSceneImages(scene);
+    // 2. Design darüber legen (transparenter Hintergrund = no-op)
     ctx.scale(scale, scale);
     await renderPosterScene(ctx, scene, images);
     canvas.toBlob(blob => downloadBlob(blob!, `merch-${side}.png`), "image/png");
-  }, [side, shirtColor, buildScene]);
+  }, [product, side, shirtColor, buildScene]);
 
   // ── Sidebar panels ─────────────────────────────────────────
   const headerField: TextFieldState = { text: headerText, setText: setHeaderText, font: headerFont, setFont: setHeaderFont, size: headerSize, setSize: setHeaderSize, sizeMin: 18, sizeMax: 80, weight: headerWeight, setWeight: setHeaderWeight, outline: headerOutline, setOutline: setHeaderOutline };
@@ -445,7 +485,10 @@ export function MerchDesigner() {
 
   return (
     <div className={`${styles.app} chalk-ui`}>
+      {(product === "tshirt" || (product === "cap" && capMode === "edit")) && (
       <MerchSidebar
+        product={product}
+        onProductChange={setProduct}
         shirtColor={shirtColor}
         onColorChange={setShirtColor}
         textPanel={textPanel}
@@ -454,17 +497,19 @@ export function MerchDesigner() {
         logoSection={
           <AssetPanel assets={logoAssets} onPlace={handlePlace} onDragPlace={handleDragPlace} onUpload={file => handleUpload(file, "logos")}
             selected={allAssets.find(a => a.id === selectedAsset?.assetId)?.category === "logos" ? selectedAsset : null}
-            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onLayer={handleLayer} onChalkChange={updateAssetChalk} />
+            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onChalkChange={updateAssetChalk} />
         }
         illustrationSection={
           <AssetPanel assets={illustrationAssets} onPlace={handlePlace} onDragPlace={handleDragPlace} onUpload={file => handleUpload(file, "icons")}
             selected={allAssets.find(a => a.id === selectedAsset?.assetId)?.category !== "logos" ? selectedAsset : null}
-            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onLayer={handleLayer} onChalkChange={updateAssetChalk} />
+            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onChalkChange={updateAssetChalk} />
         }
         onOrder={handleOrder}
       />
+      )}
 
-      {/* View strip: front / back */}
+      {/* View strip: front / back (nur T-Shirt) */}
+      {product === "tshirt" && (
       <div style={{ width: 44, flexShrink: 0, background: "#141414", borderRight: "1px solid #2a2a2a", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 4 }}>
         {TSHIRT_VIEWS.map(v => (
           <button key={v.id} onClick={() => setSide(v.id)} title={v.label}
@@ -476,13 +521,48 @@ export function MerchDesigner() {
           </button>
         ))}
       </div>
+      )}
 
       {/* Canvas area */}
       <div className={styles.preview}>
+        {/* Produkt-Umschalter: T-Shirt / Cap */}
+        <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", zIndex: 90, display: "flex", gap: 4, background: "rgba(20,20,20,0.85)", border: "1px solid #2a2a2a", borderRadius: 8, padding: 3 }}>
+          {MERCH_ITEMS.map((p) => (
+            <button key={p.id} onClick={() => setProduct(p.id)}
+              style={{ padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, letterSpacing: "0.03em", fontFamily: "'Inria Sans', system-ui, sans-serif",
+                background: product === p.id ? "#fff" : "transparent", color: product === p.id ? "#111" : "rgba(255,255,255,0.55)" }}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Cap: Umschalter Bearbeiten (2D) / 3D-Ansicht */}
+        {product === "cap" && (
+          <div style={{ position: "absolute", top: 48, left: "50%", transform: "translateX(-50%)", zIndex: 90, display: "flex", gap: 4, background: "rgba(20,20,20,0.85)", border: "1px solid #2a2a2a", borderRadius: 8, padding: 3 }}>
+            {([["edit", "2D"], ["view", "3D"]] as const).map(([m, label]) => (
+              <button key={m} onClick={() => setCapMode(m)}
+                style={{ padding: "4px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inria Sans', system-ui, sans-serif",
+                  background: capMode === m ? "#fff" : "transparent", color: capMode === m ? "#111" : "rgba(255,255,255,0.55)" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {product === "cap" && capMode === "view" ? (
+          <Suspense fallback={<div style={{ width: "100%", height: "100%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontSize: 14, fontFamily: "'Inria Sans', system-ui, sans-serif" }}>{t.capLoading}</div>}>
+            <CapViewer ref={capViewerRef} design={designCanvas} color={shirtColor} onReady={() => setCapReady(true)} />
+            <button onClick={handleCapDownload} disabled={!capReady}
+              style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", zIndex: 90, padding: "10px 28px", borderRadius: 8, border: "none", cursor: capReady ? "pointer" : "default", background: capReady ? "#fff" : "rgba(255,255,255,0.3)", color: "#111", fontSize: 14, fontWeight: 700, letterSpacing: "0.03em", fontFamily: "'Inria Sans', system-ui, sans-serif" }}>
+              {t.order}
+            </button>
+          </Suspense>
+        ) : (<>
         <TshirtCanvas
           ref={canvasRef}
           side={side}
           shirtColor={shirtColor}
+          garment={product === "tshirt"}
           size={MERCH_SIZE}
           scale={scale}
           containerRef={containerRef}
@@ -557,6 +637,7 @@ export function MerchDesigner() {
         <DrawingToolbar mode={mode} setMode={setMode} chalkColor={chalkColor} setChalkColor={setChalkColor} brushName={brushName} setBrushName={setBrushName} brushWidth={brushWidth} setBrushWidth={setBrushWidth} brushOpacity={brushOpacity} setBrushOpacity={setBrushOpacity} onUndo={undo} canUndo={canUndo} onRedo={redo} canRedo={canRedo} />
 
         <p className={styles.previewHint}>{mode === "draw" ? t.hintDraw : t.hintMove}</p>
+        </>)}
       </div>
     </div>
   );
