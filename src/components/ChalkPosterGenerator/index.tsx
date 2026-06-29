@@ -83,7 +83,7 @@ function ChalkPosterGeneratorInner({
     mode, brushOpacity, liveStrokePath, chalkColor,
     commit, deleteSelectedStroke, updateSelectedStroke,
     handlePlace, handleDragPlace, handleUpload, handleUploadStencil,
-    updateAssetChalk, updateSelected, deleteSelected, handleLayer,
+    updateAssetChalk, updateSelected, deleteSelected,
     handleStrokePointerDown, addText,
     logoAssets, illustrationAssets,
     containerRef, beginDeltaDrag,
@@ -248,14 +248,14 @@ function ChalkPosterGeneratorInner({
             onUpload={file => handleUpload(file, "logos")}
             onUploadStencil={(dataUrl, name) => handleUploadStencil(dataUrl, name, "logos")}
             selected={allAssets.find(a => a.id === selectedAsset?.assetId)?.category === "logos" ? selectedAsset : null}
-            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onLayer={handleLayer} onChalkChange={updateAssetChalk} />
+            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onChalkChange={updateAssetChalk} />
         }
         illustrationSection={
           <AssetPanel assets={illustrationAssets} onPlace={handlePlace} onDragPlace={handleDragPlace}
             onUpload={file => handleUpload(file, "icons")}
             onUploadStencil={(dataUrl, name) => handleUploadStencil(dataUrl, name, "icons")}
             selected={allAssets.find(a => a.id === selectedAsset?.assetId)?.category !== "logos" ? selectedAsset : null}
-            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onLayer={handleLayer} onChalkChange={updateAssetChalk} />
+            onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onChalkChange={updateAssetChalk} />
         }
         strokePanel={strokePanel}
         textPanel={textPanel}

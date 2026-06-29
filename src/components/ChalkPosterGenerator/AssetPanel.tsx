@@ -24,7 +24,6 @@ interface AssetPanelProps {
   selected: PlacedAsset | null;
   onUpdateSelected: (patch: Partial<PlacedAsset>) => void;
   onDeleteSelected: () => void;
-  onLayer: (dir: 1 | -1) => void;
   // Kreide-Filter eines hochgeladenen Fotos ändern (an/aus + Parameter)
   onChalkChange: (
     assetId: string,
@@ -88,7 +87,6 @@ export function AssetPanel({
   selected,
   onUpdateSelected,
   onDeleteSelected,
-  onLayer,
   onChalkChange,
   onUploadStencil,
 }: AssetPanelProps) {
@@ -457,13 +455,8 @@ export function AssetPanel({
               {t.deleteBtn}
             </button>
           </div>
-          <div className={styles.assetButtonRow}>
-            <button className={styles.smallButton} onClick={() => onLayer(1)}>
-              {t.layerUp}
-            </button>
-            <button className={styles.smallButton} onClick={() => onLayer(-1)}>
-              {t.layerDown}
-            </button>
+          <div style={{ fontSize: 12, color: "#666", textAlign: "center", marginTop: 4, letterSpacing: "0.04em" }}>
+            {t.layerHint}
           </div>
         </div>
       )}
