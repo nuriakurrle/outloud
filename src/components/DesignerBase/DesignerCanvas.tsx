@@ -27,6 +27,7 @@ export function DesignerCanvas({
     canUndo, canRedo, undo, redo,
     handleAssetPointerDown, handlePointerDown,
     handleDrawStart, handleDrawMove, handleDrawEnd, handleDrawLeave,
+    editingTextId, handleTextDoubleClick, handleTextEditCommit,
   } = useDesignerContext();
 
   // ── Overlays rendered inside the background wrapper ───────────
@@ -159,7 +160,10 @@ export function DesignerCanvas({
           scale={scale}
           dragging={dragging === item.key}
           selected={selectedTextId === item.key}
+          isEditing={editingTextId === item.key}
           onPointerDown={handlePointerDown}
+          onDoubleClick={handleTextDoubleClick}
+          onEditCommit={handleTextEditCommit}
         />
       ))}
 

@@ -329,8 +329,11 @@ export function ChalkPosterGenerator() {
   }, [patternConfig, size.w, size.h]);
 
   const onClearNamedText = useCallback((key: string) => {
-    const field = `${key}Text` as keyof PosterText;
-    updateText({ [field]: "" } as Partial<PosterText>);
+    updateText({ [`${key}Text`]: "" } as Partial<PosterText>);
+  }, [updateText]);
+
+  const onCommitNamedText = useCallback((key: string, newText: string) => {
+    updateText({ [`${key}Text`]: newText } as Partial<PosterText>);
   }, [updateText]);
 
   type PosterExtra = { patternStrokes: PatternStroke[]; patternConfig: PatternConfig };
@@ -346,9 +349,8 @@ export function ChalkPosterGenerator() {
       logoRegistry={LOGO_REGISTRY}
       illustrationRegistry={ASSET_REGISTRY}
       storageKey="vholos-poster-uploads"
-      clampX={v => Math.max(5, Math.min(95, v))}
-      clampY={v => Math.max(5, Math.min(95, v))}
       aspectRatio={size.w / size.h}
+      initialMargins={{ left: 5, right: 5, top: 5, bottom: 5 }}
       initialPositions={INITIAL_POSITIONS}
       initialTextAligns={INITIAL_ALIGNS}
       initialAssets={INITIAL_ASSETS}
@@ -360,6 +362,7 @@ export function ChalkPosterGenerator() {
       }}
       onBuildNewAsset={onBuildNewAsset}
       onClearNamedText={onClearNamedText}
+      onCommitNamedText={onCommitNamedText}
       onDeleteExtra={() => { if (selectedPatternId) { setPatternStrokes(prev => prev.filter(p => p.id !== selectedPatternId)); setSelectedPatternId(null); } }}
       defaultFont={text.headerFont}
     >

@@ -89,6 +89,15 @@ export interface DesignerContextValue {
   snapLines: { x?: number; y?: number }[];
   containerRef: React.RefObject<HTMLDivElement | null>;
 
+  // margins (user-configurable canvas safe zone, in %)
+  margins: { left: number; right: number; top: number; bottom: number };
+  setMargins: React.Dispatch<React.SetStateAction<{ left: number; right: number; top: number; bottom: number }>>;
+
+  // inline text editing
+  editingTextId: string | null;
+  handleTextDoubleClick: (id: string) => void;
+  handleTextEditCommit: (id: string, newText: string) => void;
+
   // undo/redo
   commit: () => void;
   undo: () => void;
@@ -124,18 +133,20 @@ export interface DesignerProviderProps<TExtra extends object = object> {
   logoRegistry: AssetItem[];
   illustrationRegistry: AssetItem[];
   storageKey: string;
-  clampX: (v: number) => number;
-  clampY: (v: number) => number;
   aspectRatio: number;
   initialPositions?: Record<string, Position>;
   initialTextAligns?: Record<string, Align>;
   initialAssets?: PlacedAsset[];
+  // Initial safe-zone margins in % (default: all 0 — canvas edges)
+  initialMargins?: { left: number; right: number; top: number; bottom: number };
   extraSnapshot: TExtra;
   // Receives the full snapshot (base + extra) so callers can pick their extra fields
   onApplyExtraSnapshot: (snapshot: BaseSnapshot & TExtra) => void;
   onBuildNewAsset?: (item: AssetItem) => Partial<PlacedAsset>;
   // Called when Delete is pressed on a named text key (caller clears its own text state)
   onClearNamedText?: (key: string) => void;
+  // Called when double-click editing commits on a named text key
+  onCommitNamedText?: (key: string, newText: string) => void;
   // Called when Delete is pressed and nothing shared is selected (e.g. pattern lines)
   onDeleteExtra?: () => void;
   // Font used when adding a new extra text element (default: "Oswald")

@@ -2,6 +2,7 @@ import { useState } from "react";
 import styles from "../../styles/chalkPoster.module.css";
 import { useT } from "../../i18n";
 import { MERCH_ITEMS } from "./constants";
+import { MarginPanel } from "../DesignerBase/MarginPanel";
 
 interface MerchSidebarProps {
   shirtColor: "black" | "white";
@@ -98,6 +99,10 @@ export function MerchSidebar(props: MerchSidebarProps) {
 
         <Section title={t.sectionIllustrations} isOpen={open === "illustrations"} onToggle={() => toggle("illustrations")}>
           {props.illustrationSection}
+        </Section>
+
+        <Section title="Margins %" isOpen={open === "margins"} onToggle={() => toggle("margins")}>
+          <MarginPanel />
         </Section>
 
         <Section title={t.sectionLogos} isOpen={open === "logos"} onToggle={() => toggle("logos")}>

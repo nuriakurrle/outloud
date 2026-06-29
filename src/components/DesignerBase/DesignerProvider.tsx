@@ -14,16 +14,16 @@ export function DesignerProvider<TExtra extends object = object>({
   logoRegistry,
   illustrationRegistry,
   storageKey,
-  clampX,
-  clampY,
   aspectRatio,
   initialPositions,
   initialTextAligns,
   initialAssets,
+  initialMargins,
   extraSnapshot,
   onApplyExtraSnapshot,
   onBuildNewAsset,
   onClearNamedText,
+  onCommitNamedText,
   onDeleteExtra,
   defaultFont = "Oswald",
   children,
@@ -35,6 +35,12 @@ export function DesignerProvider<TExtra extends object = object>({
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>(initialPositions ?? {});
   const [textAligns, setTextAligns] = useState<Record<string, Align>>(initialTextAligns ?? {});
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+
+  // ── Margins (user-configurable safe zone, in %) ───────────────
+  const [margins, setMargins] = useState(initialMargins ?? { left: 0, right: 0, top: 0, bottom: 0 });
+  const clampX = useCallback((v: number) => Math.max(margins.left, Math.min(100 - margins.right, v)), [margins]);
+  const clampY = useCallback((v: number) => Math.max(margins.top,  Math.min(100 - margins.bottom, v)), [margins]);
 
   // ── Refs for event handler closures ─────────────────────────
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -44,8 +50,6 @@ export function DesignerProvider<TExtra extends object = object>({
   useEffect(() => { extraTextsRef.current = extraTexts; }, [extraTexts]);
 
   // ── commitRef breaks circular dependency ─────────────────────
-  // usePlacedAssets/useDrawing/useDrag all need commit, but commit
-  // comes from useUndoRedo which needs their output state.
   const commitRef = useRef<() => void>(() => {});
   const commit = useCallback(() => commitRef.current(), []);
 
@@ -76,7 +80,7 @@ export function DesignerProvider<TExtra extends object = object>({
     setPositions(s.positions);
     setExtraTexts(s.extraTexts);
     onApplyExtraSnapshot(s);
-  // assets.setPlacedAssets is a stable dispatch function — safe to omit
+  // assets.setPlacedAssets is a stable dispatch — safe to omit
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onApplyExtraSnapshot]);
 
@@ -92,7 +96,7 @@ export function DesignerProvider<TExtra extends object = object>({
 
   const drag = useDrag({
     containerRef, positionsRef, extraTextsRef, placedAssetsRef,
-    clampX, clampY, commit,
+    clampX, clampY, margins, commit,
     setPositions, setExtraTexts,
     setPlacedAssets: assets.setPlacedAssets,
     getElementRect,
@@ -139,8 +143,26 @@ export function DesignerProvider<TExtra extends object = object>({
     setSelectedTextId(null);
   }, [selectedTextId, undoRedo, onClearNamedText]);
 
+  // ── Inline text editing ───────────────────────────────────────
+  const handleTextDoubleClick = useCallback((id: string) => {
+    setSelectedTextId(id);
+    setEditingTextId(id);
+  }, []);
+
+  const handleTextEditCommit = useCallback((id: string, newText: string) => {
+    setEditingTextId(null);
+    undoRedo.commit();
+    if (extraTextsRef.current.some(t => t.id === id)) {
+      setExtraTexts(prev => prev.map(t => t.id === id ? { ...t, text: newText } : t));
+    } else {
+      onCommitNamedText?.(id, newText);
+    }
+  }, [undoRedo, onCommitNamedText]);
+
   // ── Pointer handlers ─────────────────────────────────────────
   const handlePointerDown = useCallback((key: string, e: React.PointerEvent) => {
+    // Don't start drag if this element is being inline-edited
+    if (editingTextId === key) return;
     setSelectedTextId(key);
     assets.setSelectedAssetId(null);
     setSelectedStrokeId(null);
@@ -150,7 +172,7 @@ export function DesignerProvider<TExtra extends object = object>({
       const et = extraTextsRef.current.find(t => t.id === key);
       if (et) drag.beginDrag(key, et.position.x, et.position.y, e);
     }
-  }, [assets, drag]);
+  }, [assets, drag, editingTextId]);
 
   const handleAssetPointerDown = useCallback((id: string, e: React.PointerEvent) => {
     const a = assets.placedAssets.find(p => p.id === id);
@@ -177,7 +199,8 @@ export function DesignerProvider<TExtra extends object = object>({
   // ── Keyboard shortcuts ───────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement
+        || (e.target instanceof HTMLElement && e.target.contentEditable === "true");
       if (typing) return;
       const mod = e.ctrlKey || e.metaKey;
       if (mod && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? undoRedo.redo() : undoRedo.undo(); return; }
@@ -216,6 +239,8 @@ export function DesignerProvider<TExtra extends object = object>({
     chalkColor: drawing.chalkColor, setChalkColor: drawing.setChalkColor,
     isDrawing: drawing.isDrawing, liveStrokePath: drawing.liveStrokePath, cursorPos: drawing.cursorPos,
     dragging: drag.dragging, snapLines: drag.snapLines, containerRef,
+    margins, setMargins,
+    editingTextId, handleTextDoubleClick, handleTextEditCommit,
     commit: undoRedo.commit, undo: undoRedo.undo, redo: undoRedo.redo,
     canUndo: undoRedo.canUndo, canRedo: undoRedo.canRedo,
     beginDrag: drag.beginDrag, beginDeltaDrag: drag.beginDeltaDrag,

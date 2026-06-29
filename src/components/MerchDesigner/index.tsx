@@ -300,8 +300,11 @@ export function MerchDesigner() {
   const updateText = useCallback((patch: Partial<MerchText>) => setText(prev => ({ ...prev, ...patch })), []);
 
   const onClearNamedText = useCallback((key: string) => {
-    const field = `${key}Text` as keyof MerchText;
-    updateText({ [field]: "" } as Partial<MerchText>);
+    updateText({ [`${key}Text`]: "" } as Partial<MerchText>);
+  }, [updateText]);
+
+  const onCommitNamedText = useCallback((key: string, newText: string) => {
+    updateText({ [`${key}Text`]: newText } as Partial<MerchText>);
   }, [updateText]);
 
   const extraSnapshot = useMemo(() => ({ side, shirtColor, otherSnap }), [side, shirtColor, otherSnap]);
@@ -311,15 +314,15 @@ export function MerchDesigner() {
       logoRegistry={LOGO_REGISTRY}
       illustrationRegistry={ASSET_REGISTRY}
       storageKey="vholos-merch-uploads"
-      clampX={v => Math.max(20, Math.min(80, v))}
-      clampY={v => Math.max(18, Math.min(70, v))}
       aspectRatio={MERCH_SIZE.w / MERCH_SIZE.h}
+      initialMargins={{ left: 20, right: 20, top: 18, bottom: 30 }}
       initialPositions={DEFAULT_POSITIONS}
       initialTextAligns={{ header: "center", sub: "center", body: "center", detail: "center" }}
       initialAssets={[DEFAULT_LETTER]}
       extraSnapshot={extraSnapshot}
       onApplyExtraSnapshot={s => { setSide(s.side); setShirtColor(s.shirtColor); setOtherSnap(s.otherSnap); }}
       onClearNamedText={onClearNamedText}
+      onCommitNamedText={onCommitNamedText}
       defaultFont={text.headerFont}
     >
       <MerchDesignerInner

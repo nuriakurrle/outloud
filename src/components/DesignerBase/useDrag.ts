@@ -13,6 +13,15 @@ interface DeltaDragState {
   setOffset: (offX: number, offY: number) => void;
 }
 
+// Distances from the anchor point to each edge of the element (in %).
+// Measured once at drag start; constant throughout the drag.
+interface AnchorBounds {
+  fromLeft: number;
+  fromRight: number;
+  fromTop: number;
+  fromBottom: number;
+}
+
 interface Options {
   containerRef: React.RefObject<HTMLDivElement | null>;
   positionsRef: React.RefObject<Record<string, Position>>;
@@ -20,16 +29,15 @@ interface Options {
   placedAssetsRef: React.RefObject<PlacedAsset[]>;
   clampX: (v: number) => number;
   clampY: (v: number) => number;
+  margins: { left: number; right: number; top: number; bottom: number };
   commit: () => void;
   setPositions: React.Dispatch<React.SetStateAction<Record<string, Position>>>;
   setExtraTexts: React.Dispatch<React.SetStateAction<ExtraText[]>>;
   setPlacedAssets: React.Dispatch<React.SetStateAction<PlacedAsset[]>>;
-  // Called during drag to get an element's bounding rect for edge snap.
-  // Elements must have data-design-id attributes for this to work.
   getElementRect?: (id: string) => DOMRect | null;
 }
 
-const SNAP = 2; // snap threshold in %
+const SNAP = 2;
 
 export function useDrag({
   containerRef,
@@ -38,6 +46,7 @@ export function useDrag({
   placedAssetsRef,
   clampX,
   clampY,
+  margins,
   commit,
   setPositions,
   setExtraTexts,
@@ -48,6 +57,7 @@ export function useDrag({
   const [snapLines, setSnapLines] = useState<{ x?: number; y?: number }[]>([]);
   const dragOffset = useRef({ x: 0, y: 0 });
   const deltaRef = useRef<DeltaDragState | null>(null);
+  const anchorBoundsRef = useRef<AnchorBounds | null>(null);
 
   const beginDrag = useCallback((id: string, curX: number, curY: number, e: React.PointerEvent) => {
     e.preventDefault();
@@ -60,7 +70,19 @@ export function useDrag({
       x: e.clientX - rect.left - (curX / 100) * rect.width,
       y: e.clientY - rect.top - (curY / 100) * rect.height,
     };
-  }, [containerRef, commit]);
+    // Measure anchor-to-edge offsets for alignment-aware clamping
+    const el = getElementRect?.(id);
+    if (el) {
+      anchorBoundsRef.current = {
+        fromLeft:   curX - (el.left   - rect.left) / rect.width  * 100,
+        fromRight:  (el.right  - rect.left) / rect.width  * 100 - curX,
+        fromTop:    curY - (el.top    - rect.top)  / rect.height * 100,
+        fromBottom: (el.bottom - rect.top)  / rect.height * 100 - curY,
+      };
+    } else {
+      anchorBoundsRef.current = null;
+    }
+  }, [containerRef, commit, getElementRect]);
 
   const beginDeltaDrag = useCallback((
     id: string,
@@ -73,6 +95,7 @@ export function useDrag({
     e.stopPropagation();
     commit();
     setDragging(id);
+    anchorBoundsRef.current = null;
     const { offX, offY } = getOffset();
     deltaRef.current = { id, cx: e.clientX, cy: e.clientY, offX, offY, clamp, setOffset };
   }, [commit]);
@@ -92,9 +115,19 @@ export function useDrag({
         return;
       }
 
-      // Absolute percentage drag (texts, assets) with snap
-      let px = clampX(((e.clientX - rect.left - dragOffset.current.x) / rect.width) * 100);
-      let py = clampY(((e.clientY - rect.top - dragOffset.current.y) / rect.height) * 100);
+      // Absolute % drag — compute raw position, then clamp
+      let px = ((e.clientX - rect.left - dragOffset.current.x) / rect.width) * 100;
+      let py = ((e.clientY - rect.top  - dragOffset.current.y) / rect.height) * 100;
+
+      const ab = anchorBoundsRef.current;
+      if (ab) {
+        // Alignment-aware: keep the whole element inside margin bounds
+        px = Math.max(margins.left  + ab.fromLeft,  Math.min(100 - margins.right  - ab.fromRight,  px));
+        py = Math.max(margins.top   + ab.fromTop,   Math.min(100 - margins.bottom - ab.fromBottom, py));
+      } else {
+        px = clampX(px);
+        py = clampY(py);
+      }
 
       // Build snap targets: centers + edges of all non-dragged items
       const snapX: number[] = [];
@@ -104,7 +137,7 @@ export function useDrag({
         if (getElementRect) {
           const el = getElementRect(id);
           if (el) {
-            const halfW = (el.width / rect.width / 2) * 100;
+            const halfW = (el.width  / rect.width  / 2) * 100;
             const halfH = (el.height / rect.height / 2) * 100;
             snapX.push(cx - halfW, cx, cx + halfW);
             snapY.push(cy - halfH, cy, cy + halfH);
@@ -134,7 +167,6 @@ export function useDrag({
       }
       setSnapLines(lines);
 
-      // Apply position update to the correct state slice
       if (dragging in positionsRef.current) {
         setPositions(prev => ({ ...prev, [dragging]: { x: px, y: py } }));
       } else if (extraTextsRef.current.some(t => t.id === dragging)) {
@@ -147,6 +179,7 @@ export function useDrag({
     const onUp = () => {
       setDragging(null);
       deltaRef.current = null;
+      anchorBoundsRef.current = null;
       setSnapLines([]);
     };
 
@@ -156,7 +189,7 @@ export function useDrag({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [dragging, clampX, clampY, containerRef, positionsRef, extraTextsRef, placedAssetsRef, setPositions, setExtraTexts, setPlacedAssets, getElementRect]);
+  }, [dragging, clampX, clampY, margins, containerRef, positionsRef, extraTextsRef, placedAssetsRef, setPositions, setExtraTexts, setPlacedAssets, getElementRect]);
 
   return { dragging, setDragging, snapLines, beginDrag, beginDeltaDrag };
 }

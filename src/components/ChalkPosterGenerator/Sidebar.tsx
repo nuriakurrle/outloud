@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useT } from "../../i18n";
 import type { PatternConfig, PosterSize } from "../../types/poster";
-import styles from "../../styles/chalkPoster.module.css";export interface TextFieldState {
+import styles from "../../styles/chalkPoster.module.css";
+import { MarginPanel } from "../DesignerBase/MarginPanel";export interface TextFieldState {
   text: string;
   setText: (v: string) => void;
   font: string;
@@ -242,6 +243,10 @@ export function Sidebar(props: SidebarProps) {
 
         <Section title={t.sectionIllustrations} isOpen={open === "illustrations"} onToggle={() => toggle("illustrations")}>
           {props.illustrationSection}
+        </Section>
+
+        <Section title="Margins %" isOpen={open === "margins"} onToggle={() => toggle("margins")}>
+          <MarginPanel />
         </Section>
       </div>
 

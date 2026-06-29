@@ -239,7 +239,7 @@ export function AssetPanel({
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "#0a0a0a", overflow: "hidden" }}>
               <img src={pending.previewUrl} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} alt="preview" />
             </div>
-            <div style={{ width: 220, background: "#111", borderLeft: "1px solid #1a1a1a", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ width: 220, background: "#fff", borderLeft: "1px solid #1a1a1a", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, letterSpacing: "0.06em" }}>Variables</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <label style={{ fontSize: 12, color: "#666" }}>Blocksize</label>
