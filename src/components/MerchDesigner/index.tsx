@@ -329,7 +329,10 @@ function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, product,
 
         {capView ? (
           <Suspense fallback={<div style={{ width: "100%", height: "100%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontSize: 14, fontFamily: "'Inria Sans', system-ui, sans-serif" }}>{t.capLoading}</div>}>
-            <CapViewer ref={capViewerRef} design={designCanvas} color={shirtColor} onReady={() => setCapReady(true)} />
+            {/* Absolut füllen → R3F-Canvas misst echte Pixel (sonst bleibt er 300×150 und die Cap ist unsichtbar). */}
+            <div style={{ position: "absolute", inset: 0 }}>
+              <CapViewer ref={capViewerRef} design={designCanvas} color={shirtColor} onReady={() => setCapReady(true)} />
+            </div>
             <button onClick={handleCapDownload} disabled={!capReady}
               style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", zIndex: 90, padding: "10px 28px", borderRadius: 8, border: "none", cursor: capReady ? "pointer" : "default", background: capReady ? "#fff" : "rgba(255,255,255,0.3)", color: "#111", fontSize: 14, fontWeight: 700, letterSpacing: "0.03em", fontFamily: "'Inria Sans', system-ui, sans-serif" }}>
               {t.order}
