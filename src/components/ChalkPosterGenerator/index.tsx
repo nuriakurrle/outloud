@@ -325,7 +325,13 @@ export function ChalkPosterGenerator() {
   const skipRegenRef = useRef(false);
   useEffect(() => {
     if (skipRegenRef.current) { skipRegenRef.current = false; return; }
-    setPatternStrokes(generatePatternStrokes(patternConfig, size.w, size.h));
+    // Neue Linien generieren, aber die manuell gezogene Platzierung (offsetX/Y)
+    // je Linie beibehalten – sonst springen verschobene Linien zurück.
+    setPatternStrokes(prev =>
+      generatePatternStrokes(patternConfig, size.w, size.h).map((s, i) =>
+        prev[i] ? { ...s, offsetX: prev[i].offsetX, offsetY: prev[i].offsetY } : s
+      )
+    );
   }, [patternConfig, size.w, size.h]);
 
   const onClearNamedText = useCallback((key: string) => {
