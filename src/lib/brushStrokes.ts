@@ -1,8 +1,13 @@
-import { createBrushStroke, getAllBrushes, type Brush } from "svg-brush";
+import { createBrushStroke, getAllBrushes as _getAllBrushes, type Brush } from "svg-brush";
 import type { ChalkStroke, PatternConfig, PatternStroke } from "../types/poster";
 import { seededRandom } from "./seededRandom";
 
-export { getAllBrushes };
+// svg-brush parst bei JEDEM getAllBrushes()-Aufruf alle Pinsel-SVG-Pfade neu
+// (~100ms). Da Komponenten es im Render aufrufen, hier einmalig cachen.
+let _brushCache: ReturnType<typeof _getAllBrushes> | null = null;
+export function getAllBrushes(): ReturnType<typeof _getAllBrushes> {
+  return (_brushCache ??= _getAllBrushes());
+}
 
 type Pt = { x: number; y: number };
 
@@ -104,12 +109,25 @@ export function rerenderStroke(stroke: ChalkStroke, brushName: string, strokeWid
   return createBrushStroke(stroke.points, { brush: brush as any, strokeWidth });
 }
 
-/** Live preview path while drawing (same coordinate space as the poster %). */
+/**
+ * Live-Vorschau-Pfad während des Zeichnens (echter svg-brush, gleiche %-Koord.).
+ * Teuer (wächst mit der Punktzahl), daher: Aufrufer drosselt pro Frame (rAF) und
+ * der Live-Strich wird in einem eigenen, isolierten SVG gerendert, damit nicht
+ * die schweren Hintergrund-Pfade mit-neu-gerastert werden. Sehr lange Striche
+ * werden auf ~64 Punkte reduziert, damit die Kosten pro Frame gedeckelt bleiben.
+ */
 export function createLivePath(points: Pt[], brushName: string, strokeWidth: number): string {
   if (points.length < 2) return "";
   const brush = resolveBrush(brushName);
+  const pts = points.length > 64 ? decimate(points, 64) : points;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return createBrushStroke(points, { brush: brush as any, strokeWidth });
+  return createBrushStroke(pts, { brush: brush as any, strokeWidth });
+}
+
+// Gleichmäßig auf `max` Punkte ausdünnen (erster + letzter bleiben erhalten).
+function decimate(points: Pt[], max: number): Pt[] {
+  const step = (points.length - 1) / (max - 1);
+  return Array.from({ length: max }, (_, i) => points[Math.round(i * step)]);
 }
 
 /** Preview path for toolbar/sidebar brush thumbnails — a gentle S-curve. */
