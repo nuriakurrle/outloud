@@ -9,10 +9,11 @@ export type { PosterCanvasHandle };
 export type TshirtCanvasProps = Omit<PosterCanvasProps, "pattern" | "patternStrokes" | "bg" | "backdrop"> & {
   side: "front" | "back";
   shirtColor: "black" | "white";
+  garment?: boolean; // false = neutrale Druckfläche (z.B. Cap-Design im 2D-Modus)
 };
 
 export const TshirtCanvas = forwardRef<PosterCanvasHandle, TshirtCanvasProps>(
-  function TshirtCanvas({ side, shirtColor, children, ...rest }, ref) {
+  function TshirtCanvas({ side, shirtColor, garment = true, children, ...rest }, ref) {
     return (
       <PosterCanvas
         ref={ref}
@@ -21,14 +22,16 @@ export const TshirtCanvas = forwardRef<PosterCanvasHandle, TshirtCanvasProps>(
         pattern={EMPTY_PATTERN}
         patternStrokes={[]}
         backdrop={
-          <img
-            src={side === "front" ? frontImg : backImg}
-            style={{
-              width: "100%", height: "100%", objectFit: "contain",
-              filter: shirtColor === "white" ? "invert(1)" : undefined,
-            }}
-            alt=""
-          />
+          garment ? (
+            <img
+              src={side === "front" ? frontImg : backImg}
+              style={{
+                width: "100%", height: "100%", objectFit: "contain",
+                filter: shirtColor === "white" ? "invert(1)" : undefined,
+              }}
+              alt=""
+            />
+          ) : undefined
         }
       >
         {/* Print-zone guide — sits in overlay above SVG strokes, below interactive elements */}

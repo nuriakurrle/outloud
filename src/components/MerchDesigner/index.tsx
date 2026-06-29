@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Align, PlacedAsset, Position } from "../../types/poster";
 import { getAllBrushes } from "../../lib/brushStrokes";
 import { ASSET_REGISTRY, LOGO_REGISTRY } from "../../assetRegistry";
@@ -12,11 +12,15 @@ import { POS_KEYS, type PosKey, FONTS } from "../ChalkPosterGenerator/constants"
 import { useT } from "../../i18n";
 import { MerchSidebar } from "./MerchSidebar";
 import { TshirtCanvas, type PosterCanvasHandle, FRONT_IMG, BACK_IMG } from "./TshirtCanvas";
-import { MERCH_SIZE, TSHIRT_VIEWS, EMPTY_PATTERN } from "./constants";
+import { MERCH_SIZE, TSHIRT_VIEWS, EMPTY_PATTERN, MERCH_ITEMS, type MerchProduct } from "./constants";
+import type { CapViewerHandle } from "./CapViewer";
 import { DesignerProvider } from "../DesignerBase/DesignerProvider";
 import { DesignerCanvas } from "../DesignerBase/DesignerCanvas";
 import { useDesignerContext } from "../DesignerBase/context";
 import type { BaseSnapshot, ExtraText } from "../DesignerBase/types";
+
+// three.js ist schwer – Cap-3D-Viewer nur bei Bedarf laden.
+const CapViewer = lazy(() => import("./CapViewer").then(m => ({ default: m.CapViewer })));
 
 const DEFAULT_POSITIONS: Record<PosKey, Position> = {
   header: { x: 50, y: 33 }, sub: { x: 50, y: 43 }, body: { x: 50, y: 53 }, detail: { x: 50, y: 63 },
@@ -46,13 +50,17 @@ interface InnerProps {
   setSide: (s: "front" | "back") => void;
   shirtColor: "black" | "white";
   setShirtColor: (c: "black" | "white") => void;
+  product: MerchProduct;
+  setProduct: (p: MerchProduct) => void;
+  capMode: "edit" | "view";
+  setCapMode: (m: "edit" | "view") => void;
   otherSnap: BaseSnapshot;
   setOtherSnap: (s: BaseSnapshot) => void;
   text: MerchText;
   updateText: (patch: Partial<MerchText>) => void;
 }
 
-function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, otherSnap, setOtherSnap, text, updateText }: InnerProps) {
+function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, product, setProduct, capMode, setCapMode, otherSnap, setOtherSnap, text, updateText }: InnerProps) {
   const { t } = useT();
   const {
     strokes, setStrokes, selectedStrokeId, setSelectedStrokeId,
@@ -127,6 +135,34 @@ function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, otherSna
       assets: snap.placedAssets.map((a): SceneAsset => { const item = allAssets.find(x => x.id === a.assetId); return { ...a, src: item?.src ?? getAssetSrc(a.assetId), category: item?.category ?? "logos", naturalWidth: item?.naturalWidth, naturalHeight: item?.naturalHeight }; }),
     };
   }, [text, textColor, textAligns, allAssets, getAssetSrc]);
+
+  // ── Cap: Design-Canvas (Textur) + 3D-Snapshot ───────────────
+  const [designCanvas, setDesignCanvas] = useState<HTMLCanvasElement | null>(null);
+  const [capReady, setCapReady] = useState(false);
+  const capViewerRef = useRef<CapViewerHandle>(null);
+
+  // Aktuelles Design auf transparentes Canvas rendern (gleiche Szene wie Export)
+  // – dient als Textur fürs 3D-Cap.
+  const renderDesign = useCallback(async () => {
+    const scene = buildSceneFrom({ strokes, placedAssets, positions, extraTexts });
+    const images = await loadSceneImages(scene);
+    const texScale = 2;
+    const c = document.createElement("canvas");
+    c.width = MERCH_SIZE.w * texScale; c.height = MERCH_SIZE.h * texScale;
+    const ctx = c.getContext("2d")!;
+    ctx.scale(texScale, texScale);
+    await renderPosterScene(ctx, scene, images);
+    setDesignCanvas(c);
+  }, [buildSceneFrom, strokes, placedAssets, positions, extraTexts]);
+
+  useEffect(() => {
+    if (product === "cap" && capMode === "view") { setCapReady(false); renderDesign(); }
+  }, [product, capMode, renderDesign]);
+
+  const handleCapDownload = useCallback(async () => {
+    const blob = await capViewerRef.current?.capture();
+    if (blob) downloadBlob(blob, "cap.png");
+  }, []);
 
   const handleOrder = useCallback(async () => {
     const SCALE = 3;
@@ -220,9 +256,14 @@ function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, otherSna
     );
   })();
 
+  const capView = product === "cap" && capMode === "view";
+
   return (
     <div className={`${styles.app} chalk-ui`}>
+      {!capView && (
       <MerchSidebar
+        product={product}
+        onProductChange={setProduct}
         shirtColor={shirtColor}
         onColorChange={setShirtColor}
         textPanel={textPanel}
@@ -242,10 +283,12 @@ function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, otherSna
             selected={allAssets.find(a => a.id === selectedAsset?.assetId)?.category !== "logos" ? selectedAsset : null}
             onUpdateSelected={updateSelected} onDeleteSelected={deleteSelected} onChalkChange={updateAssetChalk} />
         }
-        onOrder={handleOrder}
+        onOrder={product === "cap" ? () => setCapMode("view") : handleOrder}
       />
+      )}
 
-      {/* View strip */}
+      {/* View strip (nur T-Shirt) */}
+      {product === "tshirt" && (
       <div style={{ width: 44, flexShrink: 0, background: "#141414", borderRight: "1px solid #2a2a2a", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 4 }}>
         {TSHIRT_VIEWS.map(v => (
           <button key={v.id} onClick={() => switchSide(v.id)} title={v.label}
@@ -257,14 +300,49 @@ function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, otherSna
           </button>
         ))}
       </div>
+      )}
 
       <div className={styles.preview}>
+        {/* Produkt-Umschalter (T-Shirt / Cap) */}
+        <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", zIndex: 90, display: "flex", gap: 4, background: "rgba(20,20,20,0.85)", border: "1px solid #2a2a2a", borderRadius: 8, padding: 3 }}>
+          {MERCH_ITEMS.map(p => (
+            <button key={p.id} onClick={() => setProduct(p.id)}
+              style={{ padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, letterSpacing: "0.03em", fontFamily: "'Inria Sans', system-ui, sans-serif",
+                background: product === p.id ? "#fff" : "transparent", color: product === p.id ? "#111" : "rgba(255,255,255,0.55)" }}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Cap: 2D-/3D-Umschalter */}
+        {product === "cap" && (
+          <div style={{ position: "absolute", top: 48, left: "50%", transform: "translateX(-50%)", zIndex: 90, display: "flex", gap: 4, background: "rgba(20,20,20,0.85)", border: "1px solid #2a2a2a", borderRadius: 8, padding: 3 }}>
+            {([["edit", "2D"], ["view", "3D"]] as const).map(([m, label]) => (
+              <button key={m} onClick={() => setCapMode(m)}
+                style={{ padding: "4px 14px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "'Inria Sans', system-ui, sans-serif",
+                  background: capMode === m ? "#fff" : "transparent", color: capMode === m ? "#111" : "rgba(255,255,255,0.55)" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {capView ? (
+          <Suspense fallback={<div style={{ width: "100%", height: "100%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", color: "#888", fontSize: 14, fontFamily: "'Inria Sans', system-ui, sans-serif" }}>{t.capLoading}</div>}>
+            <CapViewer ref={capViewerRef} design={designCanvas} color={shirtColor} onReady={() => setCapReady(true)} />
+            <button onClick={handleCapDownload} disabled={!capReady}
+              style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", zIndex: 90, padding: "10px 28px", borderRadius: 8, border: "none", cursor: capReady ? "pointer" : "default", background: capReady ? "#fff" : "rgba(255,255,255,0.3)", color: "#111", fontSize: 14, fontWeight: 700, letterSpacing: "0.03em", fontFamily: "'Inria Sans', system-ui, sans-serif" }}>
+              {t.order}
+            </button>
+          </Suspense>
+        ) : (
         <DesignerCanvas
           renderBackground={overlays => (
             <TshirtCanvas
               ref={canvasRef}
               side={side}
               shirtColor={shirtColor}
+              garment={product === "tshirt"}
               size={MERCH_SIZE}
               scale={scale}
               containerRef={containerRef}
@@ -285,6 +363,7 @@ function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, otherSna
           displayH={displayH}
           scale={scale}
         />
+        )}
       </div>
     </div>
   );
@@ -295,6 +374,8 @@ function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, otherSna
 export function MerchDesigner() {
   const [side, setSide] = useState<"front" | "back">("front");
   const [shirtColor, setShirtColor] = useState<"black" | "white">("black");
+  const [product, setProduct] = useState<MerchProduct>("tshirt");
+  const [capMode, setCapMode] = useState<"edit" | "view">("edit");
   const [otherSnap, setOtherSnap] = useState<BaseSnapshot>({ strokes: [], placedAssets: [], positions: DEFAULT_POSITIONS, extraTexts: [] });
   const [text, setText] = useState<MerchText>(DEFAULT_TEXT);
   const updateText = useCallback((patch: Partial<MerchText>) => setText(prev => ({ ...prev, ...patch })), []);
@@ -325,6 +406,8 @@ export function MerchDesigner() {
       <MerchDesignerInner
         side={side} setSide={setSide}
         shirtColor={shirtColor} setShirtColor={setShirtColor}
+        product={product} setProduct={setProduct}
+        capMode={capMode} setCapMode={setCapMode}
         otherSnap={otherSnap} setOtherSnap={setOtherSnap}
         text={text} updateText={updateText}
       />
