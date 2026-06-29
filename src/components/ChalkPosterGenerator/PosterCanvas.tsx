@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { ChalkStroke, PatternConfig, PatternStroke, PosterSize } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
 
@@ -48,6 +48,24 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
 
     const displayW = size.w * scale;
     const displayH = size.h * scale;
+
+    // Live-Vorschau aufs Canvas zeichnen (statt SVG) – isoliert vom schweren
+    // Hintergrund, daher flüssig. Pfad ist in 0–100 (%) Koordinaten.
+    const liveCanvasRef = useRef<HTMLCanvasElement>(null);
+    useEffect(() => {
+      const cv = liveCanvasRef.current;
+      const ctx = cv?.getContext("2d");
+      if (!cv || !ctx) return;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      if (liveStrokePath) {
+        ctx.scale(cv.width / 100, cv.height / 100);
+        ctx.globalAlpha = liveStrokeOpacity;
+        ctx.fillStyle = liveStrokeColor;
+        ctx.fill(new Path2D(liveStrokePath));
+      }
+    }, [liveStrokePath, liveStrokeColor, liveStrokeOpacity, displayW, displayH]);
+
     const fillColor = patternFill(pattern.color);
     const ordered = [...strokes].sort((a, b) => a.zIndex - b.zIndex);
     const backStrokes = ordered.filter((s) => !s.front);
@@ -111,11 +129,17 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
           {!patternFront && patternStrokes.map(renderPattern)}
 
           {backStrokes.map(renderStroke)}
-
-          {liveStrokePath && (
-            <path d={liveStrokePath} fill={liveStrokeColor} opacity={liveStrokeOpacity} />
-          )}
         </svg>
+
+        {/* Live-Strich auf eigenem Canvas: dessen Aktualisierung rastert NIE die
+            darunterliegenden schweren SVG-Pfade neu (anders als ein Live-Pfad im
+            selben SVG) → flüssiges Zeichnen auch auf vollem Poster. */}
+        <canvas
+          ref={liveCanvasRef}
+          width={Math.max(1, Math.round(displayW))}
+          height={Math.max(1, Math.round(displayH))}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 1, pointerEvents: "none" }}
+        />
 
         {/* Interactive overlay: text, assets, handles, draw capture */}
         <div

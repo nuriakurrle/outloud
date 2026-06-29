@@ -104,6 +104,7 @@ export function ChalkPosterGenerator() {
   const [chalkColor, setChalkColor] = useState("#FFFFFF");
   const [isDrawing, setIsDrawing] = useState(false);
   const drawPointsRef = useRef<{ x: number; y: number }[]>([]);
+  const liveRafRef = useRef<number | null>(null);
   const [liveStrokePath, setLiveStrokePath] = useState<string | undefined>();
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
   const posterCanvasRef = useRef<PosterCanvasHandle>(null);
@@ -331,7 +332,7 @@ export function ChalkPosterGenerator() {
       setScale(
         Math.min(
           (window.innerWidth - 320) / size.w,
-          (window.innerHeight - 40) / size.h,
+          (window.innerHeight - 172) / size.h, // -172: Navbar + unterer Toolbar/Hinweis-Streifen
           1.4
         )
       );
@@ -803,10 +804,12 @@ export function ChalkPosterGenerator() {
       const last = pts[pts.length - 1];
       if (Math.hypot(pos.x - last.x, pos.y - last.y) > 0.5) {
         drawPointsRef.current = [...pts, pos];
-        if (drawPointsRef.current.length >= 2) {
-          setLiveStrokePath(
-            createLivePath(drawPointsRef.current, brushName, brushWidth)
-          );
+        // Live-Pfad höchstens 1×/Frame neu erzeugen (svg-brush ist teuer).
+        if (liveRafRef.current == null && drawPointsRef.current.length >= 2) {
+          liveRafRef.current = requestAnimationFrame(() => {
+            liveRafRef.current = null;
+            setLiveStrokePath(createLivePath(drawPointsRef.current, brushName, brushWidth));
+          });
         }
       }
     },
@@ -815,6 +818,7 @@ export function ChalkPosterGenerator() {
 
   const handleDrawEnd = useCallback(() => {
     if (!isDrawing) return;
+    if (liveRafRef.current != null) { cancelAnimationFrame(liveRafRef.current); liveRafRef.current = null; }
     setIsDrawing(false);
     const pts = drawPointsRef.current;
     drawPointsRef.current = [];

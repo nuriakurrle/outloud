@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type { ToolMode } from "../../types/poster";
 import { getAllBrushes, brushPreviewPath } from "../../lib/brushStrokes";
 import { useT } from "../../i18n";
+import styles from "../../styles/chalkPoster.module.css";
 
 export const CHALK_COLORS = [
   { label: "Weiß", hex: "#FFFFFF" },
@@ -24,7 +25,9 @@ interface DrawingToolbarProps {
   onRedo: () => void; canRedo: boolean;
 }
 
-export function DrawingToolbar({
+// memo: die Toolbar enthält viele Pinsel-Vorschau-SVGs. Ohne memo würde sie bei
+// jedem pointermove im Zeichnen-Modus (cursorPos/liveStrokePath) neu rendern → ruckelt.
+export const DrawingToolbar = memo(function DrawingToolbar({
   mode, setMode, chalkColor, setChalkColor,
   brushName, setBrushName, brushWidth, setBrushWidth,
   brushOpacity, setBrushOpacity,
@@ -95,7 +98,7 @@ export function DrawingToolbar({
       )}
       {isDraw && <div style={DIVIDER} />}
       {isDraw && (
-        <div style={{ display: "flex", gap: 5, alignItems: "center", overflowX: "auto", maxWidth: 420 }}>
+        <div className={styles.brushScroll} style={{ display: "flex", gap: 5, alignItems: "center", overflowX: "auto", maxWidth: 420 }}>
           {previews.map((b) => {
             const active = brushName === b.name;
             return (
@@ -122,4 +125,4 @@ export function DrawingToolbar({
         style={{ ...btnBase, cursor: canRedo ? "pointer" : "not-allowed", opacity: canRedo ? 1 : 0.4 }}>↪</button>
     </div>
   );
-}
+});
