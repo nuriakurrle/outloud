@@ -189,6 +189,15 @@ export function DesignerProvider<TExtra extends object = object>({
         else onDeleteExtra?.();
         return;
       }
+      // Ebene der Auswahl: ↑ nach vorne, ↓ nach hinten (Logos/Illustrationen & Striche).
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        const dir = e.key === "ArrowUp" ? 1 : -1;
+        if (assets.selectedAssetId) assets.handleLayer(dir);
+        else if (selectedStrokeId) updateSelectedStroke({ front: dir === 1 });
+        else return;
+        e.preventDefault();
+        return;
+      }
       if (e.key === "d" || e.key === "D") drawing.setMode("draw");
       else if (e.key === "v" || e.key === "V" || e.key === "Escape") drawing.setMode("move");
       else if (e.key === "[") drawing.setBrushWidth(w => Math.max(0.1, w - 0.2));
@@ -196,7 +205,7 @@ export function DesignerProvider<TExtra extends object = object>({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedStrokeId, assets, drawing, undoRedo, deleteSelectedStroke, onDeleteExtra]);
+  }, [selectedStrokeId, assets, drawing, undoRedo, deleteSelectedStroke, updateSelectedStroke, onDeleteExtra]);
 
   // ── Context value ─────────────────────────────────────────────
   const ctx: DesignerContextValue = {

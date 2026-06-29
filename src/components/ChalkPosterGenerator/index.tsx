@@ -101,7 +101,7 @@ function ChalkPosterGeneratorInner({
   useEffect(() => {
     const compute = () => setScale(Math.min(
       (window.innerWidth - 344) / size.w,
-      (window.innerHeight - 40) / size.h,
+      (window.innerHeight - 172) / size.h, // -172: Navbar + unterer Toolbar/Hinweis-Streifen
       1.4
     ));
     compute();

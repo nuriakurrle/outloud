@@ -76,7 +76,7 @@ function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, otherSna
   useEffect(() => {
     const compute = () => setScale(Math.min(
       (window.innerWidth - 334) / MERCH_SIZE.w,
-      (window.innerHeight - 40) / MERCH_SIZE.h,
+      (window.innerHeight - 172) / MERCH_SIZE.h, // -172: Navbar + unterer Toolbar/Hinweis-Streifen
       1.4
     ));
     compute();
