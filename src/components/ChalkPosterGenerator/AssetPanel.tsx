@@ -117,7 +117,7 @@ export function AssetPanel({
   const [filter, setFilter] = useState<AssetCategory | "all">("all");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState<{ id: string; src: string; startX: number; startY: number; curX: number; curY: number; started: boolean } | null>(null);
-  const [pending, setPending] = useState<{ img: HTMLImageElement; originalUrl: string; previewUrl: string; name: string; blockSize: number; c: number } | null>(null);
+  const [pending, setPending] = useState<{ file: File; img: HTMLImageElement; originalUrl: string; previewUrl: string; name: string; blockSize: number; c: number; useStencil: boolean } | null>(null);
 
   const applyStencil = (blockSize: number, c: number) => {
     if (!pending) return;
@@ -126,7 +126,8 @@ export function AssetPanel({
 
   const confirmStencil = () => {
     if (!pending) return;
-    onUploadStencil(pending.previewUrl, pending.name);
+    if (pending.useStencil) onUploadStencil(pending.previewUrl, pending.name);
+    else onUpload(pending.file);
     URL.revokeObjectURL(pending.originalUrl);
     setPending(null);
   };
@@ -221,7 +222,7 @@ export function AssetPanel({
           const img = new Image();
           img.onload = () => {
             const previewUrl = stencilize(img, 300, 0);
-            setPending({ img, originalUrl: url, previewUrl, name: file.name.replace(/\.(png|jpe?g|bmp)$/i, ""), blockSize: 300, c: 0 });
+            setPending({ file, img, originalUrl: url, previewUrl, name: file.name.replace(/\.(png|jpe?g|bmp)$/i, ""), blockSize: 300, c: 0, useStencil: true });
           };
           img.src = url;
         }}
@@ -237,32 +238,38 @@ export function AssetPanel({
         <div style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,0.9)", display: "flex", flexDirection: "column" }}>
           <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "#0a0a0a", overflow: "hidden" }}>
-              <img src={pending.previewUrl} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} alt="preview" />
+              <img src={pending.useStencil ? pending.previewUrl : pending.originalUrl} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} alt="preview" />
             </div>
-            <div style={{ width: 220, background: "#fff", borderLeft: "1px solid #1a1a1a", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, letterSpacing: "0.06em" }}>Variables</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 12, color: "#666" }}>Blocksize</label>
-                <input
-                  type="number" value={pending.blockSize} min={3} max={800} step={1}
-                  onChange={e => setPending(prev => prev ? { ...prev, blockSize: Number(e.target.value) } : null)}
-                  style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "6px 8px", borderRadius: 4, fontSize: 13, width: "100%" }}
-                />
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 12, color: "#666" }}>Stroke</label>
-                <input
-                  type="number" value={pending.c} min={-50} max={50} step={1}
-                  onChange={e => setPending(prev => prev ? { ...prev, c: Number(e.target.value) } : null)}
-                  style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "6px 8px", borderRadius: 4, fontSize: 13, width: "100%" }}
-                />
-              </div>
-              <button
-                onClick={() => applyStencil(pending.blockSize, pending.c)}
-                style={{ padding: "9px 0", background: "#fff", color: "#111", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
-              >
-                Apply
-              </button>
+            <div style={{ width: 220, background: "#111", borderLeft: "1px solid #1a1a1a", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#fff", fontSize: 13, cursor: "pointer" }}>
+                <input type="checkbox" checked={pending.useStencil} onChange={e => setPending(prev => prev ? { ...prev, useStencil: e.target.checked } : null)} />
+                Stencil Filter
+              </label>
+              <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, letterSpacing: "0.06em", opacity: pending.useStencil ? 1 : 0.3 }}>Variables</div>
+              {pending.useStencil && <>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: 12, color: "#666" }}>Blocksize</label>
+                  <input
+                    type="number" value={pending.blockSize} min={3} max={800} step={1}
+                    onChange={e => setPending(prev => prev ? { ...prev, blockSize: Number(e.target.value) } : null)}
+                    style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "6px 8px", borderRadius: 4, fontSize: 13, width: "100%" }}
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: 12, color: "#666" }}>Stroke</label>
+                  <input
+                    type="number" value={pending.c} min={-50} max={50} step={1}
+                    onChange={e => setPending(prev => prev ? { ...prev, c: Number(e.target.value) } : null)}
+                    style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "6px 8px", borderRadius: 4, fontSize: 13, width: "100%" }}
+                  />
+                </div>
+                <button
+                  onClick={() => applyStencil(pending.blockSize, pending.c)}
+                  style={{ padding: "9px 0", background: "#fff", color: "#111", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                >
+                  Apply
+                </button>
+              </>}
             </div>
           </div>
           <div style={{ padding: "12px 24px", background: "#111", borderTop: "1px solid #1a1a1a", display: "flex", justifyContent: "flex-end", gap: 12 }}>
