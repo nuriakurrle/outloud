@@ -1,0 +1,91 @@
+/**
+ * Design tokens — SINGLE SOURCE OF TRUTH for all colors.
+ * Project palette: #000000 (black) and #ffffff (white) ONLY.
+ * All "grays" are white at opacity over black backgrounds.
+ * Never add a color here without referencing it from a semantic token.
+ */
+
+:root {
+  /* ── Core palette ───────────────────────────────────────── */
+  --black: #000000;
+  --white: #ffffff;
+
+  /* ── Surface scale (app is dark: black + white-opacity layering) */
+  --surface-page:    #000000;   /* page / canvas bg */
+  --surface-app:     #0d0d0d;   /* overall app bg */
+  --surface-panel:   #111111;   /* sidebar, side panels */
+  --surface-raised:  #1a1a1a;   /* elevated surfaces, dividers bg */
+  --surface-input:   #252525;   /* inputs, thumbs, card bg */
+  --surface-hover:   #333333;   /* hover states */
+  --surface-active:  #404040;   /* pressed / active bg */
+
+  /* ── Borders ──────────────────────────────────────────────
+     Named by visual weight, not by opacity number */
+  --border-faint:    rgba(255, 255, 255, 0.06);  /* subtlest divider */
+  --border-subtle:   rgba(255, 255, 255, 0.12);  /* section borders */
+  --border-default:  rgba(255, 255, 255, 0.20);  /* input borders */
+  --border-strong:   rgba(255, 255, 255, 0.40);  /* button borders */
+  --border-emphasis: rgba(255, 255, 255, 0.65);  /* focus / hover */
+  --border-active:   rgba(255, 255, 255, 0.80);  /* selected state */
+
+  /* ── Text ─────────────────────────────────────────────────
+     All white-on-dark; opacity conveys hierarchy */
+  --text-primary:   #ffffff;                     /* headings, labels, emphasis */
+  --text-body:      rgba(255, 255, 255, 0.80);   /* regular body copy */
+  --text-secondary: rgba(255, 255, 255, 0.55);   /* helper text, labels */
+  --text-muted:     rgba(255, 255, 255, 0.35);   /* hints, placeholders */
+  --text-disabled:  rgba(255, 255, 255, 0.20);   /* disabled elements */
+  /* Inverse (black text on white bg — primary buttons) */
+  --text-on-white:  #000000;
+
+  /* ── Interactive: secondary button (dark bg, white border) */
+  --btn-bg:           var(--surface-input);
+  --btn-bg-hover:     var(--surface-hover);
+  --btn-border:       var(--border-strong);
+  --btn-border-hover: var(--border-emphasis);
+  --btn-text:         var(--text-primary);
+
+  /* ── Interactive: primary button (white bg, black text) */
+  --btn-primary-bg:     var(--white);
+  --btn-primary-bg-hover: #e0e0e0;
+  --btn-primary-text:   var(--black);
+  --btn-primary-border: rgba(0, 0, 0, 0.15);
+
+  /* ── Interactive: active / selected toggle state */
+  --state-active-bg:     rgba(255, 255, 255, 0.16);
+  --state-active-border: rgba(255, 255, 255, 0.55);
+  --state-inactive-bg:   rgba(255, 255, 255, 0.04);
+  --state-inactive-border: var(--border-subtle);
+
+  /* ── Destructive action (no red — B&W only) */
+  --btn-danger-text:        var(--text-secondary);
+  --btn-danger-border:      var(--border-default);
+  --btn-danger-bg:          var(--surface-input);
+  --btn-danger-bg-hover:    var(--surface-hover);
+
+  /* ── Canvas / overlay guides */
+  --snap-guide:      rgba(255, 255, 255, 0.70);
+  --drag-outline:    rgba(255, 255, 255, 0.40);
+  --select-outline:  rgba(255, 255, 255, 0.70);
+  --hover-outline:   rgba(255, 255, 255, 0.15);
+  --draw-cursor:     rgba(255, 255, 255, 0.50);
+
+  /* ── Mask asset default tint */
+  --mask-tint: var(--white);
+
+  /* ── Shadows */
+  --shadow-float:  0 4px 24px rgba(0, 0, 0, 0.50);
+  --shadow-poster: 0 8px 40px rgba(0, 0, 0, 0.60);
+  --shadow-modal:  rgba(0, 0, 0, 0.90);
+
+  /* ── Shape / radius */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+
+  /* ── Layout dimensions */
+  --sidebar-width: 290px;
+  --nav-height: 48px;
+}

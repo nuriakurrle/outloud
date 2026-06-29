@@ -154,10 +154,10 @@ export function Sidebar(props: SidebarProps) {
         style={{
           margin: "0 12px 6px",
           padding: "10px 12px",
-          background: props.inverted ? "#ffffff" : "#000",
-          border: "1px solid rgba(255,255,255,0.3)",
-          borderRadius: 8,
-          color: props.inverted ? "#000" : "#FFF",
+          background: props.inverted ? "var(--white)" : "var(--black)",
+          border: "1px solid var(--border-strong)",
+          borderRadius: "var(--radius-lg)",
+          color: props.inverted ? "var(--black)" : "var(--white)",
           fontSize: 15,
           fontWeight: 600,
           cursor: "pointer",
@@ -170,16 +170,16 @@ export function Sidebar(props: SidebarProps) {
 
       <div className={styles.sidebarScroll}>
         {(props.textPanel || props.strokePanel) && (
-          <div style={{ padding: "12px 16px 16px", borderBottom: "1px solid #2a2a2a" }}>
+          <div style={{ padding: "12px 16px 16px", borderBottom: "1px solid var(--border-subtle)" }}>
             {props.textPanel ?? props.strokePanel}
           </div>
         )}
         {props.onAddText && (
           <div style={{ padding: "8px 12px 0" }}>
             <button onClick={props.onAddText}
-              style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.06)",
-                border: "1px dashed rgba(255,255,255,0.25)", borderRadius: 7,
-                color: "#ccc", fontSize: 14, cursor: "pointer", letterSpacing: "0.02em" }}>
+              style={{ width: "100%", padding: "8px 12px", background: "var(--state-inactive-bg)",
+                border: "1px dashed var(--border-strong)", borderRadius: "var(--radius-lg)",
+                color: "var(--text-body)", fontSize: 14, cursor: "pointer", letterSpacing: "0.02em" }}>
               {t.addText}
             </button>
           </div>
@@ -225,9 +225,9 @@ export function Sidebar(props: SidebarProps) {
                 return (
                   <button key={val} onClick={() => props.setPattern({ color: val })}
                     style={{ flex: 1, padding: "5px 8px", borderRadius: 6, cursor: "pointer",
-                      background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.04)",
-                      border: active ? "1px solid rgba(255,255,255,0.5)" : "1px solid rgba(255,255,255,0.15)",
-                      color: "#f5f2ed", fontSize: 13 }}>
+                      background: active ? "var(--state-active-bg)" : "var(--state-inactive-bg)",
+                      border: active ? "1px solid var(--state-active-border)" : "1px solid var(--state-inactive-border)",
+                      color: "var(--text-primary)", fontSize: 13 }}>
                     {val === "white" ? t.colorWhite : t.colorBlack}
                   </button>
                 );

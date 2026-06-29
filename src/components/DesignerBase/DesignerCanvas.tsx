@@ -42,8 +42,8 @@ export function DesignerCanvas({
         >
           {snapLines.map((l, i) =>
             l.x !== undefined
-              ? <line key={i} x1={l.x} y1={0} x2={l.x} y2={100} stroke="#4af" strokeWidth={0.4} strokeDasharray="2 1.5" />
-              : <line key={i} x1={0} y1={l.y} x2={100} y2={l.y!} stroke="#4af" strokeWidth={0.4} strokeDasharray="2 1.5" />
+              ? <line key={i} x1={l.x} y1={0} x2={l.x} y2={100} style={{ stroke: "var(--snap-guide)" }} strokeWidth={0.4} strokeDasharray="2 1.5" />
+              : <line key={i} x1={0} y1={l.y} x2={100} y2={l.y!} style={{ stroke: "var(--snap-guide)" }} strokeWidth={0.4} strokeDasharray="2 1.5" />
           )}
         </svg>
       )}
@@ -69,7 +69,7 @@ export function DesignerCanvas({
                 width: `${widthPx}px`, height: `${heightPx}px`,
                 transform: `translate(-50%, -50%) rotate(${asset.rotation}deg) scale(${(asset.flipX ? -1 : 1) * stretchX}, ${(asset.flipY ? -1 : 1) * stretchY})`,
                 transformOrigin: "center", opacity: asset.opacity, zIndex: asset.zIndex,
-                background: asset.tint || "#e8e5e0",
+                background: asset.tint || "var(--mask-tint)",
                 WebkitMaskImage: mask, maskImage: mask,
                 WebkitMaskSize: "100% 100%", maskSize: "100% 100%",
                 WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
@@ -133,8 +133,8 @@ export function DesignerCanvas({
           }}
           style={{
             position: "absolute", top: 8, right: 8, zIndex: 200,
-            background: "rgba(20,20,20,0.85)", border: "1px solid rgba(255,255,255,0.2)",
-            borderRadius: 6, color: "#f08080", width: 28, height: 28,
+            background: "var(--surface-panel)", border: "1px solid var(--border-default)",
+            borderRadius: "var(--radius-md)", color: "var(--btn-danger-text)", width: 28, height: 28,
             cursor: "pointer", fontSize: 14, display: "flex",
             alignItems: "center", justifyContent: "center", pointerEvents: "auto",
           }}

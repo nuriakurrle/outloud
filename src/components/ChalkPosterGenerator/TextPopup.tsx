@@ -14,9 +14,9 @@ interface TextPopupProps {
 
 const btnStyle = (active: boolean): React.CSSProperties => ({
   flex: 1, padding: "5px 0", borderRadius: 5, cursor: "pointer",
-  background: active ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.05)",
-  border: active ? "1px solid rgba(255,255,255,0.55)" : "1px solid rgba(255,255,255,0.12)",
-  color: "#f5f2ed", fontSize: 14,
+  background: active ? "var(--state-active-bg)" : "var(--state-inactive-bg)",
+  border: active ? "1px solid var(--state-active-border)" : "1px solid var(--state-inactive-border)",
+  color: "var(--text-primary)", fontSize: 14,
 });
 
 export function TextPopup({ field, align, onAlignChange, fonts, onClose, onDelete }: TextPopupProps) {
@@ -24,14 +24,14 @@ export function TextPopup({ field, align, onAlignChange, fonts, onClose, onDelet
   return (
     <div data-no-chalk style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "#666", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+        <span style={{ fontSize: 12, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
           {t.editText}
         </span>
         <div style={{ display: "flex", gap: 6 }}>
           {onDelete && (
-            <button onClick={onDelete} style={{ background: "none", border: "none", color: "#f08080", fontSize: 15, cursor: "pointer", padding: 0 }}>🗑</button>
+            <button onClick={onDelete} style={{ background: "none", border: "none", color: "var(--btn-danger-text)", fontSize: 15, cursor: "pointer", padding: 0 }}>🗑</button>
           )}
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#888", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
         </div>
       </div>
 
@@ -54,10 +54,10 @@ export function TextPopup({ field, align, onAlignChange, fonts, onClose, onDelet
       </select>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ color: "#888", fontSize: 13, minWidth: 28, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{field.size}</span>
+        <span style={{ color: "var(--text-secondary)", fontSize: 13, minWidth: 28, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{field.size}</span>
         <input type="range" min={field.sizeMin} max={field.sizeMax} value={field.size}
           onChange={(e) => field.setSize(Number(e.target.value))}
-          style={{ flex: 1, accentColor: "#fff", cursor: "pointer" }} />
+          style={{ flex: 1, accentColor: "var(--white)", cursor: "pointer" }} />
       </div>
 
       {field.setWeight && (

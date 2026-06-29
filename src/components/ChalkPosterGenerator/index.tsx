@@ -204,28 +204,28 @@ function ChalkPosterGeneratorInner({
     if (!selectedStrokeId) return undefined;
     const s = strokes.find(st => st.id === selectedStrokeId);
     if (!s) return undefined;
-    const btn = (active: boolean): React.CSSProperties => ({ flex: 1, padding: "5px 0", borderRadius: 5, cursor: "pointer", background: active ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.05)", border: active ? "1px solid rgba(255,255,255,0.55)" : "1px solid rgba(255,255,255,0.12)", color: "#f5f2ed", fontSize: 14 });
+    const btn = (active: boolean): React.CSSProperties => ({ flex: 1, padding: "5px 0", borderRadius: 5, cursor: "pointer", background: active ? "var(--state-active-bg)" : "var(--state-inactive-bg)", border: active ? "1px solid var(--state-active-border)" : "1px solid var(--state-inactive-border)", color: "var(--text-primary)", fontSize: 14 });
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 12, color: "#666", textTransform: "uppercase", letterSpacing: "0.06em" }}>{t.strokeTitle}</span>
-          <button onClick={() => setSelectedStrokeId(null)} style={{ background: "none", border: "none", color: "#888", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+          <span style={{ fontSize: 12, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{t.strokeTitle}</span>
+          <button onClick={() => setSelectedStrokeId(null)} style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
         </div>
         <div style={{ display: "flex", gap: 5 }}>
           {[{ label: t.colorWhite, hex: "#FFFFFF" }, { label: t.colorBlack, hex: "#000000" }].map(c => <button key={c.hex} onClick={() => updateSelectedStroke({ color: c.hex })} style={btn(s.color.toUpperCase() === c.hex)}>{c.label}</button>)}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "#888", fontSize: 13, minWidth: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{Math.round(s.opacity * 100)}%</span>
-          <input type="range" min={10} max={100} value={Math.round(s.opacity * 100)} onChange={e => updateSelectedStroke({ opacity: Number(e.target.value) / 100 })} style={{ flex: 1, accentColor: "#fff", cursor: "pointer" }} />
+          <span style={{ color: "var(--text-secondary)", fontSize: 13, minWidth: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{Math.round(s.opacity * 100)}%</span>
+          <input type="range" min={10} max={100} value={Math.round(s.opacity * 100)} onChange={e => updateSelectedStroke({ opacity: Number(e.target.value) / 100 })} style={{ flex: 1, accentColor: "var(--white)", cursor: "pointer" }} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "#888", fontSize: 13, minWidth: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{Math.round(s.strokeWidth * 100)}%</span>
-          <input type="range" min={1} max={100} value={Math.round(s.strokeWidth * 100)} onChange={e => updateSelectedStroke({ strokeWidth: Number(e.target.value) / 100 })} style={{ flex: 1, accentColor: "#fff", cursor: "pointer" }} />
+          <span style={{ color: "var(--text-secondary)", fontSize: 13, minWidth: 36, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{Math.round(s.strokeWidth * 100)}%</span>
+          <input type="range" min={1} max={100} value={Math.round(s.strokeWidth * 100)} onChange={e => updateSelectedStroke({ strokeWidth: Number(e.target.value) / 100 })} style={{ flex: 1, accentColor: "var(--white)", cursor: "pointer" }} />
         </div>
-        <select value={s.brushName} onChange={e => updateSelectedStroke({ brushName: e.target.value })} style={{ background: "#252525", border: "1px solid #3a3a3a", color: "#ddd", borderRadius: 5, padding: "8px 9px", fontSize: 15, fontFamily: "inherit", width: "100%", boxSizing: "border-box" as const }}>
+        <select value={s.brushName} onChange={e => updateSelectedStroke({ brushName: e.target.value })} style={{ background: "var(--surface-input)", border: "1px solid var(--border-default)", color: "var(--text-body)", borderRadius: 5, padding: "8px 9px", fontSize: 15, fontFamily: "inherit", width: "100%", boxSizing: "border-box" as const }}>
           {getAllBrushes().map(b => <option key={b.name} value={b.name}>{b.name.replace("Figma ", "")}</option>)}
         </select>
-        <button onClick={deleteSelectedStroke} style={{ padding: "7px 0", borderRadius: 6, background: "rgba(240,100,100,0.12)", border: "1px solid rgba(240,100,100,0.35)", color: "#f08080", fontSize: 14, cursor: "pointer" }}>{t.deleteLabel}</button>
+        <button onClick={deleteSelectedStroke} style={{ padding: "7px 0", borderRadius: 6, background: "var(--btn-danger-bg)", border: "1px solid var(--btn-danger-border)", color: "var(--btn-danger-text)", fontSize: 14, cursor: "pointer" }}>{t.deleteLabel}</button>
       </div>
     );
   })();

@@ -11,7 +11,7 @@ export const CHALK_COLORS = [
 const ALL_BRUSHES = getAllBrushes();
 
 const DIVIDER: React.CSSProperties = {
-  alignSelf: "stretch", width: 1, background: "rgba(255,255,255,0.12)",
+  alignSelf: "stretch", width: 1, background: "var(--border-subtle)",
 };
 
 interface DrawingToolbarProps {
@@ -38,61 +38,66 @@ export function DrawingToolbar({
 
   const btnBase: React.CSSProperties = {
     display: "flex", alignItems: "center", justifyContent: "center",
-    width: 32, height: 32, borderRadius: 6,
-    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
-    color: "#ddd", fontSize: 16, cursor: "pointer", flexShrink: 0,
+    width: 32, height: 32, borderRadius: "var(--radius-md)",
+    background: "var(--state-inactive-bg)", border: "1px solid var(--border-subtle)",
+    color: "var(--text-body)", fontSize: 16, cursor: "pointer", flexShrink: 0,
   };
 
   return (
     <div style={{
       position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)",
       display: "flex", alignItems: "center", gap: 10,
-      background: "rgba(20,20,20,0.92)", backdropFilter: "blur(12px)",
-      borderRadius: 10, padding: "8px 14px",
-      border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)",
+      background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)",
+      borderRadius: "var(--radius-xl)", padding: "8px 14px",
+      border: "1px solid var(--border-subtle)", boxShadow: "var(--shadow-float)",
       zIndex: 50, maxWidth: "calc(100vw - 32px)",
     }}>
       <button onClick={() => setMode(isDraw ? "move" : "draw")}
         style={{
-          display: "flex", alignItems: "center", gap: 5, height: 28, padding: "0 12px", borderRadius: 6,
-          background: isDraw ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.06)",
-          border: isDraw ? "2px solid #fff" : "2px solid rgba(255,255,255,0.12)",
-          color: isDraw ? "#1e1e1e" : "#ddd", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+          display: "flex", alignItems: "center", gap: 5, height: 28, padding: "0 12px", borderRadius: "var(--radius-md)",
+          background: isDraw ? "var(--btn-primary-bg)" : "var(--state-inactive-bg)",
+          border: isDraw ? "2px solid var(--white)" : "2px solid var(--border-subtle)",
+          color: isDraw ? "var(--btn-primary-text)" : "var(--text-body)",
+          fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
         }}>
         ✏️ {isDraw ? t.drawOn : t.drawOff}
       </button>
+
       {isDraw && <div style={DIVIDER} />}
       {isDraw && (
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          {[{ label: "Weiß", hex: "#FFFFFF" }, { label: "Schwarz", hex: "#000000" }].map((c) => (
-            <button key={c.hex} data-no-chalk
-              onClick={() => setChalkColor(c.hex)}
-              style={{ width: 20, height: 20, borderRadius: "50%", background: c.hex, padding: 0, cursor: "pointer", flexShrink: 0,
-                border: chalkColor === c.hex ? "2px solid #fff" : "2px solid rgba(255,255,255,0.25)" }} />
+          {CHALK_COLORS.map((c) => (
+            <button key={c.hex} data-no-chalk onClick={() => setChalkColor(c.hex)}
+              style={{
+                width: 20, height: 20, borderRadius: "50%", background: c.hex, padding: 0, cursor: "pointer", flexShrink: 0,
+                border: chalkColor === c.hex ? "2px solid var(--white)" : "2px solid var(--border-strong)",
+              }} />
           ))}
         </div>
       )}
+
       {isDraw && <div style={DIVIDER} />}
       {isDraw && (
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ color: "#aaa", fontSize: 12, minWidth: 32, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+            <span style={{ color: "var(--text-secondary)", fontSize: 12, minWidth: 32, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
               {Math.round(brushWidth * 100)}%
             </span>
             <input type="range" min={1} max={100} step={1} value={Math.round(brushWidth * 100)}
               onChange={(e) => setBrushWidth(Number(e.target.value) / 100)}
-              style={{ width: 80, accentColor: "#fff", height: 4, cursor: "pointer" }} />
+              style={{ width: 80, accentColor: "var(--white)", height: 4, cursor: "pointer" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ color: "#aaa", fontSize: 12, minWidth: 32, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+            <span style={{ color: "var(--text-secondary)", fontSize: 12, minWidth: 32, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
               {Math.round(brushOpacity * 100)}%
             </span>
             <input type="range" min={20} max={100} value={Math.round(brushOpacity * 100)}
               onChange={(e) => setBrushOpacity(Number(e.target.value) / 100)}
-              style={{ width: 80, accentColor: "#fff", height: 4, cursor: "pointer" }} />
+              style={{ width: 80, accentColor: "var(--white)", height: 4, cursor: "pointer" }} />
           </div>
         </div>
       )}
+
       {isDraw && <div style={DIVIDER} />}
       {isDraw && (
         <div style={{ display: "flex", gap: 5, alignItems: "center", overflowX: "auto", maxWidth: 420 }}>
@@ -102,19 +107,22 @@ export function DrawingToolbar({
               <button key={b.name} onClick={() => setBrushName(b.name)} title={b.name}
                 style={{
                   flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                  padding: "3px 5px", borderRadius: 6, cursor: "pointer",
-                  background: active ? "rgba(255,255,255,0.14)" : "transparent",
-                  border: active ? "1px solid rgba(255,255,255,0.5)" : "1px solid transparent",
+                  padding: "3px 5px", borderRadius: "var(--radius-md)", cursor: "pointer",
+                  background: active ? "var(--state-active-bg)" : "transparent",
+                  border: active ? "1px solid var(--state-active-border)" : "1px solid transparent",
                 }}>
                 <svg viewBox="0 0 100 100" style={{ width: 44, height: 22, display: "block" }}>
-                  <path d={b.path} fill={active ? "#fff" : "#777"} />
+                  <path d={b.path} fill={active ? "var(--white)" : "var(--text-secondary)"} />
                 </svg>
-                <span style={{ color: active ? "#fff" : "#555", fontSize: 9, whiteSpace: "nowrap" }}>{b.label}</span>
+                <span style={{ color: active ? "var(--text-primary)" : "var(--text-muted)", fontSize: 9, whiteSpace: "nowrap" }}>
+                  {b.label}
+                </span>
               </button>
             );
           })}
         </div>
       )}
+
       {isDraw && <div style={DIVIDER} />}
       <button onClick={onUndo} disabled={!canUndo} title="Rückgängig"
         style={{ ...btnBase, cursor: canUndo ? "pointer" : "not-allowed", opacity: canUndo ? 1 : 0.4 }}>↩</button>

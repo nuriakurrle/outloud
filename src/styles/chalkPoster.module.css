@@ -3,18 +3,18 @@
   height: 100%;
   width: 100vw;
   overflow: hidden;
-  background: #fff;
-  color: #ddd;
+  background: var(--surface-app);
+  color: var(--text-body);
   font-family: "Inria Sans", system-ui, sans-serif;
 }
 
 /* ── Sidebar ─────────────────────────────────────────── */
 .sidebar {
-  width: 290px;
-  min-width: 290px;
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
   height: 100%;
-  background: #1a1a1a;
-  border-right: 1px solid #2a2a2a;
+  background: var(--surface-panel);
+  border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   padding-top: 2vh;
@@ -22,7 +22,7 @@
 
 .sidebarHeader {
   padding: 18px 16px 14px;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .sidebarTitle {
@@ -30,13 +30,13 @@
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  color: #f0f0f0;
+  color: var(--text-primary);
 }
 
 .sidebarSubtitle {
   margin: 4px 0 0;
   font-size: 13px;
-  color: #777;
+  color: var(--text-secondary);
 }
 
 .sidebarScroll {
@@ -53,13 +53,13 @@
 }
 
 .sidebarScroll::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
+  background: var(--surface-hover);
   border-radius: 2px;
 }
 
 .sidebarFooter {
   padding: 14px 16px;
-  border-top: 1px solid #2a2a2a;
+  border-top: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -67,14 +67,14 @@
 
 /* ── Accordion sections ──────────────────────────────── */
 .section {
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .sectionButton {
   width: 100%;
   background: none;
   border: none;
-  color: #ddd;
+  color: var(--text-body);
   padding: 13px 16px;
   display: flex;
   align-items: center;
@@ -88,12 +88,12 @@
 }
 
 .sectionButton:hover {
-  background: #202020;
+  background: var(--surface-raised);
 }
 
 .arrow {
   font-size: 9px;
-  color: #888;
+  color: var(--text-secondary);
   transition: transform 0.18s ease;
 }
 
@@ -119,16 +119,16 @@
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #888;
+  color: var(--text-secondary);
 }
 
 .input,
 .select,
 .textarea {
-  background: #252525;
-  border: 1px solid #3a3a3a;
-  color: #ddd;
-  border-radius: 5px;
+  background: var(--surface-input);
+  border: 1px solid var(--border-default);
+  color: var(--text-body);
+  border-radius: var(--radius-sm);
   padding: 8px 9px;
   font-size: 15px;
   font-family: inherit;
@@ -140,7 +140,7 @@
 .input:focus,
 .select:focus,
 .textarea:focus {
-  border-color: #5a5a5a;
+  border-color: var(--border-emphasis);
 }
 
 .textarea {
@@ -152,8 +152,8 @@
 .select {
   cursor: pointer;
   appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, #888 50%),
-    linear-gradient(135deg, #888 50%, transparent 50%);
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
+    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
   background-position: calc(100% - 15px) calc(50% + 1px),
     calc(100% - 10px) calc(50% + 1px);
   background-size: 5px 5px, 5px 5px;
@@ -162,7 +162,7 @@
 
 .slider {
   width: 100%;
-  accent-color: #ffffff;
+  accent-color: var(--white);
   cursor: pointer;
 }
 
@@ -174,15 +174,15 @@
 
 .sliderValue {
   font-size: 13px;
-  color: #aaa;
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
 .regenButton {
-  background: #252525;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  color: #ffffff;
-  border-radius: 8px;
+  background: var(--surface-input);
+  border: 1.5px solid var(--border-strong);
+  color: var(--text-primary);
+  border-radius: var(--radius-lg);
   padding: 8px 9px;
   font-size: 15px;
   font-family: inherit;
@@ -191,13 +191,13 @@
 }
 
 .regenButton:hover {
-  background: #303030;
-  border-color: rgba(255, 255, 255, 0.75);
+  background: var(--btn-bg-hover);
+  border-color: var(--border-emphasis);
 }
 
 .hint {
   font-size: 13px;
-  color: #777;
+  color: var(--text-muted);
   line-height: 1.4;
 }
 
@@ -217,7 +217,7 @@
 .brushCard canvas {
   width: 100%;
   height: 36px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   border: 2px solid transparent;
   display: block;
   margin: 0 auto 4px;
@@ -225,22 +225,22 @@
 }
 
 .brushCard:hover canvas {
-  border-color: #4a4a4a;
+  border-color: var(--border-default);
 }
 
 .brushCardSelected canvas {
-  border-color: #ffffff;
+  border-color: var(--white);
 }
 
 .brushCard span {
   font-size: 10px;
-  color: #888;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .brushCardSelected span {
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 /* ── Werkzeug-Toolbar ────────────────────────────────── */
@@ -249,8 +249,8 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px 16px;
-  border-bottom: 1px solid #2a2a2a;
-  background: #1c1c1c;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-raised);
 }
 
 .toolToggle {
@@ -260,10 +260,10 @@
 }
 
 .toolButton {
-  background: #333;
-  border: 1px solid #3a3a3a;
-  color: #ccc;
-  border-radius: 5px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-default);
+  color: var(--text-body);
+  border-radius: var(--radius-sm);
   padding: 9px 6px;
   font-size: 14px;
   font-family: inherit;
@@ -271,24 +271,24 @@
 }
 
 .toolButton:hover {
-  background: #3a3a3a;
+  background: var(--surface-active);
 }
 
 .toolButtonActive {
-  background: #ffffff;
-  color: #111;
-  border-color: #ffffff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-bg);
   font-weight: 600;
 }
 
 .toolButtonActive:hover {
-  background: #fff;
+  background: var(--btn-primary-bg-hover);
 }
 
 /* ── Kreide-Cursor im Zeichen-Modus ──────────────────── */
 .drawCursor {
   position: fixed;
-  border: 1.5px dashed rgba(255, 255, 255, 0.5);
+  border: 1.5px dashed var(--draw-cursor);
   border-radius: 50%;
   pointer-events: none;
   transform: translate(-50%, -50%);
@@ -302,10 +302,10 @@
 
 .exportButton {
   width: 100%;
-  background: #ffffff;
-  color: #111;
-  border: 1.5px solid rgba(17, 17, 17, 0.35);
-  border-radius: 9px;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: 1.5px solid var(--btn-primary-border);
+  border-radius: var(--radius-xl);
   padding: 9px 12px;
   font-size: 15px;
   font-family: inherit;
@@ -313,7 +313,7 @@
 }
 
 .exportButton:hover {
-  background: #fff;
+  background: var(--btn-primary-bg-hover);
 }
 
 /* ── Preview ─────────────────────────────────────────── */
@@ -332,8 +332,8 @@
 
 .posterWrap {
   position: relative;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-  background: #1e1e1e;
+  box-shadow: var(--shadow-poster);
+  background: var(--surface-raised);
 }
 
 .canvas {
@@ -348,7 +348,7 @@
 
 .previewHint {
   font-size: 14px;
-  color: #666;
+  color: var(--text-muted);
   letter-spacing: 0.5px;
 }
 
@@ -370,12 +370,12 @@
 }
 
 .textEl:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--hover-outline);
 }
 
 .dragging {
   cursor: grabbing;
-  border-color: rgba(255, 255, 255, 0.4) !important;
+  border-color: var(--drag-outline) !important;
   border-style: dashed;
 }
 
@@ -392,7 +392,7 @@
 }
 
 .dividerEl:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--hover-outline);
 }
 
 /* ── Asset-Grid & Controls ───────────────────────────── */
@@ -408,35 +408,35 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  background: #252525;
-  border: 1px solid #3a3a3a;
-  border-radius: 5px;
+  background: var(--surface-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
   padding: 6px 4px;
   cursor: pointer;
   font-family: inherit;
 }
 
 .layoutThumb:hover {
-  background: #303030;
-  border-color: #5a7fb5;
+  background: var(--surface-hover);
+  border-color: var(--border-emphasis);
 }
 
 .layoutThumbActive {
-  border-color: rgba(255, 255, 255, 0.6);
-  background: #2a2a2a;
+  border-color: var(--border-active);
+  background: var(--surface-raised);
 }
 
 .layoutThumbSvg {
   width: 100%;
   height: auto;
   aspect-ratio: 60 / 80;
-  background: #1a1a1a;
-  border-radius: 3px;
+  background: var(--surface-panel);
+  border-radius: var(--radius-xs);
 }
 
 .layoutThumbLabel {
   font-size: 10px;
-  color: #bbb;
+  color: var(--text-body);
   text-align: center;
   line-height: 1.1;
 }
@@ -450,9 +450,9 @@
 .assetThumb {
   aspect-ratio: 1;
   width: 100%;
-  background: #252525;
+  background: var(--surface-input);
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   padding: 6px;
   cursor: pointer;
   display: flex;
@@ -461,8 +461,8 @@
 }
 
 .assetThumb:hover {
-  background: #333;
-  border-color: #555;
+  background: var(--surface-hover);
+  border-color: var(--border-default);
 }
 
 .assetThumbImg {
@@ -477,7 +477,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border-default);
   padding-top: 12px;
 }
 
@@ -488,10 +488,10 @@
 
 .smallButton {
   flex: 1;
-  background: #252525;
-  border: 1.5px solid rgba(255, 255, 255, 0.45);
-  color: #ffffff;
-  border-radius: 8px;
+  background: var(--btn-bg);
+  border: 1.5px solid var(--btn-border);
+  color: var(--btn-text);
+  border-radius: var(--radius-lg);
   padding: 7px 8px;
   font-size: 15px;
   font-family: inherit;
@@ -500,15 +500,15 @@
 }
 
 .smallButton:hover {
-  background: #303030;
-  border-color: rgba(255, 255, 255, 0.75);
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
 }
 
 .danger {
-  color: #f0a0a0;
+  color: var(--btn-danger-text);
 }
 
 .danger:hover {
-  background: #3a2424;
-  border-color: #6a3a3a;
+  background: var(--btn-danger-bg-hover);
+  border-color: var(--border-strong);
 }

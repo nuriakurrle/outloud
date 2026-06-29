@@ -165,9 +165,9 @@ export function AssetPanel({
             data-no-chalk
             style={
               a.category === "strokes"
-                ? { background: "#1e1e1e", gridColumn: "1 / -1" }
+                ? { background: "var(--surface-raised)", gridColumn: "1 / -1" }
                 : a.category === "shapes"
-                  ? { background: "#1e1e1e" }
+                  ? { background: "var(--surface-raised)" }
                   : undefined
             }
             onPointerDown={(e) => {
@@ -235,46 +235,46 @@ export function AssetPanel({
       </button>
 
       {pending && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,0.9)", display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 9000, background: "var(--shadow-modal)", display: "flex", flexDirection: "column" }}>
           <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "#0a0a0a", overflow: "hidden" }}>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-page)", overflow: "hidden" }}>
               <img src={pending.useStencil ? pending.previewUrl : pending.originalUrl} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} alt="preview" />
             </div>
-            <div style={{ width: 220, background: "#111", borderLeft: "1px solid #1a1a1a", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, color: "#fff", fontSize: 13, cursor: "pointer" }}>
+            <div style={{ width: 220, background: "var(--surface-panel)", borderLeft: "1px solid var(--border-faint)", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-primary)", fontSize: 13, cursor: "pointer" }}>
                 <input type="checkbox" checked={pending.useStencil} onChange={e => setPending(prev => prev ? { ...prev, useStencil: e.target.checked } : null)} />
                 Stencil Filter
               </label>
-              <div style={{ color: "#fff", fontWeight: 700, fontSize: 13, letterSpacing: "0.06em", opacity: pending.useStencil ? 1 : 0.3 }}>Variables</div>
+              <div style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 13, letterSpacing: "0.06em", opacity: pending.useStencil ? 1 : 0.3 }}>Variables</div>
               {pending.useStencil && <>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <label style={{ fontSize: 12, color: "#666" }}>Blocksize</label>
+                  <label style={{ fontSize: 12, color: "var(--text-secondary)" }}>Blocksize</label>
                   <input
                     type="number" value={pending.blockSize} min={3} max={800} step={1}
                     onChange={e => setPending(prev => prev ? { ...prev, blockSize: Number(e.target.value) } : null)}
-                    style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "6px 8px", borderRadius: 4, fontSize: 13, width: "100%" }}
+                    style={{ background: "var(--surface-raised)", border: "1px solid var(--border-default)", color: "var(--text-primary)", padding: "6px 8px", borderRadius: "var(--radius-sm)", fontSize: 13, width: "100%" }}
                   />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <label style={{ fontSize: 12, color: "#666" }}>Stroke</label>
+                  <label style={{ fontSize: 12, color: "var(--text-secondary)" }}>Stroke</label>
                   <input
                     type="number" value={pending.c} min={-50} max={50} step={1}
                     onChange={e => setPending(prev => prev ? { ...prev, c: Number(e.target.value) } : null)}
-                    style={{ background: "#1a1a1a", border: "1px solid #333", color: "#fff", padding: "6px 8px", borderRadius: 4, fontSize: 13, width: "100%" }}
+                    style={{ background: "var(--surface-raised)", border: "1px solid var(--border-default)", color: "var(--text-primary)", padding: "6px 8px", borderRadius: "var(--radius-sm)", fontSize: 13, width: "100%" }}
                   />
                 </div>
                 <button
                   onClick={() => applyStencil(pending.blockSize, pending.c)}
-                  style={{ padding: "9px 0", background: "#fff", color: "#111", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                  style={{ padding: "9px 0", background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", border: "none", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
                 >
                   Apply
                 </button>
               </>}
             </div>
           </div>
-          <div style={{ padding: "12px 24px", background: "#111", borderTop: "1px solid #1a1a1a", display: "flex", justifyContent: "flex-end", gap: 12 }}>
-            <button onClick={cancelStencil} style={{ padding: "9px 20px", background: "none", border: "1px solid #333", color: "#aaa", borderRadius: 4, fontSize: 13, cursor: "pointer" }}>Cancel</button>
-            <button onClick={confirmStencil} style={{ padding: "9px 20px", background: "#fff", color: "#111", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Upload</button>
+          <div style={{ padding: "12px 24px", background: "var(--surface-panel)", borderTop: "1px solid var(--border-faint)", display: "flex", justifyContent: "flex-end", gap: 12 }}>
+            <button onClick={cancelStencil} style={{ padding: "9px 20px", background: "none", border: "1px solid var(--border-default)", color: "var(--text-secondary)", borderRadius: "var(--radius-sm)", fontSize: 13, cursor: "pointer" }}>Cancel</button>
+            <button onClick={confirmStencil} style={{ padding: "9px 20px", background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", border: "none", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Upload</button>
           </div>
         </div>
       )}
@@ -304,13 +304,9 @@ export function AssetPanel({
                           flex: 1,
                           padding: "5px 8px",
                           borderRadius: 6,
-                          background: active
-                            ? "rgba(255,255,255,0.16)"
-                            : "rgba(255,255,255,0.04)",
-                          border: active
-                            ? "1px solid rgba(255,255,255,0.5)"
-                            : "1px solid rgba(255,255,255,0.15)",
-                          color: "#FFFFFF",
+                          background: active ? "var(--state-active-bg)" : "var(--state-inactive-bg)",
+                          border: active ? "1px solid var(--state-active-border)" : "1px solid var(--state-inactive-border)",
+                          color: "var(--text-primary)",
                           fontSize: 12,
                           cursor: "pointer",
                         }}
@@ -411,9 +407,7 @@ export function AssetPanel({
                           height: 20,
                           borderRadius: "50%",
                           background: c.hex,
-                          border: active
-                            ? "2px solid #fff"
-                            : "2px solid rgba(255,255,255,0.25)",
+                          border: active ? "2px solid var(--white)" : "2px solid var(--border-strong)",
                           cursor: "pointer",
                           padding: 0,
                         }}

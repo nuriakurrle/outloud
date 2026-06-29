@@ -10,12 +10,12 @@ export function MarginPanel() {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px" }}>
       {SIDES.map(k => (
-        <label key={k} style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 12, color: "#999", textTransform: "capitalize" }}>
+        <label key={k} style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 12, color: "var(--text-secondary)", textTransform: "capitalize" }}>
           {k}
           <input
             type="number" min={0} max={49} value={margins[k]}
             onChange={set(k)}
-            style={{ background: "#252525", border: "1px solid #3a3a3a", color: "#ddd", borderRadius: 4, padding: "4px 6px", fontSize: 13, fontFamily: "inherit", width: "100%", boxSizing: "border-box" }}
+            style={{ background: "var(--surface-input)", border: "1px solid var(--border-default)", color: "var(--text-body)", borderRadius: "var(--radius-sm)", padding: "4px 6px", fontSize: 13, fontFamily: "inherit", width: "100%", boxSizing: "border-box" }}
           />
         </label>
       ))}

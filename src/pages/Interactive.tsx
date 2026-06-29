@@ -41,8 +41,7 @@ const MAX_UPLOAD_DIM = 800;
 function brightnessFromImageData(data: Uint8ClampedArray, n: number): Float32Array {
   const out = new Float32Array(n);
   for (let i = 0; i < n; i++) {
-    out[i] =
-      (0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]) / 255;
+    out[i] = (0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]) / 255;
   }
   return out;
 }
@@ -66,7 +65,6 @@ export default function Interactive() {
   const [size, setSize] = useState({ w: 640, h: 480 });
   const { t } = useT();
 
-  // Refs so live callbacks always read latest values without restarting.
   const configRef = useRef(config);
   useEffect(() => { configRef.current = config; }, [config]);
   const stencilConfigRef = useRef(stencilConfig);
@@ -109,12 +107,11 @@ export default function Interactive() {
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      ctx.fillStyle = "#0a0a0a";
+      ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, size.w, size.h);
     }
   }, [size]);
 
-  // Chalk upload render
   useEffect(() => {
     if (source !== "upload" || !uploadedImage || renderMode !== "chalk") return;
     const canvas = canvasRef.current;
@@ -126,7 +123,6 @@ export default function Interactive() {
     ctx.restore();
   }, [config, uploadedImage, source, size, renderMode]);
 
-  // Stencil upload render
   useEffect(() => {
     if (source !== "upload" || !uploadedImage || renderMode !== "stencil") return;
     const canvas = canvasRef.current;
@@ -155,21 +151,15 @@ export default function Interactive() {
     ctx.drawImage(img, 0, 0, w, h);
     const imgData = ctx.getImageData(0, 0, w, h);
     const brightness = brightnessFromImageData(imgData.data, w * h);
-    setUploadedImage((prev) => {
-      if (prev) URL.revokeObjectURL(prev.url);
-      return { url, img, brightness, w, h };
-    });
+    setUploadedImage((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url, img, brightness, w, h }; });
   }, []);
 
   const clearUpload = useCallback(() => {
-    setUploadedImage((prev) => {
-      if (prev) URL.revokeObjectURL(prev.url);
-      return null;
-    });
+    setUploadedImage((prev) => { if (prev) URL.revokeObjectURL(prev.url); return null; });
     const ctx = canvasRef.current?.getContext("2d");
     if (ctx) {
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      ctx.fillStyle = "#0a0a0a";
+      ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, size.w, size.h);
     }
   }, [size]);
@@ -196,42 +186,22 @@ export default function Interactive() {
         const ch = canvas.height / DPR;
         ctx.save();
         ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-
         if (renderModeRef.current === "stencil") {
-          renderStencilLive(
-            ctx,
-            result.videoFrame.data,
-            result.mask.data,
-            result.width, result.height,
-            cw, ch,
-            stencilConfigRef.current.blockSize,
-            stencilConfigRef.current.c,
-          );
+          renderStencilLive(ctx, result.videoFrame.data, result.mask.data, result.width, result.height, cw, ch, stencilConfigRef.current.blockSize, stencilConfigRef.current.c);
         } else {
           const n = result.width * result.height;
           let brightness = brightnessBuf.current;
-          if (!brightness || brightness.length !== n) {
-            brightness = new Float32Array(n);
-            brightnessBuf.current = brightness;
-          }
+          if (!brightness || brightness.length !== n) { brightness = new Float32Array(n); brightnessBuf.current = brightness; }
           const d = result.videoFrame.data;
           const mask = result.mask.data;
           for (let i = 0; i < n; i++) {
-            brightness[i] =
-              mask[i * 4] < 128
-                ? 0
-                : (0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]) / 255;
+            brightness[i] = mask[i * 4] < 128 ? 0 : (0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]) / 255;
           }
           renderChalkFrame(ctx, brightness, result.width, result.height, cw, ch, configRef.current, frameCounter.current++, true);
         }
-
         ctx.restore();
       },
-      (err) => {
-        console.error("Kamera-Fehler:", err);
-        setError(t.cameraError);
-        handleStopLive();
-      }
+      (err) => { console.error("Kamera-Fehler:", err); setError(t.cameraError); handleStopLive(); }
     );
   }, [handleStopLive]);
 
@@ -288,7 +258,6 @@ export default function Interactive() {
 
       {showUI && (
         <aside style={S.sidebar}>
-          {/* Source toggle */}
           <div>
             <div style={S.sectionLabel}>{t.source}</div>
             <div style={S.toggle}>
@@ -297,7 +266,6 @@ export default function Interactive() {
             </div>
           </div>
 
-          {/* Render mode toggle */}
           <div>
             <div style={S.sectionLabel}>{t.mode}</div>
             <div style={S.toggle}>
@@ -329,7 +297,6 @@ export default function Interactive() {
           )}
 
           {error && <div style={S.error}>{error}</div>}
-
           <div style={S.divider} />
 
           {isStencil ? (
@@ -341,43 +308,28 @@ export default function Interactive() {
             </>
           ) : (
             <>
-              <Slider label={t.scale} value={config.scale} min={0.1} max={1} step={0.05}
-                onChange={(v) => setCfg({ scale: v })} fmt={(v) => v.toFixed(2)} />
-              <Slider label={t.resolution} value={config.resolution} min={2} max={20} step={1}
-                onChange={(v) => setCfg({ resolution: v })} fmt={(v) => String(v)} />
-              <Slider label={t.chalkDensity} value={config.density} min={0.1} max={1} step={0.05}
-                onChange={(v) => setCfg({ density: v })} fmt={(v) => v.toFixed(2)} />
-              <Slider label={t.threshold} value={config.threshold} min={0} max={1} step={0.02}
-                onChange={(v) => setCfg({ threshold: v })} fmt={(v) => v.toFixed(2)} />
-              <Slider label={t.noise} value={config.noise} min={0} max={1} step={0.02}
-                onChange={(v) => setCfg({ noise: v })} fmt={(v) => v.toFixed(2)} />
-              <Slider label={t.strokeDir} value={config.direction} min={0} max={360} step={1}
-                onChange={(v) => setCfg({ direction: v })} fmt={(v) => `${v}°`} />
-              <Slider label={t.strokeWeight} value={config.strokeWeight} min={1} max={8} step={0.5}
-                onChange={(v) => setCfg({ strokeWeight: v })} fmt={(v) => v.toFixed(1)} />
-              <Slider label={t.trail} value={config.trail} min={0} max={1} step={0.02}
-                onChange={(v) => setCfg({ trail: v })} fmt={(v) => v.toFixed(2)} disabled={liveDisabled} />
-              <Slider label={t.shimmer} value={config.shimmer} min={0} max={1} step={0.05}
-                onChange={(v) => setCfg({ shimmer: v })} fmt={(v) => v.toFixed(2)} disabled={liveDisabled} />
+              <Slider label={t.scale} value={config.scale} min={0.1} max={1} step={0.05} onChange={(v) => setCfg({ scale: v })} fmt={(v) => v.toFixed(2)} />
+              <Slider label={t.resolution} value={config.resolution} min={2} max={20} step={1} onChange={(v) => setCfg({ resolution: v })} fmt={(v) => String(v)} />
+              <Slider label={t.chalkDensity} value={config.density} min={0.1} max={1} step={0.05} onChange={(v) => setCfg({ density: v })} fmt={(v) => v.toFixed(2)} />
+              <Slider label={t.threshold} value={config.threshold} min={0} max={1} step={0.02} onChange={(v) => setCfg({ threshold: v })} fmt={(v) => v.toFixed(2)} />
+              <Slider label={t.noise} value={config.noise} min={0} max={1} step={0.02} onChange={(v) => setCfg({ noise: v })} fmt={(v) => v.toFixed(2)} />
+              <Slider label={t.strokeDir} value={config.direction} min={0} max={360} step={1} onChange={(v) => setCfg({ direction: v })} fmt={(v) => `${v}°`} />
+              <Slider label={t.strokeWeight} value={config.strokeWeight} min={1} max={8} step={0.5} onChange={(v) => setCfg({ strokeWeight: v })} fmt={(v) => v.toFixed(1)} />
+              <Slider label={t.trail} value={config.trail} min={0} max={1} step={0.02} onChange={(v) => setCfg({ trail: v })} fmt={(v) => v.toFixed(2)} disabled={liveDisabled} />
+              <Slider label={t.shimmer} value={config.shimmer} min={0} max={1} step={0.05} onChange={(v) => setCfg({ shimmer: v })} fmt={(v) => v.toFixed(2)} disabled={liveDisabled} />
             </>
           )}
 
           <div style={S.divider} />
-
           <button style={S.saveBtn} onClick={savePNG}>{t.savePng}</button>
-
-          <Link to="/poster-maker" style={S.editorLink} data-chalk>
-            {t.backToEditor}
-          </Link>
+          <Link to="/poster-maker" style={S.editorLink} data-chalk>{t.backToEditor}</Link>
         </aside>
       )}
     </div>
   );
 }
 
-function Slider({
-  label, value, min, max, step, onChange, fmt, disabled = false,
-}: {
+function Slider({ label, value, min, max, step, onChange, fmt, disabled = false }: {
   label: string; value: number; min: number; max: number; step: number;
   onChange: (v: number) => void; fmt: (v: number) => string; disabled?: boolean;
 }) {
@@ -394,25 +346,35 @@ function Slider({
 }
 
 const S = {
-  root: { display: "flex", height: "100%", background: "#0a0a0a", overflow: "hidden" } as React.CSSProperties,
+  root: { display: "flex", height: "100%", background: "var(--surface-page)", overflow: "hidden" } as React.CSSProperties,
   canvasArea: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minWidth: 0 } as React.CSSProperties,
-  canvas: { boxShadow: "0 4px 30px rgba(0,0,0,0.5)", background: "#0a0a0a", display: "block" } as React.CSSProperties,
-  placeholder: { position: "absolute", color: "rgba(255, 255, 255, 0.25)", fontSize: 13, pointerEvents: "none" } as React.CSSProperties,
-  sidebar: { width: 260, flexShrink: 0, background: "#111", borderLeft: "1px solid #1a1a1a", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" } as React.CSSProperties,
-  sectionLabel: { fontSize: 16, color: "#ffffff", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 } as React.CSSProperties,
-  toggle: { display: "flex", borderRadius: 6, overflow: "hidden", border: "1px solid #2a2a2a" } as React.CSSProperties,
-  toggleBtn: (active: boolean): React.CSSProperties => ({ flex: 1, padding: "8px 0", background: active ? "#e0e0e0" : "#1a1a1a", color: active ? "#111" : "#777", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer" }),
-  fileLabel: { display: "block", padding: 14, textAlign: "center", background: "#1a1a1a", border: "1px dashed #333", borderRadius: 4, cursor: "pointer", fontSize: 14, color: "#777" } as React.CSSProperties,
-  thumbRow: { display: "flex", alignItems: "center", gap: 8, padding: 8, background: "#1a1a1a", borderRadius: 4 } as React.CSSProperties,
-  thumb: { width: 48, height: 48, objectFit: "cover", borderRadius: 3 } as React.CSSProperties,
-  thumbX: { marginLeft: "auto", background: "none", border: "none", color: "#666", cursor: "pointer", fontSize: 14 } as React.CSSProperties,
-  liveBtn: (running: boolean): React.CSSProperties => ({ width: "100%", padding: 10, background: running ? "#333" : "#e0e0e0", color: running ? "#aaa" : "#111", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer" }),
-  error: { fontSize: 12, color: "rgba(235,160,160,0.9)", lineHeight: 1.4 } as React.CSSProperties,
-  divider: { height: 1, background: "#1a1a1a" } as React.CSSProperties,
+  canvas: { boxShadow: "var(--shadow-float)", background: "var(--black)", display: "block" } as React.CSSProperties,
+  placeholder: { position: "absolute", color: "var(--text-muted)", fontSize: 13, pointerEvents: "none" } as React.CSSProperties,
+  sidebar: { width: 260, flexShrink: 0, background: "var(--surface-panel)", borderLeft: "1px solid var(--border-faint)", padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" } as React.CSSProperties,
+  sectionLabel: { fontSize: 16, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 } as React.CSSProperties,
+  toggle: { display: "flex", borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-subtle)" } as React.CSSProperties,
+  toggleBtn: (active: boolean): React.CSSProperties => ({
+    flex: 1, padding: "8px 0",
+    background: active ? "var(--btn-primary-bg)" : "var(--surface-raised)",
+    color: active ? "var(--btn-primary-text)" : "var(--text-secondary)",
+    border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
+  }),
+  fileLabel: { display: "block", padding: 14, textAlign: "center", background: "var(--surface-raised)", border: "1px dashed var(--border-default)", borderRadius: "var(--radius-sm)", cursor: "pointer", fontSize: 14, color: "var(--text-secondary)" } as React.CSSProperties,
+  thumbRow: { display: "flex", alignItems: "center", gap: 8, padding: 8, background: "var(--surface-raised)", borderRadius: "var(--radius-sm)" } as React.CSSProperties,
+  thumb: { width: 48, height: 48, objectFit: "cover", borderRadius: "var(--radius-xs)" } as React.CSSProperties,
+  thumbX: { marginLeft: "auto", background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 14 } as React.CSSProperties,
+  liveBtn: (running: boolean): React.CSSProperties => ({
+    width: "100%", padding: 10,
+    background: running ? "var(--surface-hover)" : "var(--btn-primary-bg)",
+    color: running ? "var(--text-secondary)" : "var(--btn-primary-text)",
+    border: "none", borderRadius: "var(--radius-sm)", fontSize: 12, fontWeight: 600, cursor: "pointer",
+  }),
+  error: { fontSize: 12, color: "var(--text-body)", lineHeight: 1.4 } as React.CSSProperties,
+  divider: { height: 1, background: "var(--border-faint)" } as React.CSSProperties,
   sliderRow: { display: "flex", flexDirection: "column", gap: 3 } as React.CSSProperties,
-  sliderLabel: { display: "flex", justifyContent: "space-between", fontSize: 14, color: "#d9d9d9" } as React.CSSProperties,
-  sliderValue: { color: "#999", fontWeight: 600, fontVariantNumeric: "tabular-nums" } as React.CSSProperties,
-  range: { width: "100%", accentColor: "#ffffff", height: 2 } as React.CSSProperties,
-  saveBtn: { width: "100%", padding: 11, background: "#ffffff", color: "#111", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
-  editorLink: { display: "block", textAlign: "center", padding: "10px 12px", marginTop: 4, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 6, color: "#f5f2ed", fontSize: 13, fontWeight: 600, textDecoration: "none", letterSpacing: "0.02em" } as React.CSSProperties,
+  sliderLabel: { display: "flex", justifyContent: "space-between", fontSize: 14, color: "var(--text-body)" } as React.CSSProperties,
+  sliderValue: { color: "var(--text-secondary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" } as React.CSSProperties,
+  range: { width: "100%", accentColor: "var(--white)", height: 2 } as React.CSSProperties,
+  saveBtn: { width: "100%", padding: 11, background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", border: "none", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
+  editorLink: { display: "block", textAlign: "center", padding: "10px 12px", marginTop: 4, background: "var(--state-inactive-bg)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-md)", color: "var(--text-primary)", fontSize: 13, fontWeight: 600, textDecoration: "none", letterSpacing: "0.02em" } as React.CSSProperties,
 };

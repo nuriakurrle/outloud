@@ -21,31 +21,22 @@ export function Navbar() {
   return (
     <nav style={S.nav}>
       <img src={logoSrc} alt="Вголос!" style={S.logo} />
-
       <div style={S.right}>
         {ROUTES.map(({ key, to }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === "/"}
+          <NavLink key={to} to={to} end={to === "/"}
             style={({ isActive }) => isActive ? { ...S.link, ...S.linkActive } : S.link}
           >
             {t[key]}
           </NavLink>
         ))}
-
         <div style={S.langBar}>
           {LANGS.map(({ code, label }, i) => (
-            <button
-              key={code}
-              onClick={() => setLang(code)}
-              style={{
-                ...S.langBtn,
-                color: lang === code ? "#fff" : "rgba(255,255,255,0.35)",
-                fontWeight: lang === code ? 600 : 400,
-                borderLeft: i === 0 ? "1px solid rgba(255,255,255,0.12)" : "none",
-              }}
-            >
+            <button key={code} onClick={() => setLang(code)} style={{
+              ...S.langBtn,
+              color: lang === code ? "var(--white)" : "var(--text-muted)",
+              fontWeight: lang === code ? 600 : 400,
+              borderLeft: i === 0 ? "1px solid var(--border-subtle)" : "none",
+            }}>
               {label}
             </button>
           ))}
@@ -57,7 +48,7 @@ export function Navbar() {
 
 const S = {
   nav: {
-    height: 48, flexShrink: 0, background: "#000",
+    height: "var(--nav-height)", flexShrink: 0, background: "var(--black)",
     display: "flex", alignItems: "center", justifyContent: "space-between",
     padding: "0 24px 0 20px", zIndex: 100,
   } as React.CSSProperties,
@@ -70,15 +61,13 @@ const S = {
     display: "flex", alignItems: "center", padding: "0 20px",
     textDecoration: "none", fontSize: 13,
     fontFamily: "'Inria Sans', system-ui, sans-serif",
-    fontWeight: 400, color: "#fff", background: "transparent",
+    fontWeight: 400, color: "var(--white)", background: "transparent",
     letterSpacing: "0.03em", whiteSpace: "nowrap",
   } as React.CSSProperties,
 
-  linkActive: { background: "#fff", color: "#000", fontWeight: 600 } as React.CSSProperties,
+  linkActive: { background: "var(--white)", color: "var(--black)", fontWeight: 600 } as React.CSSProperties,
 
-  langBar: {
-    display: "flex", alignItems: "center", marginLeft: 8,
-  } as React.CSSProperties,
+  langBar: { display: "flex", alignItems: "center", marginLeft: 8 } as React.CSSProperties,
 
   langBtn: {
     background: "none", border: "none", cursor: "pointer",

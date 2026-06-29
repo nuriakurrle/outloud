@@ -31,9 +31,9 @@ function Section({ title, isOpen, onToggle, children }: {
 
 const colBtn = (active: boolean): React.CSSProperties => ({
   flex: 1, padding: "5px 8px", borderRadius: 6, cursor: "pointer",
-  background: active ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.04)",
-  border: active ? "1px solid rgba(255,255,255,0.5)" : "1px solid rgba(255,255,255,0.15)",
-  color: "#f5f2ed", fontSize: 13,
+  background: active ? "var(--state-active-bg)" : "var(--state-inactive-bg)",
+  border: active ? "1px solid var(--state-active-border)" : "1px solid var(--state-inactive-border)",
+  color: "var(--text-primary)", fontSize: 13,
 });
 
 export function MerchSidebar(props: MerchSidebarProps) {
@@ -72,7 +72,7 @@ export function MerchSidebar(props: MerchSidebarProps) {
 
         {/* Selected text element panel */}
         {props.textPanel && (
-          <div style={{ padding: "12px 16px 16px", borderBottom: "1px solid #2a2a2a" }}>
+          <div style={{ padding: "12px 16px 16px", borderBottom: "1px solid var(--border-subtle)" }}>
             {props.textPanel}
           </div>
         )}
@@ -81,9 +81,9 @@ export function MerchSidebar(props: MerchSidebarProps) {
         {props.onAddText && (
           <div style={{ padding: "8px 12px 0" }}>
             <button onClick={props.onAddText} style={{
-              width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.06)",
-              border: "1px dashed rgba(255,255,255,0.25)", borderRadius: 7,
-              color: "#ccc", fontSize: 14, cursor: "pointer", fontFamily: "inherit",
+              width: "100%", padding: "8px 12px", background: "var(--state-inactive-bg)",
+              border: "1px dashed var(--border-strong)", borderRadius: "var(--radius-lg)",
+              color: "var(--text-body)", fontSize: 14, cursor: "pointer", fontFamily: "inherit",
             }}>
               {t.addText}
             </button>
@@ -92,7 +92,7 @@ export function MerchSidebar(props: MerchSidebarProps) {
 
         {/* Selected stroke panel */}
         {props.strokePanel && !props.textPanel && (
-          <div style={{ padding: "12px 16px 16px", borderBottom: "1px solid #2a2a2a" }}>
+          <div style={{ padding: "12px 16px 16px", borderBottom: "1px solid var(--border-subtle)" }}>
             {props.strokePanel}
           </div>
         )}
