@@ -13,6 +13,8 @@ interface TextOverlayProps {
   position: Position;
   align?: Align;
   scale: number;
+  width?: number; // explicit width in % — freezes auto-reflow
+  opacity?: number;
   dragging: boolean;
   selected?: boolean;
   outline?: boolean;
@@ -30,7 +32,7 @@ const TRANSFORM: Record<Align, string> = {
 
 export function TextOverlay({
   id, text, font, size, weight, color, position,
-  align = "center", scale, dragging, selected = false,
+  align = "center", scale, width, opacity, dragging, selected = false,
   outline = false, isEditing = false,
   onPointerDown, onDoubleClick, onEditCommit,
 }: TextOverlayProps) {
@@ -70,6 +72,8 @@ export function TextOverlay({
     outline: selected || isEditing ? "1.5px dashed rgba(255,255,255,0.7)" : "none",
     outlineOffset: 4,
     pointerEvents: "auto",
+    ...(width !== undefined ? { width: `${width}%`, maxWidth: "none" } : {}),
+    ...(opacity !== undefined ? { opacity } : {}),
     ...outlineStyle,
   };
 

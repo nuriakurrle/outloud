@@ -36,6 +36,7 @@ export function DesignerProvider<TExtra extends object = object>({
   const [textAligns, setTextAligns] = useState<Record<string, Align>>(initialTextAligns ?? {});
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [textWidths, setTextWidths] = useState<Record<string, number>>({});
 
   // ── Margins (user-configurable safe zone, in %) ───────────────
   const [margins, setMargins] = useState(initialMargins ?? { left: 0, right: 0, top: 0, bottom: 0 });
@@ -94,12 +95,20 @@ export function DesignerProvider<TExtra extends object = object>({
     []
   );
 
+  const onBeginDrag = useCallback((id: string, w: number) => {
+    if (id in positionsRef.current || extraTextsRef.current.some(t => t.id === id))
+      setTextWidths(prev => ({ ...prev, [id]: w }));
+  }, []);
+
+  const updateTextWidth = useCallback((id: string, w: number) =>
+    setTextWidths(prev => ({ ...prev, [id]: w })), []);
+
   const drag = useDrag({
     containerRef, positionsRef, extraTextsRef, placedAssetsRef,
     clampX, clampY, margins, commit,
     setPositions, setExtraTexts,
     setPlacedAssets: assets.setPlacedAssets,
-    getElementRect,
+    getElementRect, onBeginDrag,
   });
 
   // ── Stroke actions ───────────────────────────────────────────
@@ -241,6 +250,7 @@ export function DesignerProvider<TExtra extends object = object>({
     imgRatios: assets.imgRatios, getAssetSrc: assets.getAssetSrc,
     positions, setPositions, textAligns, setTextAligns,
     extraTexts, setExtraTexts, selectedTextId, setSelectedTextId,
+    textWidths, updateTextWidth,
     mode: drawing.mode, setMode: drawing.setMode,
     brushName: drawing.brushName, setBrushName: drawing.setBrushName,
     brushWidth: drawing.brushWidth, setBrushWidth: drawing.setBrushWidth,

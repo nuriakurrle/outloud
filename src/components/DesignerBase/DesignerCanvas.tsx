@@ -1,6 +1,8 @@
+import { useCallback } from "react";
 import { useDesignerContext } from "./context";
 import type { DesignerCanvasProps } from "./types";
 import { TextOverlay } from "../ChalkPosterGenerator/TextOverlay";
+import { TextResizeHandles } from "./TextResizeHandles";
 import { SelectionHandles } from "../ChalkPosterGenerator/SelectionHandles";
 import { DrawingToolbar } from "../ChalkPosterGenerator/DrawingToolbar";
 import { useT } from "../../i18n";
@@ -28,7 +30,24 @@ export function DesignerCanvas({
     handleAssetPointerDown, handlePointerDown,
     handleDrawStart, handleDrawMove, handleDrawEnd, handleDrawLeave,
     editingTextId, handleTextDoubleClick, handleTextEditCommit,
+    positions, textWidths, updateTextWidth,
+    setPositions, setExtraTexts,
   } = useDesignerContext();
+
+  const selectedTextItem = selectedTextId
+    ? textItems.find(i => i.key === selectedTextId) ?? null
+    : null;
+
+  const handleTextResize = useCallback((width: number, x?: number) => {
+    if (!selectedTextId) return;
+    updateTextWidth(selectedTextId, width);
+    if (x === undefined) return;
+    if (selectedTextId in positions) {
+      setPositions(prev => ({ ...prev, [selectedTextId]: { ...prev[selectedTextId], x } }));
+    } else {
+      setExtraTexts(prev => prev.map(t => t.id === selectedTextId ? { ...t, position: { ...t.position, x } } : t));
+    }
+  }, [selectedTextId, updateTextWidth, positions, setPositions, setExtraTexts]);
 
   // ── Overlays rendered inside the background wrapper ───────────
   const overlays = (
@@ -122,6 +141,19 @@ export function DesignerCanvas({
         );
       })()}
 
+      {/* Resize handles for selected text item */}
+      {selectedTextItem && textWidths[selectedTextItem.key] !== undefined && (
+        <TextResizeHandles
+          textId={selectedTextItem.key}
+          align={selectedTextItem.align}
+          positionX={selectedTextItem.position.x}
+          width={textWidths[selectedTextItem.key]}
+          containerRef={containerRef}
+          onStart={commit}
+          onChange={handleTextResize}
+        />
+      )}
+
       {/* Trash button */}
       {(selectedAsset || selectedStrokeId || selectedTextId) && (
         <button
@@ -158,6 +190,7 @@ export function DesignerCanvas({
           outline={item.outline}
           position={item.position}
           scale={scale}
+          width={textWidths[item.key]}
           dragging={dragging === item.key}
           selected={selectedTextId === item.key}
           isEditing={editingTextId === item.key}
@@ -166,6 +199,13 @@ export function DesignerCanvas({
           onEditCommit={handleTextEditCommit}
         />
       ))}
+
+      {/* Gray veil outside canvas — transparent inside, box-shadow covers outside */}
+      <div style={{
+        position: "absolute", inset: 0,
+        boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.5)",
+        pointerEvents: "none", zIndex: 150,
+      }} />
 
       {/* Draw capture */}
       {mode === "draw" && (

@@ -68,6 +68,8 @@ export interface DesignerContextValue {
   setExtraTexts: React.Dispatch<React.SetStateAction<ExtraText[]>>;
   selectedTextId: string | null;
   setSelectedTextId: React.Dispatch<React.SetStateAction<string | null>>;
+  textWidths: Record<string, number>;
+  updateTextWidth: (id: string, w: number) => void;
 
   // drawing tool
   mode: ToolMode;

@@ -35,9 +35,10 @@ interface Options {
   setExtraTexts: React.Dispatch<React.SetStateAction<ExtraText[]>>;
   setPlacedAssets: React.Dispatch<React.SetStateAction<PlacedAsset[]>>;
   getElementRect?: (id: string) => DOMRect | null;
+  onBeginDrag?: (id: string, widthPct: number) => void;
 }
 
-const SNAP = 2;
+const SNAP = 1;
 
 export function useDrag({
   containerRef,
@@ -52,6 +53,7 @@ export function useDrag({
   setExtraTexts,
   setPlacedAssets,
   getElementRect,
+  onBeginDrag,
 }: Options) {
   const [dragging, setDragging] = useState<string | null>(null);
   const [snapLines, setSnapLines] = useState<{ x?: number; y?: number }[]>([]);
@@ -70,7 +72,7 @@ export function useDrag({
       x: e.clientX - rect.left - (curX / 100) * rect.width,
       y: e.clientY - rect.top - (curY / 100) * rect.height,
     };
-    // Measure anchor-to-edge offsets for alignment-aware clamping
+    // Measure anchor-to-edge offsets for snap and width capture
     const el = getElementRect?.(id);
     if (el) {
       anchorBoundsRef.current = {
@@ -79,10 +81,11 @@ export function useDrag({
         fromTop:    curY - (el.top    - rect.top)  / rect.height * 100,
         fromBottom: (el.bottom - rect.top)  / rect.height * 100 - curY,
       };
+      onBeginDrag?.(id, (el.width / rect.width) * 100);
     } else {
       anchorBoundsRef.current = null;
     }
-  }, [containerRef, commit, getElementRect]);
+  }, [containerRef, commit, getElementRect, onBeginDrag]);
 
   const beginDeltaDrag = useCallback((
     id: string,
@@ -115,19 +118,9 @@ export function useDrag({
         return;
       }
 
-      // Absolute % drag — compute raw position, then clamp
+      // Absolute % drag — unconstrained
       let px = ((e.clientX - rect.left - dragOffset.current.x) / rect.width) * 100;
       let py = ((e.clientY - rect.top  - dragOffset.current.y) / rect.height) * 100;
-
-      const ab = anchorBoundsRef.current;
-      if (ab) {
-        // Alignment-aware: keep the whole element inside margin bounds
-        px = Math.max(margins.left  + ab.fromLeft,  Math.min(100 - margins.right  - ab.fromRight,  px));
-        py = Math.max(margins.top   + ab.fromTop,   Math.min(100 - margins.bottom - ab.fromBottom, py));
-      } else {
-        px = clampX(px);
-        py = clampY(py);
-      }
 
       // Build snap targets: centers + edges of all non-dragged items
       const snapX: number[] = [];
@@ -158,13 +151,30 @@ export function useDrag({
         if (a.id !== dragging) addTarget(a.id, a.x, a.y);
       }
 
+      // Edge-aware snap: check center + left/right (or top/bottom) edges of dragged item
+      const ab = anchorBoundsRef.current;
       const lines: { x?: number; y?: number }[] = [];
-      for (const tx of snapX) {
-        if (Math.abs(px - tx) < SNAP) { px = tx; lines.push({ x: tx }); break; }
-      }
-      for (const ty of snapY) {
-        if (Math.abs(py - ty) < SNAP) { py = ty; lines.push({ y: ty }); break; }
-      }
+
+      const findSnap = (edgeVals: number[], offsets: number[], targets: number[]) => {
+        let best: { snapped: number; guide: number } | null = null, minD = SNAP;
+        for (const tx of targets)
+          for (let i = 0; i < edgeVals.length; i++) {
+            const d = Math.abs(edgeVals[i] - tx);
+            if (d < minD) { minD = d; best = { snapped: tx + offsets[i], guide: tx }; }
+          }
+        return best;
+      };
+
+      const edgesX = ab ? [px, px - ab.fromLeft, px + ab.fromRight] : [px];
+      const offsX  = ab ? [0,  ab.fromLeft,      -ab.fromRight]     : [0];
+      const sx = findSnap(edgesX, offsX, snapX);
+      if (sx) { px = sx.snapped; lines.push({ x: sx.guide }); }
+
+      const edgesY = ab ? [py, py - ab.fromTop, py + ab.fromBottom] : [py];
+      const offsY  = ab ? [0,  ab.fromTop,      -ab.fromBottom]     : [0];
+      const sy = findSnap(edgesY, offsY, snapY);
+      if (sy) { py = sy.snapped; lines.push({ y: sy.guide }); }
+
       setSnapLines(lines);
 
       if (dragging in positionsRef.current) {
@@ -189,7 +199,7 @@ export function useDrag({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
-  }, [dragging, clampX, clampY, margins, containerRef, positionsRef, extraTextsRef, placedAssetsRef, setPositions, setExtraTexts, setPlacedAssets, getElementRect]);
+  }, [dragging, containerRef, positionsRef, extraTextsRef, placedAssetsRef, setPositions, setExtraTexts, setPlacedAssets, getElementRect]);
 
   return { dragging, setDragging, snapLines, beginDrag, beginDeltaDrag };
 }
