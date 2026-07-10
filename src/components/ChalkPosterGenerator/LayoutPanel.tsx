@@ -9,14 +9,19 @@ interface LayoutPanelProps {
   selectedId?: string;
 }
 
-/** Winziges schematisches Vorschaubild eines Layouts. */
 function LayoutThumb({ layout }: { layout: PosterLayout }) {
-  const order: (keyof PosterLayout["positions"])[] = [
-    "header",
-    "sub",
-    "body",
-    "detail",
-  ];
+  if (layout.preview) {
+    return (
+      <img
+        src={layout.preview}
+        alt={layout.name}
+        className={styles.layoutThumbSvg}
+        style={{ objectFit: "cover" }}
+      />
+    );
+  }
+
+  const order: (keyof PosterLayout["positions"])[] = ["header", "sub", "body", "detail"];
   return (
     <svg viewBox="0 0 60 80" className={styles.layoutThumbSvg}>
       {order.map((key, i) => {
@@ -36,23 +41,17 @@ function LayoutThumb({ layout }: { layout: PosterLayout }) {
         );
       })}
       <line
-        x1={6}
-        x2={54}
+        x1={6} x2={54}
         y1={(layout.positions.divider.y / 100) * 80}
         y2={(layout.positions.divider.y / 100) * 80}
-        stroke="#666"
-        strokeWidth={0.7}
-        strokeDasharray="2 2"
+        stroke="#666" strokeWidth={0.7} strokeDasharray="2 2"
       />
       {layout.logoSlots.map((s, i) => (
         <circle
           key={i}
-          cx={(s.x / 100) * 60}
-          cy={(s.y / 100) * 80}
+          cx={(s.x / 100) * 60} cy={(s.y / 100) * 80}
           r={Math.max(2.5, s.scale * 22)}
-          fill="none"
-          stroke="#7fb0ff"
-          strokeWidth={1}
+          fill="none" stroke="#7fb0ff" strokeWidth={1}
         />
       ))}
     </svg>
