@@ -71,6 +71,25 @@ function Section({
   );
 }
 
+function Counter({ label, value, min = 0, max, onChange }: { label: string; value: number; min?: number; max: number; onChange: (v: number) => void }) {
+  return (
+    <div className={styles.field}>
+      <span className={styles.label}>{label}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+        <button onClick={() => onChange(Math.max(min, value - 1))} disabled={value <= min}
+          style={{ width: 32, height: 32, borderRadius: "var(--radius-sm)", border: "1px solid var(--border-default)", background: "var(--surface-input)", color: "var(--text-primary)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: value <= min ? 0.35 : 1 }}>
+          <Minus size={14}/>
+        </button>
+        <span style={{ flex: 1, textAlign: "center", fontSize: 15, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{value}</span>
+        <button onClick={() => onChange(Math.min(max, value + 1))} disabled={value >= max}
+          style={{ width: 32, height: 32, borderRadius: "var(--radius-sm)", border: "1px solid var(--border-default)", background: "var(--surface-input)", color: "var(--text-primary)", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: value >= max ? 0.35 : 1 }}>
+          <Plus size={14}/>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Slider({
   label,
   value,
@@ -211,7 +230,7 @@ export function Sidebar(props: SidebarProps) {
               {props.brushNames.map((n) => <option key={n} value={n}>{n.replace("Figma ", "")}</option>)}
             </select>
           </div>
-          <Slider label={t.strokes} value={props.pattern.count} min={1} max={20}
+          <Counter label={t.strokes} value={props.pattern.count} min={0} max={20}
             onChange={(v) => props.setPattern({ count: v })} />
           <Slider label={t.strength} value={props.pattern.strokeWidth} min={0.01} max={1} step={0.01}
             format={(v) => `${Math.round(v * 100)}%`}

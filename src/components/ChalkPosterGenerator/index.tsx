@@ -402,6 +402,7 @@ export function ChalkPosterGenerator() {
       logoRegistry={LOGO_REGISTRY}
       illustrationRegistry={ASSET_REGISTRY}
       storageKey="vholos-poster-uploads"
+      uploadsKey="vholos-shared-uploads"
       aspectRatio={size.w / size.h}
       initialMargins={{ left: 5, right: 5, top: 5, bottom: 5 }}
       initialPositions={INITIAL_POSITIONS}

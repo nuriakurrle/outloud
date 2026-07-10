@@ -403,6 +403,7 @@ export function MerchDesigner() {
       logoRegistry={LOGO_REGISTRY}
       illustrationRegistry={ASSET_REGISTRY}
       storageKey="vholos-merch-uploads"
+      uploadsKey="vholos-shared-uploads"
       aspectRatio={MERCH_SIZE.w / MERCH_SIZE.h}
       initialMargins={{ left: 20, right: 20, top: 18, bottom: 30 }}
       initialPositions={DEFAULT_POSITIONS}

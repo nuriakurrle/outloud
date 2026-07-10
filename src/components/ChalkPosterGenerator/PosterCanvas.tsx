@@ -103,7 +103,7 @@ export const PosterCanvas = forwardRef<PosterCanvasHandle, PosterCanvasProps>(
               <g key={s.id}
                 opacity={s.opacity}
                 transform={`translate(${s.offsetX} ${s.offsetY})`}
-                style={{ cursor: onStrokePointerDown ? "grab" : "default" }}
+                style={{ cursor: onStrokePointerDown ? "grab" : "default", pointerEvents: (onStrokePointerDown ? "bounding-box" : "none") as React.CSSProperties["pointerEvents"] }}
                 onPointerDown={onStrokePointerDown ? (e) => { e.stopPropagation(); onStrokePointerDown(s.id, e); } : undefined}
               >
                 <path d={s.svgPath} fill={s.color} />

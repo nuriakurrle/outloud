@@ -14,6 +14,7 @@ export function DesignerProvider<TExtra extends object = object>({
   logoRegistry,
   illustrationRegistry,
   storageKey,
+  uploadsKey,
   aspectRatio,
   initialPositions,
   initialTextAligns,
@@ -59,7 +60,7 @@ export function DesignerProvider<TExtra extends object = object>({
 
   // ── Placed assets ────────────────────────────────────────────
   const assets = usePlacedAssets({
-    logoRegistry, illustrationRegistry, storageKey,
+    logoRegistry, illustrationRegistry, storageKey, uploadsKey,
     containerRef, positionsRef, clampX, clampY, aspectRatio,
     chalkColor: drawing.chalkColor,
     onBuildNewAsset, initialAssets,

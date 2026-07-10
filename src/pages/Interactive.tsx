@@ -5,8 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Link } from "react-router";
-import { X, Webcam, Image as ImageIcon, Pencil, SprayCan, ChevronLeft } from "lucide-react";
+import { X, Webcam, Image as ImageIcon, Pencil, SprayCan } from "lucide-react";
 import { useT } from "../i18n";
 import {
   startBodySegmentation,
@@ -65,6 +64,8 @@ export default function Interactive() {
   const [size, setSize] = useState({ w: 640, h: 480 });
   const { t } = useT();
 
+  const aspectRef = useRef(4 / 3);
+
   const configRef = useRef(config);
   useEffect(() => { configRef.current = config; }, [config]);
   const stencilConfigRef = useRef(stencilConfig);
@@ -85,7 +86,7 @@ export default function Interactive() {
       const m = 24;
       const availW = Math.max(120, r.width - m * 2);
       const availH = Math.max(120, r.height - m * 2);
-      const aspect = 4 / 3;
+      const aspect = aspectRef.current;
       let w = availW;
       let h = w / aspect;
       if (h > availH) { h = availH; w = h * aspect; }
@@ -164,10 +165,32 @@ export default function Interactive() {
     ctx.drawImage(img, 0, 0, w, h);
     const imgData = ctx.getImageData(0, 0, w, h);
     const brightness = brightnessFromImageData(imgData.data, w * h);
+    aspectRef.current = w / h;
+    const area = areaRef.current;
+    if (area) {
+      const r = area.getBoundingClientRect();
+      const m = 24;
+      const availW = Math.max(120, r.width - m * 2);
+      const availH = Math.max(120, r.height - m * 2);
+      const aspect = w / h;
+      let sw = availW; let sh = sw / aspect;
+      if (sh > availH) { sh = availH; sw = sh * aspect; }
+      setSize({ w: Math.round(sw), h: Math.round(sh) });
+    }
     setUploadedImage((prev) => { if (prev) URL.revokeObjectURL(prev.url); return { url, img, brightness, w, h }; });
+    // add to shared gallery
+    const dataUrl = c.toDataURL("image/png");
+    try {
+      const existing = JSON.parse(localStorage.getItem("vholos-shared-uploads") ?? "[]");
+      localStorage.setItem("vholos-shared-uploads", JSON.stringify([
+        ...existing,
+        { id: `custom/${crypto.randomUUID()}`, name: file.name.replace(/\.(png|jpe?g|bmp)$/i, ""), category: "icons", src: dataUrl, defaultScale: 0.25, anchor: "center" },
+      ]));
+    } catch { /* quota */ }
   }, []);
 
   const clearUpload = useCallback(() => {
+    aspectRef.current = 4 / 3;
     setUploadedImage((prev) => { if (prev) URL.revokeObjectURL(prev.url); return null; });
     const ctx = canvasRef.current?.getContext("2d");
     if (ctx) {
@@ -335,7 +358,6 @@ export default function Interactive() {
 
           <div style={S.divider} />
           <button style={S.saveBtn} onClick={savePNG}>{t.savePng}</button>
-          <Link to="/poster-maker" style={S.editorLink} data-chalk><ChevronLeft size={14}/>{t.backToEditor}</Link>
         </aside>
       )}
     </div>
@@ -374,7 +396,7 @@ const S = {
   }),
   fileLabel: { display: "block", padding: 14, textAlign: "center", background: "var(--surface-raised)", border: "1px dashed var(--border-default)", borderRadius: "var(--radius-sm)", cursor: "pointer", fontSize: 14, color: "var(--text-secondary)" } as React.CSSProperties,
   thumbRow: { display: "flex", alignItems: "center", gap: 8, padding: 8, background: "var(--surface-raised)", borderRadius: "var(--radius-sm)" } as React.CSSProperties,
-  thumb: { width: 48, height: 48, objectFit: "cover", borderRadius: "var(--radius-xs)" } as React.CSSProperties,
+  thumb: { width: 48, height: 48, objectFit: "contain", borderRadius: "var(--radius-xs)" } as React.CSSProperties,
   thumbX: { marginLeft: "auto", background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 14 } as React.CSSProperties,
   liveBtn: (running: boolean): React.CSSProperties => ({
     width: "100%", padding: 10,
@@ -389,5 +411,4 @@ const S = {
   sliderValue: { color: "var(--text-secondary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" } as React.CSSProperties,
   range: { width: "100%", accentColor: "var(--white)", height: 2 } as React.CSSProperties,
   saveBtn: { width: "100%", padding: 11, background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", border: "none", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
-  editorLink: { display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "10px 12px", marginTop: 4, background: "var(--state-inactive-bg)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-md)", color: "var(--text-primary)", fontSize: 13, fontWeight: 600, textDecoration: "none", letterSpacing: "0.02em" } as React.CSSProperties,
 };

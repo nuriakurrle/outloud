@@ -72,6 +72,7 @@ export function TextOverlay({
     outline: selected || isEditing ? "1.5px dashed rgba(255,255,255,0.7)" : "none",
     outlineOffset: 4,
     pointerEvents: "auto",
+    zIndex: 50,
     ...(width !== undefined ? { width: `${width}%`, maxWidth: "none" } : {}),
     ...(opacity !== undefined ? { opacity } : {}),
     ...outlineStyle,

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export type Lang = "de" | "en" | "uk";
 
@@ -158,12 +158,15 @@ const T = {
 
 export type Translations = { [K in keyof typeof T.de]: string };
 
+const TITLES: Record<Lang, string> = { de: "Outloud!", en: "Outloud!", uk: "Вголос!" };
+
 const Ctx = createContext<{ lang: Lang; setLang: (l: Lang) => void; t: Translations }>({
-  lang: "uk", setLang: () => {}, t: T.uk,
+  lang: "en", setLang: () => {}, t: T.en,
 });
 
 export function LangProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState<Lang>("uk");
+  const [lang, setLang] = useState<Lang>("en");
+  useEffect(() => { document.title = TITLES[lang]; }, [lang]);
   return <Ctx.Provider value={{ lang, setLang, t: T[lang] }}>{children}</Ctx.Provider>;
 }
 

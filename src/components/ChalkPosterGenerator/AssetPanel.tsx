@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { FlipHorizontal2, FlipVertical2, Trash2 } from "lucide-react";
+import { FlipHorizontal2, FlipVertical2, Trash2, Upload } from "lucide-react";
 import type {
   AssetCategory,
   AssetItem,
@@ -228,9 +228,10 @@ export function AssetPanel({
       />
       <button
         className={styles.regenButton}
+        style={{ display: "flex", alignItems: "center", gap: 6 }}
         onClick={() => fileInputRef.current?.click()}
       >
-        {t.upload}
+        <Upload size={14}/>{t.upload}
       </button>
 
       {pending && (

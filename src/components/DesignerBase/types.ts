@@ -136,6 +136,7 @@ export interface DesignerProviderProps<TExtra extends object = object> {
   logoRegistry: AssetItem[];
   illustrationRegistry: AssetItem[];
   storageKey: string;
+  uploadsKey?: string;
   aspectRatio: number;
   initialPositions?: Record<string, Position>;
   initialTextAligns?: Record<string, Align>;

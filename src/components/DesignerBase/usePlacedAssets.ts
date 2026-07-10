@@ -13,6 +13,7 @@ interface Options {
   logoRegistry: AssetItem[];
   illustrationRegistry: AssetItem[];
   storageKey: string;
+  uploadsKey?: string;
   containerRef: React.RefObject<HTMLDivElement | null>;
   positionsRef: React.RefObject<Record<string, Position>>;
   commit: () => void;
@@ -28,6 +29,7 @@ export function usePlacedAssets({
   logoRegistry,
   illustrationRegistry,
   storageKey,
+  uploadsKey,
   containerRef,
   positionsRef,
   commit,
@@ -38,14 +40,15 @@ export function usePlacedAssets({
   onBuildNewAsset,
   initialAssets,
 }: Options) {
+  const uKey = uploadsKey ?? storageKey;
   const [placedAssets, setPlacedAssets] = useState<PlacedAsset[]>(initialAssets ?? []);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
   const [customAssets, setCustomAssets] = useState<AssetItem[]>(() => {
-    try { return JSON.parse(localStorage.getItem(storageKey) ?? "[]"); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(uKey) ?? "[]"); } catch { return []; }
   });
   useEffect(() => {
-    try { localStorage.setItem(storageKey, JSON.stringify(customAssets)); } catch { /* quota */ }
-  }, [customAssets, storageKey]);
+    try { localStorage.setItem(uKey, JSON.stringify(customAssets)); } catch { /* quota */ }
+  }, [customAssets, uKey]);
 
   const imgRatios = useRef<Map<string, number>>(new Map());
 
