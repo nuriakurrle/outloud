@@ -73,6 +73,8 @@ export function TextOverlay({
     outlineOffset: 4,
     pointerEvents: "auto",
     zIndex: 50,
+    width: "max-content", // sonst schrumpft die abs. Position (left: x%) die verfügbare Breite → Umbruch mitten im Wort
+
     ...(width !== undefined ? { width: `${width}%`, maxWidth: "none" } : {}),
     ...(opacity !== undefined ? { opacity } : {}),
     ...outlineStyle,
