@@ -2,7 +2,7 @@
 
 A generative design toolkit for the social project **Вголос! (Outloud!)**. It creates event posters and merch in the project's chalk-drawing style, strictly in black and white.
 
-**Live demo:** https://nuriakurrle.github.io/gen_design_outloud/
+**Live demo:** https://nuriakurrle.github.io/outloud/
 
 ## Features
 
@@ -36,7 +36,7 @@ npm run build
 
 ## Deployment
 
-Every push to `main` is built and deployed to GitHub Pages automatically via GitHub Actions ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)). The Vite `base` is set to `/gen_design_outloud/`.
+Every push to `main` is built and deployed to GitHub Pages automatically via GitHub Actions ([.github/workflows/deploy.yml](.github/workflows/deploy.yml)). The Vite `base` is set to `/outloud/`.
 
 ## Project structure
 
