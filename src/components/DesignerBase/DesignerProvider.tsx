@@ -88,6 +88,30 @@ export function DesignerProvider<TExtra extends object = object>({
   const undoRedo = useUndoRedo(liveSnapshot, applySnapshot);
   commitRef.current = undoRedo.commit;
 
+  // ── Persistence ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!storageKey) return;
+    const raw = localStorage.getItem(`${storageKey}-state`);
+    if (!raw) return;
+    try {
+      const { v, snap, textAligns: ta, textWidths: tw, margins: m } = JSON.parse(raw);
+      if (v !== 1) return;
+      applySnapshot(snap);
+      if (ta) setTextAligns(ta);
+      if (tw) setTextWidths(tw);
+      if (m) setMargins(m);
+    } catch { localStorage.removeItem(`${storageKey}-state`); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    const id = setTimeout(() =>
+      localStorage.setItem(`${storageKey}-state`, JSON.stringify({ v: 1, snap: liveSnapshot, textAligns, textWidths, margins }))
+    , 1500);
+    return () => clearTimeout(id);
+  }, [liveSnapshot, textAligns, textWidths, margins, storageKey]);
+
   // ── Drag ─────────────────────────────────────────────────────
   const getElementRect = useCallback(
     (id: string): DOMRect | null =>

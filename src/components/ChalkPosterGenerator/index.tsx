@@ -87,7 +87,7 @@ function ChalkPosterGeneratorInner({
     handleStrokePointerDown, addText,
     logoAssets, illustrationAssets,
     containerRef, beginDeltaDrag,
-    setSelectedAssetId,
+    setSelectedAssetId, textWidths,
   } = useDesignerContext();
 
   const posterCanvasRef = useRef<PosterCanvasHandle>(null);
@@ -169,14 +169,16 @@ function ChalkPosterGeneratorInner({
   const buildScene = useCallback((): PosterScene => ({
     w: size.w, h: size.h, bg: bgColor,
     pattern: effectivePatternConfig, patternStrokes, strokes,
-    texts: textItems.map(tx => ({ key: tx.key, text: tx.text, font: tx.font, size: tx.size, weight: tx.weight, color: tx.color, align: tx.align, outline: tx.outline, x: tx.position.x, y: tx.position.y })),
+    texts: textItems.map(tx => ({ key: tx.key, text: tx.text, font: tx.font, size: tx.size, weight: tx.weight, color: tx.color, align: tx.align, outline: tx.outline, x: tx.position.x, y: tx.position.y, ...(textWidths[tx.key] !== undefined ? { maxWidth: textWidths[tx.key] } : {}) })),
     assets: placedAssets.map((a): SceneAsset => { const item = allAssets.find(x => x.id === a.assetId); return { ...a, src: item?.src ?? getAssetSrc(a.assetId), category: item?.category ?? "logos", naturalWidth: item?.naturalWidth, naturalHeight: item?.naturalHeight }; }),
-  }), [size, bgColor, effectivePatternConfig, patternStrokes, strokes, textItems, placedAssets, allAssets, getAssetSrc]);
+  }), [size, bgColor, effectivePatternConfig, patternStrokes, strokes, textItems, textWidths, placedAssets, allAssets, getAssetSrc]);
 
   const handleExport = useCallback(async () => {
     const blob = await exportPNG(buildScene(), 3);
-    downloadBlob(blob, "holos-poster.png");
-  }, [buildScene]);
+    const FORMAT_NAMES = ["A3", "A4", "Flyer", "Insta"] as const;
+    const slug = text.headerText.replace(/[^а-яА-ЯіІїЇєЄa-zA-Z0-9\s]/g, "").trim().replace(/\s+/g, "-").slice(0, 40) || "poster";
+    downloadBlob(blob, `${slug}-${FORMAT_NAMES[posterSizeIndex] ?? "poster"}.png`);
+  }, [buildScene, text.headerText, posterSizeIndex]);
 
   // ── Text popup ────────────────────────────────────────────
   const textPanel = (() => {

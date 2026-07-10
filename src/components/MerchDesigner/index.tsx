@@ -60,6 +60,9 @@ interface InnerProps {
   updateText: (patch: Partial<MerchText>) => void;
 }
 
+const toSlug = (s: string) =>
+  s.replace(/[^а-яА-ЯіІїЇєЄa-zA-Z0-9\s]/g, "").trim().replace(/\s+/g, "-").slice(0, 40) || "merch";
+
 function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, product, setProduct, capMode, setCapMode, otherSnap, setOtherSnap, text, updateText }: InnerProps) {
   const { t } = useT();
   const {
@@ -161,8 +164,8 @@ function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, product,
 
   const handleCapDownload = useCallback(async () => {
     const blob = await capViewerRef.current?.capture();
-    if (blob) downloadBlob(blob, "cap.png");
-  }, []);
+    if (blob) downloadBlob(blob, `${toSlug(text.headerText)}-Cap.png`);
+  }, [text.headerText]);
 
   const handleOrder = useCallback(async () => {
     const SCALE = 3;
@@ -201,8 +204,9 @@ function MerchDesignerInner({ side, setSide, shirtColor, setShirtColor, product,
     ctx.fillRect(0, 0, combined.width, combined.height);
     ctx.drawImage(frontCanvas, 0, 0);
     ctx.drawImage(backCanvas, frontCanvas.width, 0);
-    combined.toBlob(blob => downloadBlob(blob!, "merch-order.png"), "image/png");
-  }, [side, shirtColor, strokes, placedAssets, positions, extraTexts, otherSnap, buildSceneFrom]);
+    const productLabel = MERCH_ITEMS.find(i => i.id === product)?.label ?? "merch";
+    combined.toBlob(blob => downloadBlob(blob!, `${toSlug(text.headerText)}-${productLabel}.png`), "image/png");
+  }, [side, shirtColor, strokes, placedAssets, positions, extraTexts, otherSnap, buildSceneFrom, product, text.headerText]);
 
   // ── Text popup panel ────────────────────────────────────────
   const textPanel = (() => {

@@ -27,6 +27,7 @@ export interface SceneText {
   outline?: boolean; // hohle Buchstaben mit Kontur (Umriss-Stil)
   x: number;
   y: number;
+  maxWidth?: number; // explicit box width in % — mirrors textWidths from editor
 }
 
 /** Ein platziertes Asset mit aufgelöster Quelle + Metadaten. */
@@ -100,7 +101,7 @@ async function renderSvgStrokes(
   strokeList: ChalkStroke[],
   includePatterns: boolean
 ): Promise<void> {
-  const fillColor = scene.pattern.color === "white" ? "#e8e5e0" : "#222222";
+  const fillColor = scene.pattern.color === "white" ? "#ffffff" : "#000000";
   const ordered = [...strokeList].sort((a, b) => a.zIndex - b.zIndex);
 
   const pathsHtml = [
@@ -161,8 +162,8 @@ export async function renderPosterScene(
 
   // 5. Text
   ctx.textBaseline = "middle";
-  const maxWidth = w * 0.9; // wie .textEl { max-width: 90% }
   for (const item of scene.texts) {
+    const maxWidth = item.maxWidth !== undefined ? (item.maxWidth / 100) * w : w * 0.9;
     const align = item.align ?? "center";
     ctx.textAlign = align;
     ctx.font = `${item.weight} ${item.size}px "${item.font}", sans-serif`;
@@ -202,13 +203,32 @@ export async function renderPosterScene(
     const baseW = asset.scale * w;
     const targetW = baseW * (asset.scaleX ?? 1);
     const targetH = baseW * (ih / iw) * (asset.scaleY ?? 1);
-    ctx.save();
-    ctx.translate(px, py);
-    ctx.rotate((asset.rotation * Math.PI) / 180);
-    if (asset.flipX) ctx.scale(-1, 1);
-    ctx.globalAlpha = asset.opacity;
-    ctx.drawImage(img, -targetW / 2, -targetH / 2, targetW, targetH);
-    ctx.restore();
+    const isMask = asset.category === "strokes" || asset.category === "shapes";
+    if (isMask) {
+      const off = new OffscreenCanvas(w, h);
+      const offCtx = off.getContext("2d")!;
+      offCtx.save();
+      offCtx.translate(px, py);
+      offCtx.rotate((asset.rotation * Math.PI) / 180);
+      offCtx.scale(asset.flipX ? -1 : 1, asset.flipY ? -1 : 1);
+      offCtx.fillStyle = asset.tint ?? "#ffffff";
+      offCtx.fillRect(-targetW / 2, -targetH / 2, targetW, targetH);
+      offCtx.globalCompositeOperation = "destination-in";
+      offCtx.drawImage(img, -targetW / 2, -targetH / 2, targetW, targetH);
+      offCtx.restore();
+      ctx.save();
+      ctx.globalAlpha = asset.opacity;
+      ctx.drawImage(off, 0, 0);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate((asset.rotation * Math.PI) / 180);
+      ctx.scale(asset.flipX ? -1 : 1, asset.flipY ? -1 : 1);
+      ctx.globalAlpha = asset.opacity;
+      ctx.drawImage(img, -targetW / 2, -targetH / 2, targetW, targetH);
+      ctx.restore();
+    }
   }
   ctx.globalAlpha = 1;
 
