@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { unzipSync, strFromU8 } from "fflate";
+import { exportDesignZip, type DesignFileState } from "../../lib/layeredExport";
 import type {
   Align, AssetItem, PatternConfig, PatternStroke, PlacedAsset, Position,
 } from "../../types/poster";
@@ -67,17 +69,18 @@ interface InnerProps {
   setSelectedLayoutId: (id: string) => void;
   text: PosterText;
   updateText: (patch: Partial<PosterText>) => void;
+  applyPattern: (strokes: PatternStroke[], config: PatternConfig) => void;
 }
 
 function ChalkPosterGeneratorInner({
   posterSizeIndex, setPosterSizeIndex, inverted, setInverted,
   patternConfig, updatePattern, patternStrokes, setPatternStrokes,
   selectedPatternId, setSelectedPatternId, selectedLayoutId, setSelectedLayoutId,
-  text, updateText,
+  text, updateText, applyPattern,
 }: InnerProps) {
   const { t } = useT();
   const {
-    strokes, selectedStrokeId, setSelectedStrokeId,
+    strokes, setStrokes, selectedStrokeId, setSelectedStrokeId,
     placedAssets, setPlacedAssets, selectedAsset, allAssets, getAssetSrc,
     positions, setPositions, textAligns, setTextAligns,
     extraTexts, setExtraTexts, selectedTextId, setSelectedTextId,
@@ -88,7 +91,8 @@ function ChalkPosterGeneratorInner({
     handleStrokePointerDown, addText,
     logoAssets, illustrationAssets,
     containerRef, beginDeltaDrag,
-    setSelectedAssetId, textWidths,
+    setSelectedAssetId, textWidths, setTextWidths,
+    margins, setMargins,
   } = useDesignerContext();
 
   const posterCanvasRef = useRef<PosterCanvasHandle>(null);
@@ -174,12 +178,45 @@ function ChalkPosterGeneratorInner({
     assets: placedAssets.map((a): SceneAsset => { const item = allAssets.find(x => x.id === a.assetId); return { ...a, src: item?.src ?? getAssetSrc(a.assetId), category: item?.category ?? "logos", naturalWidth: item?.naturalWidth, naturalHeight: item?.naturalHeight }; }),
   }), [size, bgColor, effectivePatternConfig, patternStrokes, strokes, textItems, textWidths, placedAssets, allAssets, getAssetSrc]);
 
+  const FORMAT_NAMES = ["A3", "A4", "Flyer", "Insta"] as const;
+  const toSlug = (s: string) => s.replace(/[^а-яА-ЯіІїЇєЄa-zA-Z0-9\s]/g, "").trim().replace(/\s+/g, "-").slice(0, 40) || "poster";
+
   const handleExport = useCallback(async () => {
     const blob = await exportPNG(buildScene(), 3);
-    const FORMAT_NAMES = ["A3", "A4", "Flyer", "Insta"] as const;
-    const slug = text.headerText.replace(/[^а-яА-ЯіІїЇєЄa-zA-Z0-9\s]/g, "").trim().replace(/\s+/g, "-").slice(0, 40) || "poster";
-    downloadBlob(blob, `${slug}-${FORMAT_NAMES[posterSizeIndex] ?? "poster"}.png`);
+    downloadBlob(blob, `${toSlug(text.headerText)}-${FORMAT_NAMES[posterSizeIndex] ?? "poster"}.png`);
   }, [buildScene, text.headerText, posterSizeIndex]);
+
+  const handleExportDesign = useCallback(async () => {
+    const designState: DesignFileState = {
+      v: 2, app: "outloud-poster",
+      snap: { strokes, placedAssets, positions, extraTexts, patternStrokes, patternConfig } as Record<string, unknown>,
+      textAligns, textWidths, margins,
+      text: { headerText: text.headerText, subText: text.subText, bodyText: text.bodyText, detailText: text.detailText },
+      inverted, posterSizeIndex,
+    };
+    const blob = await exportDesignZip(buildScene(), designState);
+    downloadBlob(blob, `${toSlug(text.headerText)}-${FORMAT_NAMES[posterSizeIndex] ?? "poster"}.zip`);
+  }, [buildScene, strokes, placedAssets, positions, extraTexts, patternStrokes, patternConfig, textAligns, textWidths, margins, text, inverted, posterSizeIndex]);
+
+  const handleImportDesign = useCallback(async (file: File) => {
+    try {
+      const unzipped = unzipSync(new Uint8Array(await file.arrayBuffer()));
+      const state = JSON.parse(strFromU8(unzipped["design.json"])) as DesignFileState;
+      if (state.v !== 2 || state.app !== "outloud-poster") return;
+      const snap = state.snap as { strokes: typeof strokes; placedAssets: typeof placedAssets; positions: typeof positions; extraTexts: typeof extraTexts; patternStrokes: typeof patternStrokes; patternConfig: typeof patternConfig };
+      setStrokes(snap.strokes);
+      setPlacedAssets(snap.placedAssets);
+      setPositions(snap.positions);
+      setExtraTexts(snap.extraTexts);
+      setTextAligns(state.textAligns as typeof textAligns);
+      setTextWidths(state.textWidths);
+      setMargins(state.margins);
+      applyPattern(snap.patternStrokes, snap.patternConfig);
+      updateText(state.text as Partial<PosterText>);
+      setInverted(state.inverted);
+      setPosterSizeIndex(state.posterSizeIndex);
+    } catch (e) { console.warn("Import failed:", e); }
+  }, [setStrokes, setPlacedAssets, setPositions, setExtraTexts, setTextAligns, setTextWidths, setMargins, applyPattern, updateText, setInverted, setPosterSizeIndex]);
 
   // ── Text popup ────────────────────────────────────────────
   const textPanel = (() => {
@@ -265,6 +302,8 @@ function ChalkPosterGeneratorInner({
         onAddText={addText}
         onRandomize={generateAll}
         onExport={handleExport}
+        onExportDesign={handleExportDesign}
+        onImportDesign={handleImportDesign}
       />
 
       <div className={styles.preview}>
@@ -323,6 +362,11 @@ export function ChalkPosterGenerator() {
   const [text, setText] = useState<PosterText>(DEFAULT_TEXT);
   const updateText = useCallback((patch: Partial<PosterText>) => setText(prev => ({ ...prev, ...patch })), []);
   const updatePattern = useCallback((patch: Partial<PatternConfig>) => setPatternConfig(prev => ({ ...prev, ...patch })), []);
+  const applyPattern = useCallback((strokes: PatternStroke[], config: PatternConfig) => {
+    skipRegenRef.current = true;
+    setPatternStrokes(strokes);
+    setPatternConfig(config);
+  }, []);
   const size = POSTER_SIZES[posterSizeIndex];
 
   const skipRegenRef = useRef(false);
@@ -383,6 +427,7 @@ export function ChalkPosterGenerator() {
         selectedPatternId={selectedPatternId} setSelectedPatternId={setSelectedPatternId}
         selectedLayoutId={selectedLayoutId} setSelectedLayoutId={setSelectedLayoutId}
         text={text} updateText={updateText}
+        applyPattern={applyPattern}
       />
     </DesignerProvider>
   );

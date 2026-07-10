@@ -274,7 +274,7 @@ export function DesignerProvider<TExtra extends object = object>({
     imgRatios: assets.imgRatios, getAssetSrc: assets.getAssetSrc,
     positions, setPositions, textAligns, setTextAligns,
     extraTexts, setExtraTexts, selectedTextId, setSelectedTextId,
-    textWidths, updateTextWidth,
+    textWidths, updateTextWidth, setTextWidths,
     mode: drawing.mode, setMode: drawing.setMode,
     brushName: drawing.brushName, setBrushName: drawing.setBrushName,
     brushWidth: drawing.brushWidth, setBrushWidth: drawing.setBrushWidth,

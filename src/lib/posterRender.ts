@@ -46,6 +46,7 @@ export interface PosterScene {
   pattern: PatternConfig; // hält den Seed (Tafel-Grain); Striche s.u.
   patternStrokes: PatternStroke[]; // generierte Hintergrund-Striche
   patternFront?: boolean; // generierte Linien über Text & Illustrationen
+  skipBg?: boolean;       // skip background fill (for transparent layer export)
   strokes: ChalkStroke[];
   texts: SceneText[];
   assets: SceneAsset[];
@@ -154,8 +155,7 @@ export async function renderPosterScene(
   const { w, h } = scene;
 
   // 1. Background fill
-  ctx.fillStyle = scene.bg;
-  ctx.fillRect(0, 0, w, h);
+  if (!scene.skipBg) { ctx.fillStyle = scene.bg; ctx.fillRect(0, 0, w, h); }
 
   // 2. SVG strokes auf der Hinter-Text-Ebene (Muster nur, wenn nicht „vorne")
   await renderSvgStrokes(ctx, scene, w, h, scene.strokes.filter((s) => !s.front), !scene.patternFront);

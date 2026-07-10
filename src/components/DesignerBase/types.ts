@@ -70,6 +70,7 @@ export interface DesignerContextValue {
   setSelectedTextId: React.Dispatch<React.SetStateAction<string | null>>;
   textWidths: Record<string, number>;
   updateTextWidth: (id: string, w: number) => void;
+  setTextWidths: React.Dispatch<React.SetStateAction<Record<string, number>>>;
 
   // drawing tool
   mode: ToolMode;

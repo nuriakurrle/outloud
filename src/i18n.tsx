@@ -41,6 +41,7 @@ const T = {
     layoutHintLogos: "Layout wählen · Texte & Logos werden angeordnet",
     layoutHintNoLogos: "Layout ordnet Texte an · Logos im Logo-Bereich hinzufügen",
 
+    exportDesign: "Design exportieren", importDesign: "Design importieren",
     strokeTitle: "Kreidelinie", deleteLabel: "Löschen",
 
     hintDraw: "Zeichnen aktiv · ziehen zum Malen · Zeichnen ausschalten zum Bewegen",
@@ -90,6 +91,7 @@ const T = {
     layoutHintLogos: "Choose layout · Texts & logos will be arranged",
     layoutHintNoLogos: "Layout arranges texts · Add logos in the logos section",
 
+    exportDesign: "Export design", importDesign: "Import design",
     strokeTitle: "Chalk line", deleteLabel: "Delete",
 
     hintDraw: "Drawing active · drag to paint · turn off drawing to move",
@@ -139,6 +141,7 @@ const T = {
     layoutHintLogos: "Обрати макет · Тексти й логотипи будуть розставлені",
     layoutHintNoLogos: "Макет розставляє тексти · Логотипи — у розділі логотипів",
 
+    exportDesign: "Експортувати дизайн", importDesign: "Імпортувати дизайн",
     strokeTitle: "Крейдова лінія", deleteLabel: "Видалити",
 
     hintDraw: "Малювання активне · тягни для нанесення · вимкни для переміщення",

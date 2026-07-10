@@ -44,6 +44,8 @@ interface SidebarProps {
 
   onRandomize: () => void;
   onExport: () => void;
+  onExportDesign: () => void;
+  onImportDesign: (f: File) => void;
 }
 
 // ── kleine Hilfs-Komponenten ─────────────────────────────
@@ -251,6 +253,13 @@ export function Sidebar(props: SidebarProps) {
 
       <div className={styles.sidebarFooter}>
         <button className={styles.exportButton} onClick={props.onExport}>{t.exportPng}</button>
+        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+          <button className={styles.exportButton} style={{ flex: 1, fontSize: 12 }} onClick={props.onExportDesign}>{t.exportDesign}</button>
+          <label className={styles.exportButton} style={{ flex: 1, fontSize: 12, textAlign: "center", cursor: "pointer" }}>
+            {t.importDesign}
+            <input type="file" accept=".zip" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) { props.onImportDesign(f); e.target.value = ""; } }} />
+          </label>
+        </div>
       </div>
     </aside>
   );

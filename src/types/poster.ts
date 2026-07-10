@@ -45,6 +45,7 @@ export interface ChalkStroke {
   offsetX: number;
   offsetY: number;
   zIndex: number;
+  front?: boolean;
   isGenerated: boolean;
 }
 
