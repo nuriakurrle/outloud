@@ -9,11 +9,15 @@ export const FONTS = [
   { label: "Playfair Display", value: "Playfair Display" },
   { label: "Oswald", value: "Oswald" },
   { label: "Pacifico", value: "Pacifico" },
-  { label: "Permanent Marker", value: "Permanent Marker" },
   { label: "Caveat", value: "Caveat" },
-  { label: "Special Elite", value: "Special Elite" },
-  { label: "Rock Salt", value: "Rock Salt" },
-  { label: "Abril Fatface", value: "Abril Fatface" },
+  { label: "Bad Script", value: "Bad Script" },
+  { label: "Inter", value: "Inter" },
+  { label: "Ink Free", value: "Ink Free" },
+  { label: "KyivType Titling", value: "KyivType Titling" },
+  { label: "KyivType Serif", value: "KyivType Serif" },
+  { label: "KyivType Sans", value: "KyivType Sans" },
+  { label: "Segoe Script", value: "Segoe Script" },
+  { label: "Outloud Type", value: "Outloud Type" },
 ];
 
 export const POSTER_SIZES: PosterSize[] = [
