@@ -25,7 +25,7 @@ export const LAYOUTS: PosterLayout[] = [
     id: "nationalism_a3",
     name: "Націоналізм",
     hint: "Великий заголовок зліва · Логотип внизу · Деталі зліва",
-    preview: "/layouts/nationalism-a3.png",
+    preview: `${import.meta.env.BASE_URL}layouts/nationalism-a3.png`,
     positions: {
       header:  { x: 4.94,  y: 10.52 },
       sub:     { x: 19.96, y: 63.68 },
