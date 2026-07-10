@@ -18,6 +18,7 @@ export interface PosterLayout {
   positions: Record<PosKey, Position>;
   aligns?: Partial<Record<TextKey, Align>>;
   logoSlots: LogoSlot[];
+  strokeRows: number[]; // y-Reihen (%) für Kreide-Linien — in den Weißräumen zwischen den Textblöcken
 }
 
 export const LAYOUTS: PosterLayout[] = [
@@ -26,42 +27,31 @@ export const LAYOUTS: PosterLayout[] = [
     name: "Націоналізм",
     hint: "Великий заголовок зліва · Логотип внизу · Деталі зліва",
     preview: `${import.meta.env.BASE_URL}layouts/nationalism-a3.png`,
+    // Hierarchie wie Referenzposter: Titel → Tagline → Termin → Details → Logo unten links
     positions: {
-      header:  { x: 4.94,  y: 10.52 },
-      sub:     { x: 5.60,  y: 63.68 },
-      divider: { x: 50,    y: 40    },
-      body:    { x: 5.60,  y: 36.45 },
-      detail:  { x: 5.60,  y: 46.56 },
+      header:  { x: 4.94,  y: 14 },
+      sub:     { x: 5.60,  y: 29 },
+      divider: { x: 50,    y: 46.5 },
+      body:    { x: 5.60,  y: 40 },
+      detail:  { x: 5.60,  y: 52 },
     },
     aligns: { header: "left", sub: "left", body: "left", detail: "left" },
     // Logo zentriert verankert: x so, dass die linke Kante (x − scale·50) auf der Textspalte liegt
     logoSlots: [{ x: 23.1, y: 76.84, scale: 0.35 }],
-  },
-  {
-    id: "event_links",
-    name: "Event (Links)",
-    hint: "Logo oben links · Titel & Text links · Details unten",
-    positions: {
-      header: { x: 8, y: 26 },
-      sub: { x: 8, y: 43 },
-      divider: { x: 50, y: 38 },
-      body: { x: 8, y: 52 },
-      detail: { x: 8, y: 88 },
-    },
-    aligns: { header: "left", sub: "left", body: "left", detail: "left" },
-    logoSlots: [{ x: 20, y: 12, scale: 0.3 }],
+    strokeRows: [48.5, 62, 91.5],
   },
   {
     id: "zentriert",
     name: "Zentriert",
     hint: "Kompakt gestapelt · kleines Logo unten",
     positions: {
-      header: { x: 50, y: 30 },
-      sub: { x: 50, y: 46 },
-      divider: { x: 50, y: 53 },
-      body: { x: 50, y: 60 },
-      detail: { x: 50, y: 78 },
+      header: { x: 50, y: 28 },
+      sub: { x: 50, y: 44 },
+      divider: { x: 50, y: 50 },
+      body: { x: 50, y: 56 },
+      detail: { x: 50, y: 68 },
     },
-    logoSlots: [{ x: 50, y: 91, scale: 0.22 }],
+    logoSlots: [{ x: 50, y: 84, scale: 0.22 }],
+    strokeRows: [9, 75.5, 93],
   },
 ];

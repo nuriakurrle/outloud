@@ -38,6 +38,12 @@ const DEFAULT_TEXT: PosterText = {
   detailText: "Реєстрація в Інстаграм", detailFont: "Oswald", detailSize: 14,
 };
 
+// Legt die Kreide-Linien auf die Weißraum-Reihen des Layouts statt quer durch den Text
+const strokesOnLayoutRows = (cfg: PatternConfig, w: number, h: number, rows: number[]): PatternStroke[] => {
+  const generated = generatePatternStrokes(cfg, w, h);
+  return cfg.patternType === "lines" ? generated.map((s, i) => ({ ...s, offsetY: rows[i % rows.length] - ((i + 0.5) / cfg.count) * 100 })) : generated;
+};
+
 const INITIAL_POSITIONS: Record<PosKey, Position> = LAYOUTS[0].positions as Record<PosKey, Position>;
 const INITIAL_ALIGNS: Record<PosKey, Align> = {
   header: LAYOUTS[0].aligns?.header ?? "center",
@@ -133,17 +139,21 @@ function ChalkPosterGeneratorInner({
   }, [mode, patternStrokes, setSelectedPatternId, setSelectedStrokeId, setSelectedTextId, setSelectedAssetId, beginDeltaDrag, setPatternStrokes]);
 
   // ── Layout / Randomize ────────────────────────────────────
+  const strokesOnRows = useCallback((cfg: PatternConfig, rows: number[]) => strokesOnLayoutRows(cfg, size.w, size.h, rows), [size.w, size.h]);
+
   const applyLayout = useCallback((layout: PosterLayout) => {
     setPositions(layout.positions);
     setTextAligns({ header: layout.aligns?.header ?? "center", sub: layout.aligns?.sub ?? "center", body: layout.aligns?.body ?? "center", detail: layout.aligns?.detail ?? "center" });
     setSelectedLayoutId(layout.id);
+    const cfg = { ...patternConfig, count: layout.strokeRows.length };
+    applyPattern(strokesOnRows(cfg, layout.strokeRows), cfg);
     if (LOGO_REGISTRY.length === 0) { setPlacedAssets([]); setSelectedAssetId(null); return; }
     setPlacedAssets(layout.logoSlots.map((slot, i) => ({
       id: makeId(), assetId: LOGO_REGISTRY[i % LOGO_REGISTRY.length].id,
       x: slot.x, y: slot.y, scale: slot.scale, rotation: 0, opacity: 1, flipX: false, zIndex: i + 1,
     })));
     setSelectedAssetId(null);
-  }, [setPositions, setTextAligns, setSelectedLayoutId, setPlacedAssets, setSelectedAssetId]);
+  }, [setPositions, setTextAligns, setSelectedLayoutId, patternConfig, applyPattern, strokesOnRows, setPlacedAssets, setSelectedAssetId]);
 
   const generateAll = useCallback(() => {
     commit();
@@ -158,17 +168,20 @@ function ChalkPosterGeneratorInner({
       return [...others, ...layout.logoSlots.map((slot, i) => ({ id: makeId(), assetId: LOGO_REGISTRY[i % LOGO_REGISTRY.length].id, x: slot.x, y: slot.y, scale: slot.scale, rotation: 0, opacity: 1, flipX: false, zIndex: baseZ + i + 1 }))];
     });
     setSelectedAssetId(null);
-    updatePattern({ count: Math.round(3 + Math.random() * 8), opacity: Math.round(45 + Math.random() * 45), seed: Math.floor(Math.random() * 999999) });
-  }, [commit, allAssets, setPositions, setTextAligns, setSelectedLayoutId, setPlacedAssets, setSelectedAssetId, updatePattern]);
+    const cfg = { ...patternConfig, count: layout.strokeRows.length, opacity: Math.round(45 + Math.random() * 45), seed: Math.floor(Math.random() * 999999) };
+    applyPattern(strokesOnRows(cfg, layout.strokeRows), cfg);
+  }, [commit, allAssets, setPositions, setTextAligns, setSelectedLayoutId, setPlacedAssets, setSelectedAssetId, patternConfig, applyPattern, strokesOnRows]);
 
   // ── Text items ────────────────────────────────────────────
+  // Schriftgrößen sind A3-Referenzwerte — relativ zur Formathöhe skalieren, damit die Layout-%-Positionen in jedem Format halten
+  const fscale = size.h / POSTER_SIZES[0].h;
   const textItems = useMemo(() => [
-    { key: "header" as PosKey, text: text.headerText, font: text.headerFont, size: text.headerSize, weight: text.headerWeight, color: textColor, align: (textAligns.header ?? "center") as Align, outline: text.headerOutline, position: positions.header ?? INITIAL_POSITIONS.header },
-    { key: "sub" as PosKey, text: text.subText, font: text.subFont, size: text.subSize, weight: "600", color: textColor, align: (textAligns.sub ?? "center") as Align, outline: text.subOutline, position: positions.sub ?? INITIAL_POSITIONS.sub },
-    { key: "body" as PosKey, text: text.bodyText, font: text.bodyFont, size: text.bodySize, weight: "400", color: textColor, align: (textAligns.body ?? "center") as Align, outline: text.bodyOutline, position: positions.body ?? INITIAL_POSITIONS.body },
-    { key: "detail" as PosKey, text: text.detailText, font: text.detailFont, size: text.detailSize, weight: "400", color: textColor, align: (textAligns.detail ?? "center") as Align, outline: false, position: positions.detail ?? INITIAL_POSITIONS.detail },
-    ...extraTexts.map(et => ({ key: et.id, text: et.text, font: et.font, size: et.size, weight: et.weight, color: textColor, align: et.align, outline: et.outline, position: et.position })),
-  ], [text, textColor, textAligns, positions, extraTexts]);
+    { key: "header" as PosKey, text: text.headerText, font: text.headerFont, size: text.headerSize * fscale, weight: text.headerWeight, color: textColor, align: (textAligns.header ?? "center") as Align, outline: text.headerOutline, position: positions.header ?? INITIAL_POSITIONS.header },
+    { key: "sub" as PosKey, text: text.subText, font: text.subFont, size: text.subSize * fscale, weight: "600", color: textColor, align: (textAligns.sub ?? "center") as Align, outline: text.subOutline, position: positions.sub ?? INITIAL_POSITIONS.sub },
+    { key: "body" as PosKey, text: text.bodyText, font: text.bodyFont, size: text.bodySize * fscale, weight: "400", color: textColor, align: (textAligns.body ?? "center") as Align, outline: text.bodyOutline, position: positions.body ?? INITIAL_POSITIONS.body },
+    { key: "detail" as PosKey, text: text.detailText, font: text.detailFont, size: text.detailSize * fscale, weight: "400", color: textColor, align: (textAligns.detail ?? "center") as Align, outline: false, position: positions.detail ?? INITIAL_POSITIONS.detail },
+    ...extraTexts.map(et => ({ key: et.id, text: et.text, font: et.font, size: et.size * fscale, weight: et.weight, color: textColor, align: et.align, outline: et.outline, position: et.position })),
+  ], [text, textColor, textAligns, positions, extraTexts, fscale]);
 
   // ── Scene / Export ────────────────────────────────────────
   const buildScene = useCallback((): PosterScene => ({
@@ -352,11 +365,14 @@ export function ChalkPosterGenerator() {
   const [posterSizeIndex, setPosterSizeIndex] = useState(0);
   const [inverted, setInverted] = useState(false);
   const [patternConfig, setPatternConfig] = useState<PatternConfig>({
-    patternType: "lines", count: 5, brushName: "Figma Verite",
+    patternType: "lines", count: LAYOUTS[0].strokeRows.length, brushName: "Figma Verite",
     strokeWidth: 0.3, opacity: 100, color: "white",
     seed: Math.floor(Math.random() * 999999),
   });
-  const [patternStrokes, setPatternStrokes] = useState<PatternStroke[]>([]);
+  // Startzustand: Linien direkt auf den Weißraum-Reihen des Default-Layouts
+  const [patternStrokes, setPatternStrokes] = useState<PatternStroke[]>(() =>
+    strokesOnLayoutRows(patternConfig, POSTER_SIZES[0].w, POSTER_SIZES[0].h, LAYOUTS[0].strokeRows)
+  );
   const [selectedPatternId, setSelectedPatternId] = useState<string | null>(null);
   const [selectedLayoutId, setSelectedLayoutId] = useState(LAYOUTS[0].id);
   const [text, setText] = useState<PosterText>(DEFAULT_TEXT);
