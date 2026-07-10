@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /home/nkurrle/4_Semester/GenDesign/gen_design_outloud log --oneline -15)",
+      "Bash(git -C /home/nkurrle/4_Semester/GenDesign/gen_design_outloud shortlog -sne HEAD)",
+      "Bash(git -C /home/nkurrle/4_Semester/GenDesign/gen_design_outloud remote -v)",
+      "Bash(git -C /home/nkurrle/4_Semester/GenDesign/gen_design_outloud add README.md)",
+      "Bash(git -C /home/nkurrle/4_Semester/GenDesign/gen_design_outloud commit -m \"README aktualisiert: Projektbeschreibung, Features, Setup, Deployment\")",
+      "Bash(git -C /home/nkurrle/4_Semester/GenDesign/gen_design_outloud log -1 --format='%an <%ae>%n%B')",
+      "Bash(gh api *)",
+      "Bash(gh auth *)"
+    ]
+  }
+}
