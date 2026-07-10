@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus, Minus } from "lucide-react";
 import { useT } from "../../i18n";
 import type { PatternConfig, PosterSize } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
@@ -61,9 +62,7 @@ function Section({
     <div className={styles.section}>
       <button className={styles.sectionButton} onClick={onToggle}>
         <span>{title}</span>
-        <span className={`${styles.arrow} ${isOpen ? styles.arrowOpen : ""}`}>
-          ▶
-        </span>
+        {isOpen ? <Minus size={14}/> : <Plus size={14}/>}
       </button>
       {isOpen && <div className={styles.sectionBody}>{children}</div>}
     </div>

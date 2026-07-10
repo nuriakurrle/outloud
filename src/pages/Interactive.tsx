@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { Link } from "react-router";
-import { X } from "lucide-react";
+import { X, Webcam, Image as ImageIcon, Pencil, SprayCan, ChevronLeft } from "lucide-react";
 import { useT } from "../i18n";
 import {
   startBodySegmentation,
@@ -274,16 +274,16 @@ export default function Interactive() {
           <div>
             <div style={S.sectionLabel}>{t.source}</div>
             <div style={S.toggle}>
-              <button onClick={() => switchSource("live")} style={S.toggleBtn(source === "live")}>📷 Live</button>
-              <button onClick={() => switchSource("upload")} style={S.toggleBtn(source === "upload")}>🖼 Upload</button>
+              <button onClick={() => switchSource("live")} style={S.toggleBtn(source === "live")}><Webcam size={16}/> Live</button>
+              <button onClick={() => switchSource("upload")} style={S.toggleBtn(source === "upload")}><ImageIcon size={16}/> Upload</button>
             </div>
           </div>
 
           <div>
             <div style={S.sectionLabel}>{t.mode}</div>
             <div style={S.toggle}>
-              <button onClick={() => setRenderMode("chalk")} style={S.toggleBtn(!isStencil)}>✏ {t.chalk}</button>
-              <button onClick={() => setRenderMode("stencil")} style={S.toggleBtn(isStencil)}>◼ {t.stencil}</button>
+              <button onClick={() => setRenderMode("chalk")} style={S.toggleBtn(!isStencil)}><Pencil size={16}/> {t.chalk}</button>
+              <button onClick={() => setRenderMode("stencil")} style={S.toggleBtn(isStencil)}><SprayCan size={16}/> {t.stencil}</button>
             </div>
           </div>
 
@@ -335,7 +335,7 @@ export default function Interactive() {
 
           <div style={S.divider} />
           <button style={S.saveBtn} onClick={savePNG}>{t.savePng}</button>
-          <Link to="/poster-maker" style={S.editorLink} data-chalk>{t.backToEditor}</Link>
+          <Link to="/poster-maker" style={S.editorLink} data-chalk><ChevronLeft size={14}/>{t.backToEditor}</Link>
         </aside>
       )}
     </div>
@@ -367,7 +367,7 @@ const S = {
   sectionLabel: { fontSize: 16, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 } as React.CSSProperties,
   toggle: { display: "flex", borderRadius: "var(--radius-md)", overflow: "hidden", border: "1px solid var(--border-subtle)" } as React.CSSProperties,
   toggleBtn: (active: boolean): React.CSSProperties => ({
-    flex: 1, padding: "8px 0",
+    flex: 1, padding: "8px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
     background: active ? "var(--btn-primary-bg)" : "var(--surface-raised)",
     color: active ? "var(--btn-primary-text)" : "var(--text-secondary)",
     border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
@@ -389,5 +389,5 @@ const S = {
   sliderValue: { color: "var(--text-secondary)", fontWeight: 600, fontVariantNumeric: "tabular-nums" } as React.CSSProperties,
   range: { width: "100%", accentColor: "var(--white)", height: 2 } as React.CSSProperties,
   saveBtn: { width: "100%", padding: 11, background: "var(--btn-primary-bg)", color: "var(--btn-primary-text)", border: "none", borderRadius: "var(--radius-sm)", fontSize: 13, fontWeight: 700, cursor: "pointer" } as React.CSSProperties,
-  editorLink: { display: "block", textAlign: "center", padding: "10px 12px", marginTop: 4, background: "var(--state-inactive-bg)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-md)", color: "var(--text-primary)", fontSize: 13, fontWeight: 600, textDecoration: "none", letterSpacing: "0.02em" } as React.CSSProperties,
+  editorLink: { display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: "10px 12px", marginTop: 4, background: "var(--state-inactive-bg)", border: "1px solid var(--border-subtle)", borderRadius: "var(--radius-md)", color: "var(--text-primary)", fontSize: 13, fontWeight: 600, textDecoration: "none", letterSpacing: "0.02em" } as React.CSSProperties,
 };

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Pencil, Undo2, Redo2 } from "lucide-react";
 import type { ToolMode } from "../../types/poster";
 import { getAllBrushes, brushPreviewPath } from "../../lib/brushStrokes";
 import { useT } from "../../i18n";
@@ -61,7 +62,7 @@ export function DrawingToolbar({
           color: isDraw ? "var(--btn-primary-text)" : "var(--text-body)",
           fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
         }}>
-        ✏️ {isDraw ? t.drawOn : t.drawOff}
+        <Pencil size={16}/> {isDraw ? t.drawOn : t.drawOff}
       </button>
 
       {isDraw && <div style={DIVIDER} />}
@@ -126,9 +127,9 @@ export function DrawingToolbar({
 
       {isDraw && <div style={DIVIDER} />}
       <button onClick={onUndo} disabled={!canUndo} title="Rückgängig"
-        style={{ ...btnBase, cursor: canUndo ? "pointer" : "not-allowed", opacity: canUndo ? 1 : 0.4 }}>↩</button>
+        style={{ ...btnBase, cursor: canUndo ? "pointer" : "not-allowed", opacity: canUndo ? 1 : 0.4 }}><Undo2 size={16}/></button>
       <button onClick={onRedo} disabled={!canRedo} title="Wiederholen"
-        style={{ ...btnBase, cursor: canRedo ? "pointer" : "not-allowed", opacity: canRedo ? 1 : 0.4 }}>↪</button>
+        style={{ ...btnBase, cursor: canRedo ? "pointer" : "not-allowed", opacity: canRedo ? 1 : 0.4 }}><Redo2 size={16}/></button>
     </div>
   );
 }

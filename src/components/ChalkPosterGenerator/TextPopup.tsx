@@ -1,3 +1,4 @@
+import { AlignLeft, AlignCenter, AlignRight, Trash2, X } from "lucide-react";
 import type { TextFieldState } from "./Sidebar";
 import type { Align } from "../../types/poster";
 import styles from "../../styles/chalkPoster.module.css";
@@ -19,6 +20,8 @@ const btnStyle = (active: boolean): React.CSSProperties => ({
   color: "var(--text-primary)", fontSize: 14,
 });
 
+const ALIGN_ICONS = { left: <AlignLeft size={14}/>, center: <AlignCenter size={14}/>, right: <AlignRight size={14}/> };
+
 export function TextPopup({ field, align, onAlignChange, fonts, onClose, onDelete }: TextPopupProps) {
   const { t } = useT();
   return (
@@ -29,9 +32,9 @@ export function TextPopup({ field, align, onAlignChange, fonts, onClose, onDelet
         </span>
         <div style={{ display: "flex", gap: 6 }}>
           {onDelete && (
-            <button onClick={onDelete} style={{ background: "none", border: "none", color: "var(--btn-danger-text)", fontSize: 15, cursor: "pointer", padding: 0 }}>🗑</button>
+            <button onClick={onDelete} style={{ background: "none", border: "none", color: "var(--btn-danger-text)", cursor: "pointer", padding: 0, display: "flex" }}><Trash2 size={16}/></button>
           )}
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", padding: 0, display: "flex" }}><X size={16}/></button>
         </div>
       </div>
 
@@ -43,8 +46,8 @@ export function TextPopup({ field, align, onAlignChange, fonts, onClose, onDelet
 
       <div style={{ display: "flex", gap: 5 }}>
         {(["left", "center", "right"] as Align[]).map((a) => (
-          <button key={a} onClick={() => onAlignChange(a)} style={btnStyle(align === a)}>
-            {a === "left" ? "←" : a === "center" ? "↔" : "→"}
+          <button key={a} onClick={() => onAlignChange(a)} style={{ ...btnStyle(align === a), display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {ALIGN_ICONS[a]}
           </button>
         ))}
       </div>

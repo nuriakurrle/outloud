@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { X } from "lucide-react";
 import type {
   Align, AssetItem, PatternConfig, PatternStroke, PlacedAsset, Position,
 } from "../../types/poster";
@@ -211,7 +212,7 @@ function ChalkPosterGeneratorInner({
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: 12, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{t.strokeTitle}</span>
-          <button onClick={() => setSelectedStrokeId(null)} style={{ background: "none", border: "none", color: "var(--text-secondary)", fontSize: 18, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+          <button onClick={() => setSelectedStrokeId(null)} style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", padding: 0, display: "flex" }}><X size={16}/></button>
         </div>
         <div style={{ display: "flex", gap: 5 }}>
           {[{ label: t.colorWhite, hex: "#FFFFFF" }, { label: t.colorBlack, hex: "#000000" }].map(c => <button key={c.hex} onClick={() => updateSelectedStroke({ color: c.hex })} style={btn(s.color.toUpperCase() === c.hex)}>{c.label}</button>)}

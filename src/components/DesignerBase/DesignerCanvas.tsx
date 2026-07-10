@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { Trash2 } from "lucide-react";
 import { useDesignerContext } from "./context";
 import type { DesignerCanvasProps } from "./types";
 import { TextOverlay } from "../ChalkPosterGenerator/TextOverlay";
@@ -172,7 +173,7 @@ export function DesignerCanvas({
           }}
           title={t.deleteLabel}
         >
-          🗑
+          <Trash2 size={16}/>
         </button>
       )}
 

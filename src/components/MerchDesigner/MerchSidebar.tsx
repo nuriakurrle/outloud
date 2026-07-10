@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus, Minus } from "lucide-react";
 import styles from "../../styles/chalkPoster.module.css";
 import { useT } from "../../i18n";
 import { MERCH_ITEMS, type MerchProduct } from "./constants";
@@ -24,7 +25,7 @@ function Section({ title, isOpen, onToggle, children }: {
     <div className={styles.section}>
       <button className={styles.sectionButton} onClick={onToggle}>
         <span>{title}</span>
-        <span className={`${styles.arrow} ${isOpen ? styles.arrowOpen : ""}`}>▶</span>
+        {isOpen ? <Minus size={14}/> : <Plus size={14}/>}
       </button>
       {isOpen && <div className={styles.sectionBody}>{children}</div>}
     </div>

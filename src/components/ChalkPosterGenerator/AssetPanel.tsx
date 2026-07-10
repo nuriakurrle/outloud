@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { FlipHorizontal2, FlipVertical2, Trash2 } from "lucide-react";
 import type {
   AssetCategory,
   AssetItem,
@@ -439,21 +440,21 @@ export function AssetPanel({
               className={styles.smallButton}
               onClick={() => onUpdateSelected({ flipX: !selected.flipX })}
             >
-              {t.mirror}
+              <FlipHorizontal2 size={14}/> {t.mirror}
             </button>
             {isMaskSel && (
               <button
                 className={styles.smallButton}
                 onClick={() => onUpdateSelected({ flipY: !selected.flipY })}
               >
-                {t.mirrorV}
+                <FlipVertical2 size={14}/> {t.mirrorV}
               </button>
             )}
             <button
               className={`${styles.smallButton} ${styles.danger}`}
               onClick={onDeleteSelected}
             >
-              {t.deleteBtn}
+              <Trash2 size={14}/> {t.deleteBtn}
             </button>
           </div>
           <div style={{ fontSize: 12, color: "#666", textAlign: "center", marginTop: 4, letterSpacing: "0.04em" }}>

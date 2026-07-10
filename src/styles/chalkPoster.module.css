@@ -91,16 +91,6 @@
   background: var(--surface-raised);
 }
 
-.arrow {
-  font-size: 9px;
-  color: var(--text-secondary);
-  transition: transform 0.18s ease;
-}
-
-.arrowOpen {
-  transform: rotate(90deg);
-}
-
 .sectionBody {
   padding: 4px 16px 16px;
   display: flex;
