@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router";
+import { HashRouter as BrowserRouter, Routes, Route } from "react-router";
 import { Navbar } from "./components/Navbar";
 import { ChalkPosterGenerator } from "./components/ChalkPosterGenerator";
 import Interactive from "./pages/Interactive";
