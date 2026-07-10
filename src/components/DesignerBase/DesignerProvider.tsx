@@ -257,12 +257,13 @@ export function DesignerProvider<TExtra extends object = object>({
       }
       if (e.key === "d" || e.key === "D") drawing.setMode("draw");
       else if (e.key === "v" || e.key === "V" || e.key === "Escape") drawing.setMode("move");
+      else if (e.key === "t" || e.key === "T") addText();
       else if (e.key === "[") drawing.setBrushWidth(w => Math.max(0.1, w - 0.2));
       else if (e.key === "]") drawing.setBrushWidth(w => Math.min(4, w + 0.2));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selectedStrokeId, assets, drawing, undoRedo, deleteSelectedStroke, updateSelectedStroke, onDeleteExtra]);
+  }, [selectedStrokeId, assets, drawing, undoRedo, deleteSelectedStroke, updateSelectedStroke, onDeleteExtra, addText]);
 
   // ── Context value ─────────────────────────────────────────────
   const ctx: DesignerContextValue = {
