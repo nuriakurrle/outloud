@@ -21,12 +21,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # Pages-Quelle auf "GitHub Actions" stellen, sonst überschreibt der Legacy-Branch-Build dieses Deployment
-      - run: gh api -X PUT "repos/${{ github.repository }}/pages" -f build_type=workflow
-        env:
-          GH_TOKEN: ${{ github.token }}
-        continue-on-error: true
-
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
